@@ -1,34 +1,3 @@
-// ==UserScript==
-// @name     Parallels ReportViewer Dev
-// @version            0.9.5.8
-// @author 	Nikolai Smetannikov
-// @updateURL    https://gist.github.com/NickSmet/b07cda0b4446466ab36126b79dc8659e/raw/ReportViewer_dev.user.js 
-
-// @include      *
-
-////// @require    https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
-////// @require    https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js
-
-////// @require    https://visjs.github.io/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js
-////// @require    https://gist.github.com/NickSmet/fcad86dc02d9f779b28cfe951f7f4748/raw/feedback.js
-////// @require    https://gist.githubusercontent.com/NickSmet/5c03094e6e48e3437910fd27055b29ee/raw/RVTimeline.js
-
-
-// @require    https://www.jsviews.com/download/jsrender.js
-// @resource    https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css
-// @resource    https://codepen.io/nicksmet-the-vuer/pen/PoqbbqM.css
-// @resource    https://codepen.io/nicksmet-the-vuer/pen/XWbNxLB.css
-// @grant          GM_xmlhttpRequest
-// @require    https://raw.githubusercontent.com/pugetive/plist_parser/master/plist_parser.js
-// ==/UserScript==
-
-
-
-
-
-
-
-
 function setUpCss(css){
   for (i = 0; i < css.length; i++){
     console.log(css[i])
@@ -1198,7 +1167,7 @@ function DoReportOverview() {
   }
 
 window.addEventListener("load", function(event) {
-  setUpCss(incl_css_main);
+  // setUpCss(incl_css_main);
   if (curr_url.match(/Report.aspx\?ReportId=/)){
     DoReportOverview()
   }
