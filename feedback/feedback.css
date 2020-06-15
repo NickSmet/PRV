@@ -1,0 +1,82 @@
+#wrapper .text {
+  position:relative;
+  bottom:30px;
+  left:0px;
+  visibility:hidden;
+  }
+  
+  #wrapper:hover .text {
+  visibility:visible;
+  }
+  
+  input {
+    width: auto;
+    word-break: break-word;
+  }
+  
+  
+  .help-button-wrapper {
+    position: fixed;
+    bottom: 1em;
+    right: 1em;
+    text-align: center;
+  }
+  .help-button {
+    height: 5em;
+    width: 5em;
+    font-size: 10px;
+    border-radius: 50%;
+    border: 0 none;
+    background: #ffffff57;
+    color: rgb(53, 53, 53);
+    cursor: pointer;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+    transform: scale(1);
+    transition: all 200ms ease;
+  }
+  .help-button:hover,
+  .help-button:focus,
+  .help-button:active {
+    box-shadow: 0 8px 17px 0 rgba(0, 0, 0, 0.2);
+    outline: 0;
+  }
+  .help-button span {
+    display: block;
+    font-size: 2em;
+    transform: scale(1);
+    transition: transform 100ms ease;
+  }
+  .help-button:hover span,
+  .expanded .help-button span,
+  .expanded .help-button span {
+    transform: scale(1.25);
+  }
+  .expanded .help-button {
+    transform: scale(0.5);
+  
+  }
+  .help-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    transition: all 200ms ease;
+    transform: translate(0, 90px) scale(0.5);
+    transform-origin: bottom center;
+     opacity: 0.0;
+    background-color:rgba(46, 46, 46, 0.35);
+    border-radius: 5px;
+  }
+  .expanded .help-list {
+    transform: translate(0px, 20px) scale(1);
+    opacity: 1;
+  }
+  .help-list li {
+    margin-bottom: 1em;
+  }
+  .help-list a {
+    color: #2e2e2e;
+  }
+  
+  .help-button-wrapper label {
+    display:inline-block
+  }
