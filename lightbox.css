@@ -1,0 +1,38 @@
+.thumbnail {
+  max-width: 40%;
+}
+
+.italic { font-style: italic; }
+.small { font-size: 0.8em; }
+
+/** LIGHTBOX MARKUP **/
+
+.lightbox {
+	/** Default lightbox to hidden */
+	display: none;
+
+	/** Position and style */
+	position: fixed !important; 
+	z-index: 999 !important;
+	width: 100% !important;
+	height: 100% !important;
+	text-align: center !important;
+	top: 0 !important;
+	left: 0 !important;
+	background: rgba(0,0,0,0.8) !important;
+}
+
+.lightbox img {
+	/** Pad the lightbox image */
+	max-width: 95% !important;
+	max-height: 90% !important;
+	margin-top: 2% !important;
+}
+
+.lightbox:target {
+	/** Remove default browser outline */
+	outline: none;
+
+	/** Unhide lightbox **/
+	display: block;
+}

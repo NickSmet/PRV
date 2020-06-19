@@ -263,8 +263,8 @@ function ParseCurrentVm(item_all_data) {
     //var hdds_regex = /\<Hdd[^\>]*\>[^$]*<\/CommandName>/g
 
 
-    var ParamVMHDDs = {'Location':'SystemName', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode'}
-    var AdjustsVMHDDs = {'Interface':'hddtype'}
+    var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode'}
+    var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
     var iconVMHDDs = "https://image.flaticon.com/icons/svg/1689/1689016.svg"
 
     var VMHDDs_data = ParseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
@@ -334,13 +334,13 @@ function ParseCurrentVm(item_all_data) {
     //check if VM ram is not more than 1/2 of Host.
     var hostram = $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
     
-    var tempram = specs_regex['Ram']
+    var vmram = specs_regex['Ram']
 
-    if (tempram>hostram/2){
+    if (vmram>hostram/2){
       specs_regex['Ram']+='<b style="color:red">!!!!! Too Much</b>',
       MarkBullet("CurrentVm",'bad')
     }
-    if((tempram % 256) != 0){
+    if((vmram % 256) != 0){
       specs_regex['Ram']+='<b style="color:orange">! Uneven amount </b>',
       MarkBullet("CurrentVm",'warning')
     }
@@ -965,10 +965,18 @@ function AdjustSpec(spec_value, adjustment){
       case 'bytes': 
       console.log("it's bytes!!!")
       spec_value = humanFileSize(spec_value, true);
+      break;
       case 'hddtype': 
       var hddtypes = {0: 'IDE', 1: 'SCSI', 2: 'SATA', 3: 'NVMe'}
       spec_value = hddtypes[spec_value]
+      break;
+      case 'mbytes':
+      spec_value = humanFileSize(spec_value*1024*1024, false)
+      break;
+      case 'appleMbytes':
+      spec_value = humanFileSize(spec_value*1024*1024, true)//because for Apple kilo is actually 1000 :) 
 }
+
 
 return spec_value}
 

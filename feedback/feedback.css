@@ -67,7 +67,7 @@
     border-radius: 5px;
   }
   .expanded .help-list {
-    transform: translate(0px, 20px) scale(1);
+    transform: translate(0px, 0px) scale(1);
     opacity: 1;
   }
   .help-list li {
@@ -79,4 +79,17 @@
   
   .help-button-wrapper label {
     display:inline-block
+  }
+
+  .vis-labelset .vis-label .vis-inner {
+    max-width: 300px;
+    padding-left:0px !important
+  }
+
+  .vis-group-level-unknown-but-gte1 {
+    border: 1px solid black
+  }
+  
+  .left {
+    text-align:left
   }

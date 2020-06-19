@@ -50,14 +50,15 @@ function editItemStyle(item, styleDict){
       editItemStyle(item,all_items[item]['style'])
     }
 
-for (i in incl_css_timeline){
-  if ($('head').html().match(incl_css_timeline[i])){
-    console.log('skipping css, since already present: '+ incl_css_timeline[i])
-    continue}
-  else
-  {$('head').append('<link rel="stylesheet" type="text/css" href="'+incl_css_timeline[i]+'">');
-}
-}
+//sometimes userscript fails to load external CSS, below is a workaround
+// for (i in incl_css_timeline){
+//   if ($('head').html().match(incl_css_timeline[i])){
+//     console.log('skipping css, since already present: '+ incl_css_timeline[i])
+//     continue}
+//   else
+//   {$('head').append('<link rel="stylesheet" type="text/css" href="'+incl_css_timeline[i]+'">');
+// }
+// }
 
 
 var head = $("body");
@@ -168,7 +169,7 @@ $("#restore").click(function(){
               }
                 else {
                   rule_result = checkRule(item, line_message, prev_line_content, next_line_content,item_time)
-                  console.log(rule_result)
+
                   if (!rule_result){continue}
                   else {createItem(item_class,item_group,rule_result.value,item_time,curr_line_content,rule_result.style)}
                 }
@@ -182,8 +183,8 @@ $("#restore").click(function(){
   
   }
   
-  function createItem(item, group, content, datetime, line_content, style){
-    var time = datetime
+  function createItem(item, group, content, datetime, line_content, style, customTime){
+    if(!customTime){time = datetime}
 
     console.log(style)
     items.add({
@@ -232,17 +233,22 @@ $("#restore").click(function(){
   var options
 
 
-  window.addEventListener("load", function() {
-    
   curr_url = window.location.href;
   groupIds = {}
   groups = new vis.DataSet();  
   items = new vis.DataSet();
   global_id = 1
 
+
+
+  window.addEventListener("load", function() {
     if (curr_url.match(url_regex)){
       all_items = vmlog_all_items
+      var head = $("body");
+      head.prepend($(' <button id="Generate" >Generate Timeline</button>'))
+      $("#Generate").click(function(){
       doTimeline()
+    });
     }
   });
 
@@ -250,10 +256,10 @@ $("#restore").click(function(){
 //The below stuff is what I'm regularly editing
 
 
-  var vmlog_regex = /LogName\=vm\.log/
-  var testenv_regex = /test\.html/
+  var vmlog_regex = /vm\.log/
+  var testenv_regex = /(vm\.log\.html)/
   
-  url_regex=testenv_regex
+  url_regex=vmlog_regex
 
 
 
@@ -262,8 +268,8 @@ $("#restore").click(function(){
     var result = {value:all_items[item].name}
     
     switch (item) { 
-      case 'crash':
-      if (!prev_line.match('VM process exiting with code 0'))
+      case 'crash'://need a rule that works in case there are some more lines after 'VM process exiting with code 0'
+      if (!prev_line.match('VM process exiting with code 0')&&line_message.match(/===========================================================/))
       {return result}else{return false
       }
 
@@ -286,10 +292,10 @@ $("#restore").click(function(){
         
       
       case 'tools_outdated': {
-        console.log(rule_vars['tools_outdated']['last_seen'])
-        if(!rule_vars['tools_outdated']['last_seen']||rule_vars['tools_outdated']['last_seen']-item_time>200000){
+        var last_seen = rule_vars.tools_outdated.last_seen
+        if(!last_seen||last_seen-item_time>200000){
           //"tools outdated" messagesusually go in pairs, of it the last one was seen 200 sec apart or more, we skip it.
-          rule_vars['tools_outdated']['last_seen'] = item_time
+          rule_vars.tools_outdated.last_seen = item_time
           return result
           }else{return false}
       }
@@ -303,7 +309,7 @@ $("#restore").click(function(){
 
     align:'left',
     maxHeight:"500px",
-    zoomMax: 2*24*60*60*1000, //7 ways
+    zoomMax: 7*24*60*60*1000, //7 ways
     margin: {
       item: 5
     },
@@ -328,9 +334,9 @@ $("#restore").click(function(){
     };
   
   const regular_apps = //apps that will be ignored from the timeline
-  (/(explorer\.exe|consent\.exe|wwahost|WindowsApps|SkypeApp|StartMenuExperienceHost|SystemSettings|LogonUI|ShellExperienceHost|WindowsInternal|taskhostw|SearchUI|WinStore|GameBar|CredentialUIBroker|LockApp|Explorer\.EXE|YourPhone|dwm\.exe)/)
+  (/(\\Dwm\.exeexplorer\.exe|consent\.exe|wwahost|WindowsApps|SkypeApp|StartMenuExperienceHost|SystemSettings|LogonUI|ShellExperienceHost|WindowsInternal|taskhostw|SearchUI|WinStore|GameBar|CredentialUIBroker|LockApp|Explorer\.EXE|YourPhone|dwm\.exe)/)
   
-  var rule_vars = {'tools_outdated':{'last_seen':undefined}}//dynamic conditions for checkRule()
+  var rule_vars = {'tools_outdated':{'last_seen':undefined},'vm_exited':{'last_seen':undefined}}//dynamic conditions for checkRule()
   
   const incl_css_timeline = [
     'https://visjs.github.io/vis-timeline/styles/vis-timeline-graph2d.min.css',
@@ -355,7 +361,8 @@ $("#restore").click(function(){
     "resume":{'regex':/VM state\((VmStatePaused|f)\): enqueued 'VmLocalCmdStart'/,"group":'Pause/Resume',"name":"resume",'style':{'background-color':'rgb(127, 219, 181)'}},
     "pause":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdPause'/,"group":'Pause/Resume',"name":"pause",'style':{'background-color':'rgb(182, 217, 184)'}},
    
-    "crash":{'regex':/=============================================================/,"group":"Stop/Shutdown/Restart","name":"сrash(host?)",'style':{'background-color':'rgb(161, 13, 50)'},'rule':true},
+
+    "crash":{'regex':/(=============================================================|VM process exiting with code 0)/,"group":"Stop/Shutdown/Restart","name":"сrash(host?)",'style':{'background-color':'rgb(161, 13, 50)'},'rule':true},
   
     "video_crash":{'regex':/Caught Abort trap\(.+\) in video device thread/,"group":"Stop/Shutdown/Restart","name":"video crash",'style':{'background-color':'rgb(161, 13, 50)'}},
    

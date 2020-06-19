@@ -11,6 +11,13 @@ css_feedback = ['https://codepen.io/nicksmet-the-vuer/pen/XWbNxLB.css']
 //   }
 //   }
 
+var curr_rvmain
+var curr_vmLog_prod = /\=?vm\.log/
+var curr_vmLog_test = /vm\.log\.html/
+
+var curr_vmLog = curr_vmLog_prod
+
+
 function hideBug(x) {
   if (x.checked) {
     $('#bugDiv').attr('style', 'display: none !important');
@@ -45,10 +52,10 @@ function SetUpFeedback(){
  if(curr_url.match(/Report.aspx\?ReportId/))
 { form_html = '<div class="help-button-wrapper">\
 <form action="javascript:void(0);"; class = "help-list"; id="form" method="get">\
-<input type="radio" id="FR " name="type" value="FR">\
-<a class = "left"><label for="FR">[FR]</label><br>\
+<div class = "left"><input type="radio" id="FR " name="type" value="FR">\
+<label for="FR">[FR]</label><br>\
 <input type="radio" id="BUG" name="type" value="BUG">\
-<label for="BUG">[BUG]</label><br></a>\
+<label for="BUG">[BUG]</label><br></div>\
 <label for="fname">Description</label><br>\
 <textarea type="text" id="feedback" name="feedback"></textarea ><br>\
 <button class="submit" type="submit">Submit</button>\
@@ -58,7 +65,7 @@ function SetUpFeedback(){
 </button>\
 </div>'}
 
-else if (curr_url.match(/\=vm\.log/))///TESTTEXT
+else if (curr_url.match(curr_vmLog))
 {
 form_html = '<div class="help-button-wrapper">\
 <form action="javascript:void(0)"; class = "help-list"; id="form"; method="get">\
@@ -107,6 +114,6 @@ var curr_url = window.location.href
 var form_html
 
 
-//window.addEventListener("load", function(event) {
+window.addEventListener("load", function(event) {
  SetUpFeedback()
-//});
+});
