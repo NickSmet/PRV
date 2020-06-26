@@ -1,15 +1,3 @@
-function setUpCss(css){
-  for (i = 0; i < css.length; i++){
-    console.log(css[i])
-    if ($('head').html().match(css[i])){
-      console.log('skipping css, since already present: '+ css[i])
-      continue}
-    else
-    {$('head').append('<link rel="stylesheet" type="text/css" href="'+css[i]+'">');}
-  }
-  }
-
-
 //Constrution of menu with bullets and log links
 function upper_menu() {
 //Making the main informationpanel occupy half of the screen
@@ -37,7 +25,9 @@ function upper_menu() {
 
     /*input prl report url, output -- 'data:image/png;base64' string*/
     }
-//Creates bullets and arranges bullets into an array
+
+/** @description  Creates bullets and arranges bullets into an array
+ */
 function ConstructBullets (elements_array, elements_type, append_to) {
     var i
     for (i = 0; i < elements_array.length; i++) {
@@ -68,7 +58,7 @@ function ConstructBullets (elements_array, elements_type, append_to) {
  * @param {Object} filter Object like {"NetworkType":"0"}. Bullet elements consistent with these
  * criteria will be skipped.  
  */
-function ParseXMLItem( data, element, parameters, adjustments={}, filter={}){
+function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
   //console.log(data)
   data = data.replace(/\<\-\>/,"")
   data = data.replace(/<\?xml[^>]*>/,"")
@@ -76,9 +66,12 @@ function ParseXMLItem( data, element, parameters, adjustments={}, filter={}){
 
   xmlDoc = $.parseXML( data ),
   $xml = $( xmlDoc );
+
   var subBullet = ''
+
+  var element = $xml.find(element)
   //console.log (element)
-  $xml.find(element).each(function () {
+  element.each(function () {
     //console.log($(this))
     for (var key in filter){
       //console.log(filter[i])
@@ -89,11 +82,9 @@ function ParseXMLItem( data, element, parameters, adjustments={}, filter={}){
     
     var subBulletItem = ''
     for (var parameter in parameters){
-
         var paramValue = $.trim($(this).find(parameters[parameter]).first().text())
-
         if (parameter in adjustments){
-            paramValue = AdjustSpec(paramValue, adjustments[parameter])
+            paramValue = adjustSpec(paramValue, adjustments[parameter])
         }
         if (paramValue){
         subBulletItem +='<u>'+parameter+'</u>: '+ paramValue+'\n'}
@@ -102,6 +93,9 @@ function ParseXMLItem( data, element, parameters, adjustments={}, filter={}){
     subBullet = subBullet+subBulletItem+'\n';  })
     if (subBullet.trim() == ''){subBullet='Nothing'}
 return subBullet}
+
+
+
 
 /** @description  Construction of individual bullet
  * @param {string} item_name Bullet's displayed name (don't use spaces).
@@ -112,7 +106,7 @@ return subBullet}
 function CreateBullet(item_name, bullet_type, data = '', icon_url, sublevel=0) {
   var sublevel_space = "    "
     
-    //console.log(item_name+" "+bullet_type)
+    //Here it's templating enginge syntax
     var collapsible_template = '<div>\
 <button type="button" id={{:button_id}} class="btn btn-primary btn-xs" aria-pressed="true" data-toggle="collapse" data-target={{:item_target}}>\
 ➤\
@@ -163,15 +157,15 @@ nothing yet</div>'
     var item_data = data;
   	var item_link = type_to_link[bullet_type];
     
-    var item_id = item_name;
+    var item_id = item_name.split(" ").join("");;
     if(bullet_type=='log'){
       item_id = item_name.replace('Log')
     }
     
     
-    var button_id = "btn_" + item_name;
+    var button_id = "btn_" + item_id;
     var item_summary = "nothing yet";
-    var item_target = '#' + item_name;
+    var item_target = '#' + item_id;
 
 
     var bullet_content = {
@@ -186,7 +180,9 @@ nothing yet</div>'
     };
 
     collapsible_template = $.templates(collapsible_template);
-    return collapsible_template.render(bullet_content)
+    var bullet = collapsible_template.render(bullet_content)
+    
+    return bullet
 
 }
 
@@ -225,7 +221,7 @@ function BulletData(item_id, option) {
 
       bullet_all_data = bullet_all_data.replace('<?xml version="1.0" encoding="UTF-8"?>','')
 
-        eval("bullet_parsed_data=Parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
+        eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
         //console.log(bullet_parsed_data)
 
         if(typeof option === "undefined") {
@@ -235,7 +231,7 @@ function BulletData(item_id, option) {
         else if (option == 'time') {
             timediff = bullet_parsed_data
 //need to rewrite the bit below (and maybe FitTime to aligh with it)
-            correcttime = FixTime (timediff)
+            correcttime = fixTime (timediff)
             var gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
             //console.log(gmt_string)
             var gmt_regex = /\(\"([\d\-T\:]*)\"\)/
@@ -256,29 +252,31 @@ function BulletData(item_id, option) {
 
     })}
 
-function ParseCurrentVm(item_all_data) {
+function parseCurrentVm(item_all_data) {
     xmlDoc = $.parseXML( item_all_data ),
     $xml = $( xmlDoc );
 
     //var hdds_regex = /\<Hdd[^\>]*\>[^$]*<\/CommandName>/g
 
 
-    var ParamVMHDDs = {'Location':'SystemName', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode'}
-    var AdjustsVMHDDs = {'Interface':'hddtype'}
+    var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode'}
+    var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
     var iconVMHDDs = "https://image.flaticon.com/icons/svg/1689/1689016.svg"
 
-    var VMHDDs_data = ParseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
+    var VMHDDs_data = parseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
     var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
+    
+
 
     var ParamVMUSBs = {'Name':'SystemName', 'Last connected':'Timestamp'}
     var AdjustsVMUSBs = {'Last connected':'time'}
     var iconVMUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
 
-    var VMUSBs_data = ParseXMLItem ( item_all_data, element = "USBPort", ParamVMUSBs,AdjustsVMUSBs)
+    var VMUSBs_data = parseXMLItem ( item_all_data, element = "USBPort", ParamVMUSBs,AdjustsVMUSBs)
     var VMUSBs = CreateBullet('Guest USBs','Custom', VMUSBs_data, iconVMUSBs)
 
-    if(VMHDDs.match(/<u>Trim<\/u>: 1/)){MarkBullet('CurrentVm', 'trim')}
-    if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){MarkBullet('CurrentVm', 'splitted')}
+    if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
+    if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
 
   //console.log(guestUSB)
 
@@ -334,15 +332,15 @@ function ParseCurrentVm(item_all_data) {
     //check if VM ram is not more than 1/2 of Host.
     var hostram = $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
     
-    var tempram = specs_regex['Ram']
+    var vmram = specs_regex['Ram']
 
-    if (tempram>hostram/2){
+    if (vmram>hostram/2){
       specs_regex['Ram']+='<b style="color:red">!!!!! Too Much</b>',
-      MarkBullet("CurrentVm",'bad')
+      markBullet("CurrentVm",'bad')
     }
-    if((tempram % 256) != 0){
+    if((vmram % 256) != 0){
       specs_regex['Ram']+='<b style="color:orange">! Uneven amount </b>',
-      MarkBullet("CurrentVm",'warning')
+      markBullet("CurrentVm",'warning')
     }
 
     //Setting readable string for videomode.
@@ -355,28 +353,31 @@ function ParseCurrentVm(item_all_data) {
 
     //Identifying if VM was copied
     if (specs_regex['Source   UUID']!=specs_regex['This VM UUID'])
-    {MarkBullet("CurrentVm",'copied vm')}
+    {markBullet("CurrentVm",'copied vm')}
 
-    //Idenrifying if VM is on an external volumes
-    if (specs_regex['PVM Location'].match(/^\/Volumes/)){MarkBullet("CurrentVm","external drive")}
+    //Identifying if VM is on an external volumes
+    if (specs_regex['PVM Location'].match(/^\/Volumes/)){markBullet("CurrentVm","external drive")}
 
-    //Idenrifying AppleHV and marking bullet accordingly
+    //Identifying AppleHV and marking bullet accordingly
     if (specs_regex['Hypervisor']==1)
-    {MarkBullet("CurrentVm","AppleHV")}
+    {markBullet("CurrentVm","AppleHV")}
 
- //Idenrifying Nested Virtualization and marking bullet accordingly
+ //Identifying Nested Virtualization and marking bullet accordingly
     if (specs_regex['Nested Virtualization']==1)
-    {MarkBullet("CurrentVm","Nested")}
+    {markBullet("CurrentVm","Nested")}
 
-    //Idenrifying if headless and marking bullet accordingly
+    //Identifying if headless and marking bullet accordingly
     if (specs_regex['AutoStart']==1 || specs_regex['AutoStart']==5 || specs_regex['AutoStart']==3)
-    {MarkBullet("CurrentVm","headless")} else{MarkBullet("CurrentVm",'not headless')}
+    {markBullet("CurrentVm","headless")} 
+    else
+    {//markBullet("CurrentVm",'not headless')
+  }
 
-    //Idenrifying if Isolated and marking bullet accordingly
-    if (specs_regex['Isolated']=='1'){MarkBullet("CurrentVm","isolated")}
+    //Identifying if Isolated and marking bullet accordingly
+    if (specs_regex['Isolated']=='1'){markBullet("CurrentVm","isolated")}
 
-    //Idenrifying if has bootflags and marking bullet accordingly
-    if (specs_regex['<b>Boot Flags</b>']!=''){MarkBullet("CurrentVm","flags")}
+    //Identifying if has bootflags and marking bullet accordingly
+    if (specs_regex['<b>Boot Flags</b>']!=''){markBullet("CurrentVm","flags")}
     var specs_to_name = {
       'Lan Adapter':{0: 'Legacy',1 :'RealTek RTL8029AS',2: 'Intel(R) PRO/1000MT',3:'Virtio', 4:'Intel(R) Gigabit CT (82574l)'},
       'Network':{1: 'Shared',2 :'Bridged'},
@@ -407,7 +408,7 @@ function ParseCurrentVm(item_all_data) {
 
 }
 
-function ParseNetConfig(item_all_data) {
+function parseNetConfig(item_all_data) {
 
   
   var networkParams = {
@@ -420,7 +421,7 @@ function ParseNetConfig(item_all_data) {
     'NetworkType':'NetworkType'
   }
   var networkFilter = {'NetworkType':0}
-  var network = ParseXMLItem(item_all_data, "VirtualNetwork", networkParams,{}, networkFilter)
+  var network = parseXMLItem(item_all_data, "VirtualNetwork", networkParams,{}, networkFilter)
   //console.log(network)
 
   //var networkBullet = CreateBullet('Networks', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
@@ -430,27 +431,31 @@ function ParseNetConfig(item_all_data) {
      return network;}
 
 
-     function 	ParseClientProxyInfo(item_all_data) {
+     function 	parseClientProxyInfo(item_all_data) {
 
       proxies_regex = /\<dictionary\> {[^}]*}([^}]*)}/gm
 
       var proxies = item_all_data.match(proxies_regex)[0]
 
-      if (proxies.match(/HTTPEnable : 1/)){MarkBullet("ClientProxyInfo","red")}else{MarkBullet("ClientProxyInfo",'all good')}
+      if (proxies.match(/HTTPEnable : 1/)){markBullet("ClientProxyInfo","red")}else{markBullet("ClientProxyInfo",'all good')}
     
     
          return ;
 
 }
 
-function ParseAdvancedVmInfo(item_all_data) {
-  var number_of_snapshots = item_all_data.match("SavedStateItem")
-  if(!number_of_snapshots){
-    MarkBullet("AdvancedVmInfo", "nosnapshots")
-    return ("No snapshots")} else 
+function parseAdvancedVmInfo(item_all_data) {
+  console.log(typeof item_all_data)
+  var number_of_snapshots = item_all_data.match(/SavedStateItem/g);
+  console.log(number_of_snapshots)
+  
+  if(number_of_snapshots<1){
+    markBullet("AdvancedVmInfo", "no_snapshots")
+    return ("No snapshots")
+  } else 
     {
-  MarkBullet("AdvancedVmInfo", "snapshots")
-  MarkBullet("AdvancedVmInfo", "Custom", '<a>'+number_of_snapshots.length+'* </a>')
+  markBullet("AdvancedVmInfo", "snapshots")
+  markBullet("AdvancedVmInfo", "Custom", '<a>'+number_of_snapshots.length/2-1+'* </a>')
     }
 
   //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's off.
@@ -468,7 +473,7 @@ function ParseAdvancedVmInfo(item_all_data) {
     'Name':'Name',
     'Created on':'DateTime'
   }
-  var savedStates = ParseXMLItem(item_all_data, "SavedStateItem", savedStatesParams)
+  var savedStates = parseXMLItem(item_all_data, "SavedStateItem", savedStatesParams)
   var savedStatesBullet = CreateBullet('Snapshots', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
   
   
@@ -480,7 +485,7 @@ function ParseAdvancedVmInfo(item_all_data) {
 
 }
 
-function ParseHostInfo(item_all_data) {
+function parseHostInfo(item_all_data) {
   //console.log(item_all_data)
  
 
@@ -492,6 +497,7 @@ var AdjustsHdd = {"Size":"bytes"}
 var HddFilter = {'Name':'AppleAPFSMedia'}
 var iconHDDS = 'https://image.flaticon.com/icons/svg/1689/1689016.svg'
 
+var paramCameras = {'Name':'Name', 'UUID':'Uuid'}
 
 var ParamNetwork = {'Name':'Name','UUID':'Uuid', "MAC":"MacAddress","IP":'NetAddress'}
 var iconNetwork = "https://image.flaticon.com/icons/svg/969/969345.svg"
@@ -506,21 +512,23 @@ var iconPrinters = "https://image.flaticon.com/icons/svg/2489/2489670.svg"
 var ParamCCIDs = {'Name':'Name', 'UUID':'Uuid'}
 var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
 
-  var USBs_data = ParseXMLItem( item_all_data, element = "UsbDevice", ParamUSBs)
-  var Network_data = ParseXMLItem( item_all_data, element = "NetworkAdapter", ParamNetwork,{},networkFilter)
-  var HDDs_data = ParseXMLItem( item_all_data, element = "HardDisk", ParamHDDs, AdjustsHdd,HddFilter)
-  var Inputs_data = ParseXMLItem( item_all_data, element = "HIDDevice", ParamInputs)
-  var Printers_data = ParseXMLItem( item_all_data, element = "Printer", ParamPrinters)
-  var CCIDs_data = ParseXMLItem( item_all_data, element = "SmartCardReaders", ParamCCIDs)
+  var USBs_data = parseXMLItem( item_all_data, element = "UsbDevice", ParamUSBs)
+  var Network_data = parseXMLItem( item_all_data, element = "NetworkAdapter", ParamNetwork,{},networkFilter)
+  var HDDs_data = parseXMLItem( item_all_data, element = "HardDisk", ParamHDDs, AdjustsHdd,HddFilter)
+  var Inputs_data = parseXMLItem( item_all_data, element = "HIDDevice", ParamInputs)
+  var Printers_data = parseXMLItem( item_all_data, element = "Printer", ParamPrinters)
+  var CCIDs_data = parseXMLItem( item_all_data, element = "SmartCardReaders", ParamCCIDs)
+  var camerasData = parseXMLItem( item_all_data, element = "Cameras", paramCameras)
   
 
   var specs_definition = {
   'Subbullet1': CreateBullet('Host_USBs','Custom', USBs_data, iconUSBs),
   'Subbullet2': CreateBullet('Host_Nets','Custom', Network_data, iconNetwork),
   'Subbullet3': CreateBullet('Host_HDDs','Custom', HDDs_data, iconHDDS),
-  'Subbullet4': CreateBullet('Host_Input_Devices','Custom', Inputs_data, iconInputs),
-  'Subbullet5': CreateBullet('Host_Printers','Custom', Printers_data, iconPrinters),
-  'Subbullet6': CreateBullet('Host_CCIDs','Custom', CCIDs_data, iconCCIDS),
+  'Subbullet4': CreateBullet('Host_Cams','Custom', camerasData, icons.webcam),
+  'Subbullet5': CreateBullet('Host_Input_Devices','Custom', Inputs_data, iconInputs),
+  'Subbullet6': CreateBullet('Host_Printers','Custom', Printers_data, iconPrinters),
+  'Subbullet7': CreateBullet('Host_CCIDs','Custom', CCIDs_data, iconCCIDS),
 
   };
   var all_specs = '';
@@ -553,7 +561,7 @@ var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
 
 }
 
-function ParseMoreHostInfo(item_all_data) {
+function parseMoreHostInfo(item_all_data) {
 
     regex = /(\<More[^$]*dtd\"\>|\<\=|\<\/MoreHostInfo>)/gm
     item_all_data = item_all_data.replace(regex, '');
@@ -579,10 +587,13 @@ function ParseMoreHostInfo(item_all_data) {
     }
     var number_of_displays = 0
     var gpus_bullet = ''
+    var gpuNames=[]
     for (var i in graphics_subel){
         
         var gpu = graphics_subel[i]
         var gpu_name = (gpu['sppci_model'])
+        if (gpuNames.includes(gpu_name)){gpu_name+="_"+i}
+        gpuNames.push(gpu_name)
         var displays = []
         for (var i in gpu['spdisplays_ndrvs']){
             number_of_displays++
@@ -596,30 +607,32 @@ function ParseMoreHostInfo(item_all_data) {
             //CreateBullet(item_name, bullet_type, data = '', icon_url)
         } 
         if (displays==""){displays='No displays connected.'}
-        var gpu_bullet = CreateBullet(gpu_name, 'Custom', displays, "https://image.flaticon.com/icons/svg/2303/2303023.svg",1)
+        var gpu_bullet = CreateBullet(gpu_name, 'Custom', displays, icons.gpu,1)
         gpus_bullet += gpu_bullet
         }
         //console.log(gpus_bullet)
 
         if(number_of_displays>0){
-        MarkBullet("MoreHostInfo", "screens")
-        MarkBullet("MoreHostInfo", "Custom", '<a>'+number_of_displays+'* </a>')
+        markBullet("MoreHostInfo", 'screens')
+        markBullet("MoreHostInfo", "Custom", '<a>'+number_of_displays+'* </a>')
+          }
+          else {
+            markBullet("MoreHostInfo", 'no_screens')
           }
       
-        //should add cameras
         
-        return CreateBullet('Gpus', 'Custom', gpus_bullet, "https://image.flaticon.com/icons/svg/2302/2302939.svg")
+        return gpus_bullet
         
 
   }
 
-function ParseLoadedDrivers(item_all_data) {
+function parseLoadedDrivers(item_all_data) {
 
     var non_apple_regex = /^((?!com.apple|LoadedDrivers|com.parallels).)*$/gm;
     var non_apple_arr = item_all_data.match(non_apple_regex);
     if (non_apple_arr == null) {
         $('#LoadedDrivers').text("Only apple+prl");
-        MarkBullet('LoadedDrivers','all good')
+        markBullet('LoadedDrivers','all good')
         return;
     }
     var kext
@@ -638,16 +651,16 @@ function ParseLoadedDrivers(item_all_data) {
     var non_apple_str = non_apple_arr.join('\r\n');
     
     if (hasBadKexts==false){
-      MarkBullet('LoadedDrivers','warning')}
+      markBullet('LoadedDrivers', 'warning')}
       else{
-        MarkBullet('LoadedDrivers','bad')}
+        markBullet('LoadedDrivers','bad')}
       
     return non_apple_str
 
 
 }
 
-function ParseAllProcesses(item_all_data) {
+function parseAllProcesses(item_all_data) {
     var bsdtar_regex = /toolbox_report\.xml\.tar\.gz/
     var bdstar_marker = "<u><b>bdstar</b></u>"
     var apps_regex = /\s\/Applications\/((?!Parallels Desktop.app|\/).)*\//gm;/*the \s at the beginning is important, 
@@ -656,8 +669,8 @@ function ParseAllProcesses(item_all_data) {
     var app_regex = /\/Applications\/([^\/]+)\//;
     var apps = item_all_data.match(apps_regex);
     if (item_all_data.match(bsdtar_regex)){
-      MarkBullet('AllProcesses','bad')
-      MarkBullet('AllProcesses','Custom',bdstar_marker)
+      markBullet('AllProcesses','bad')
+      markBullet('AllProcesses','Custom',bdstar_marker)
       
     }
     if (!apps){
@@ -681,7 +694,7 @@ function ParseAllProcesses(item_all_data) {
 
 }
 
-function ParseMountInfo(item_all_data) {
+function parseMountInfo(item_all_data) {
 
     var mountinfo_regex = /^.*(Gi|Filesystem|Ti).*$/gm;
     var mountinfo = item_all_data.match(mountinfo_regex);
@@ -702,26 +715,26 @@ function ParseMountInfo(item_all_data) {
 
 }
 
-function ParseGuestOs(item_all_data) {
+function parseGuestOs(item_all_data) {
 
   xmlDoc = $.parseXML( item_all_data ),
   $xml = $( xmlDoc );
   var ToolsParams = {'Name':'ToolName', 'Version':'ToolVersion','Last updated':'ToolDate','Status':'ToolUpdateStatus'}
   var ToolsAdjust = {'Last updated':'Time'}
   var ToolsFilter = {'ToolUpdateStatus':'UpToDate','ToolVersion':'0.0.0.0'}
-  result = ParseXMLItem(item_all_data, 'GuestToolInfo', ToolsParams,ToolsAdjust,ToolsFilter);
+  result = parseXMLItem(item_all_data, 'GuestToolInfo', ToolsParams,ToolsAdjust,ToolsFilter);
   //console.log(result)
   if (result=='Nothing'){
-    MarkBullet('GuestOs','all good')
+    markBullet('GuestOs','all good')
     return 'All good!'
   }
   else{
-    MarkBullet('GuestOs','warning')
+    markBullet('GuestOs','warning')
     return result
   }
 }
 
-function ParseGuestCommands(item_all_data) {
+function parseGuestCommands(item_all_data) {
 
   if(item_all_data.length<100){return "Nothing"} //instead of matching empty guest commands, just ignoring when it's very small
 
@@ -739,7 +752,7 @@ function ParseGuestCommands(item_all_data) {
   var ipconfig = "ipconfig /all"
   var cpu_usage = "prl_cpuusage --sort-cpu-desc --time 4000"
 
-  function ParseNetuse(command_result) {
+  function parseNetuse(command_result) {
     if(!command_result){return}
    var net_volumes_regex = /[A-Z]\: +\\\\Mac\\\w+/g
    var net_volumes = command_result.match(net_volumes_regex)
@@ -750,7 +763,7 @@ function ParseGuestCommands(item_all_data) {
     return net_volumes}
 
   }
-  function ParseIpconfig(command_result) {
+  function parseIpconfig(command_result) {
     
     var adapters_regex = /\n[ \w][^\n\:]*:\n\n( +[^\n]*\n){1,}/gi
     var adapters = command_result.match(adapters_regex)
@@ -790,7 +803,7 @@ function ParseGuestCommands(item_all_data) {
     return adapters_output}
 
   }
-  function ParseCpuUsage(command_result) {
+  function parseCpuUsage(command_result) {
     //console.log(command_result)
 
     var cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-]+\.exe/g
@@ -805,9 +818,9 @@ function ParseGuestCommands(item_all_data) {
 
   }
 
-  var net_use_results = ParseNetuse(ExtractCommandOutput(net_use))
-  var ipconfig_results = ParseIpconfig(ExtractCommandOutput(ipconfig))
-  var cpu_usage_results = ParseCpuUsage(ExtractCommandOutput(cpu_usage))
+  var net_use_results = parseNetuse(ExtractCommandOutput(net_use))
+  var ipconfig_results = parseIpconfig(ExtractCommandOutput(ipconfig))
+  var cpu_usage_results = parseCpuUsage(ExtractCommandOutput(cpu_usage))
 
   guest_commands_results.push(ipconfig_results, net_use_results, cpu_usage_results)
 
@@ -818,21 +831,21 @@ function ParseGuestCommands(item_all_data) {
 
 }
 
-function ParseVmDirectory(item_all_data) {
+function parseVmDirectory(item_all_data) {
   //counts number of VMs and marks bullet accordingly
   var numberofvms = item_all_data.match(/VmName/g).length/2
   if(numberofvms>0){
-    MarkBullet("VmDirectory", "vms")
-    MarkBullet("VmDirectory", "Custom", '<a>'+numberofvms+'* </a>')
+    markBullet("VmDirectory", "vms")
+    markBullet("VmDirectory", "Custom", '<a>'+numberofvms+'* </a>')
       }
 
   xmlDoc = $.parseXML( item_all_data ),
   $xml = $( xmlDoc );
   var VMParams = {'Name':'VmName', 'Location':'VmHome','UUID':'Uuid','Registered on':'RegistrationDateTime',}
-return ParseXMLItem(item_all_data, 'VirtualMachine', VMParams);
+return parseXMLItem(item_all_data, 'VirtualMachine', VMParams);
 
 
-function ParseCpuUsage(command_result) {
+function parseCpuUsage(command_result) {
     //console.log(command_result)
 
     var cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-]+\.exe/g
@@ -847,9 +860,9 @@ function ParseCpuUsage(command_result) {
 
   }
 
-  var net_use_results = ParseNetuse(ExtractCommandOutput(net_use))
-  var ipconfig_results = ParseIpconfig(ExtractCommandOutput(ipconfig))
-  var cpu_usage_results = ParseCpuUsage(ExtractCommandOutput(cpu_usage))
+  var net_use_results = parseNetuse(ExtractCommandOutput(net_use))
+  var ipconfig_results = parseIpconfig(ExtractCommandOutput(ipconfig))
+  var cpu_usage_results = parseCpuUsage(ExtractCommandOutput(cpu_usage))
 
   guest_commands_results.push(ipconfig_results, net_use_results, cpu_usage_results)
 
@@ -860,7 +873,7 @@ function ParseCpuUsage(command_result) {
 
 }
 
-function ParseTimeZone(item_all_data) {
+function parseTimeZone(item_all_data) {
   //console.log(item_all_data)
     var timezone_regex = /<TimeZone>(.*)?<\/TimeZone>/;
     var timezone = item_all_data.match(timezone_regex)[1]
@@ -871,22 +884,27 @@ function ParseTimeZone(item_all_data) {
 
 }
 
-function ParsetoolsLog(item_all_data) {
+function parsetoolsLog(item_all_data) {
   var last1000chars = item_all_data.slice(item_all_data.length -1000)
   if(last1000chars.match(/successfully/)){
-  MarkBullet('tools.log','all good')}
-  else if(last1000chars.match(/FatalError/)) {MarkBullet('tools.log','bad')}
+  markBullet('tools.log','all good')}
+  else if(last1000chars.match(/FatalError/)) {markBullet('tools.log','bad')}
   
-  else {MarkBullet('tools.log','warning')}
+  else {markBullet('tools.log','warning')}
 }
 
 
 
 //Extra functions
-function ComputerModel() {
+
+//
+/** @description  This one appemds Mac's specs next to the Model (gets them at everymac.com)
+ */
+function computerModel() {
 
   function ExtractSpecs(allmacs, cpu, mac_element){
     var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
+     if(mac.length==0){mac = allmacs.find("table:nth-child(3)")}//if I can't parce CPU correctly, then just taking the 1st model
     var mac_type = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(3) > td:nth-child(2)').text()
     var produced_from = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(2)').text()
     var produced_till = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(4)').text()
@@ -937,7 +955,9 @@ function GetMacsModel (fetchURL, cpu, mac_element) {
 
 }
 
-function FixTime(timediff, time = '') {
+/** @description  Appends customer time im addition to server's local
+ */
+function fixTime(timediff, time = '') {
     var gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
     //console.log(gmt_string)
     var gmt_regex = /\(\"([\d\-T\:]*)\"\)/
@@ -957,18 +977,26 @@ function FixTime(timediff, time = '') {
 }
 
 //Adjusts time, converts values etc. Where for example we get bytes but want to render gb/tb
-function AdjustSpec(spec_value, adjustment){
+function adjustSpec(spec_value, adjustment){
   switch (adjustment) { 
       case 'time': 
-      spec_value = FixTime(timediff, spec_value)
+      spec_value = fixTime(timediff, spec_value)
           break;
       case 'bytes': 
       console.log("it's bytes!!!")
       spec_value = humanFileSize(spec_value, true);
+      break;
       case 'hddtype': 
       var hddtypes = {0: 'IDE', 1: 'SCSI', 2: 'SATA', 3: 'NVMe'}
       spec_value = hddtypes[spec_value]
+      break;
+      case 'mbytes':
+      spec_value = humanFileSize(spec_value*1024*1024, false)
+      break;
+      case 'appleMbytes':
+      spec_value = humanFileSize(spec_value*1024*1024, true)//because for Apple kilo is actually 1000 :) 
 }
+
 
 return spec_value}
 
@@ -989,7 +1017,9 @@ function humanFileSize(bytes, si) {
   return bytes.toFixed(1)+' '+units[u];
 }
 
-function Screenshots(){
+/** @description  Converst all links to attached screenshots to clickable thumbnails
+ */
+function screenshots(){
   function CreateScreenshot(id, url){
     $.get(url, function (data) {
       var img = ( $('pre > img', data).eq(0).attr('src'))
@@ -1020,7 +1050,9 @@ screens_el.find("a").each(function() {
   })
 }
 
-function SignatureBugs(){
+/** @description  Appends Bug IDs to found signatures (if a signature has a bug)
+ */
+function signatureBugs(){
 
   function GetBugId(signatureObject){
     var loading_bug_message = $('</br><span id="loadingBug">Loading bug info...</span></br>')
@@ -1059,28 +1091,7 @@ $('a[href*="Signature"]').each(function() {
  * if color is set to 'custom, then the appended element is defined by
  * @param {string} html if color is 'custom', this defines element to be appended as a mark
  */
-function MarkBullet(bullet_name, color,html){
-
-  var icons = {
-  'all good':'https://image.flaticon.com/icons/png/128/1828/1828520.png',
-  'warning' : 'https://image.flaticon.com/icons/svg/497/497738.svg',
-  'bad': 'https://image.flaticon.com/icons/svg/1672/1672451.svg',
-  'headless':'https://image.flaticon.com/icons/png/128/1089/1089503.png',
-  'not headless':'https://cdn0.iconfinder.com/data/icons/people-and-lifestyle-1/64/people-male-man-head-512.png',
-'isolated':'https://cdn4.iconfinder.com/data/icons/real-estate-1/512/prison-512.png',
-'flags':'https://cdn3.iconfinder.com/data/icons/seo-and-digital-marketing-5-3/48/211-512.png',
-'nosnapshots':'https://image.flaticon.com/icons/svg/2803/2803253.svg',
-'snapshots':'https://image.flaticon.com/icons/svg/502/502559.svg',
-'screens':'https://getdrawings.com/free-icon/desktop-pc-icon-54.png',
-'vms':'https://insmac.org/uploads/posts/2017-08/1503641514_parallels.png',
-'vpn':'https://image.flaticon.com/icons/png/128/1451/1451546.png',
-'external drive':"http://www.icons101.com/icon_png/size_32/id_81556/External_Drive.png",
-'copied vm':'https://www.subrosasoft.com/wp-content/uploads/2016/03/DiskCopyIcon.png',
-'AppleHV':'https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/OS_Apple.png',
-'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-512.png',
-'splitted':'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-512.png',
-'trim':'https://i.ibb.co/XpVhPZ9/unnamed.png'}
-  
+function markBullet(bullet_name, color,html){  
   
 if (color.match(/^no_/))
 {console.log(color)
@@ -1125,11 +1136,6 @@ const bad_kexts = ['as.vit9696.Lilu',
 const vpn_kexts = ['at.obdev.nke.LittleSnitch',]
 
 
-var incl_css_main = [
-  'https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css',
-  'https://codepen.io/nicksmet-the-vuer/pen/PoqbbqM.css',
-]
-
 //Filling bullet content with appropriate data.
 var tries={"tries":3}//When "get" request fails, BulletData() reruns itself (see $.ajaxSetup). This var stores number of tries left for each item.
 // If item is not present in this dict, it's added with counter set to 3 and then goes down with each run of the function. 
@@ -1141,13 +1147,13 @@ var current_url = window.location.href;
 var report_id = current_url.match(/\d{7,9}/);
 
 
-function DoReportOverview() {
+function doReportOverview() {
   
   upper_menu();
-  Screenshots();
+  screenshots();
   BulletData('TimeZone','time');
-  ComputerModel();
-  SignatureBugs();
+  computerModel();
+  signatureBugs();
   
       for (var item in process_immediately){
         console.log(process_immediately[item]+' ran right away.')
@@ -1167,9 +1173,30 @@ function DoReportOverview() {
   }
 
 window.addEventListener("load", function(event) {
-  // setUpCss(incl_css_main);
   if (curr_url.match(/Report.aspx\?ReportId=/)){
-    DoReportOverview()
+    doReportOverview()
   }
 });
 
+
+const icons = {
+  'all good':'https://image.flaticon.com/icons/png/128/1828/1828520.png',
+  'warning' : 'https://image.flaticon.com/icons/svg/497/497738.svg',
+  'bad': 'https://image.flaticon.com/icons/svg/1672/1672451.svg',
+  'headless':'https://image.flaticon.com/icons/png/128/1089/1089503.png',
+  'not headless':'https://cdn0.iconfinder.com/data/icons/people-and-lifestyle-1/64/people-male-man-head-512.png',
+'isolated':'https://cdn4.iconfinder.com/data/icons/real-estate-1/512/prison-512.png',
+'flags':'https://cdn3.iconfinder.com/data/icons/seo-and-digital-marketing-5-3/48/211-512.png',
+'nosnapshots':'https://image.flaticon.com/icons/svg/2803/2803253.svg',
+'snapshots':'https://image.flaticon.com/icons/svg/502/502559.svg',
+'screens':'https://getdrawings.com/free-icon/desktop-pc-icon-54.png',
+'vms':'https://insmac.org/uploads/posts/2017-08/1503641514_parallels.png',
+'vpn':'https://image.flaticon.com/icons/png/128/1451/1451546.png',
+'external drive':"http://www.icons101.com/icon_png/size_32/id_81556/External_Drive.png",
+'copied vm':'https://www.subrosasoft.com/wp-content/uploads/2016/03/DiskCopyIcon.png',
+'AppleHV':'https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/OS_Apple.png',
+'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-512.png',
+'splitted':'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-512.png',
+'trim':'https://i.ibb.co/XpVhPZ9/unnamed.png',
+'webcam':'https://image.flaticon.com/icons/png/128/179/179879.png',
+'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg"}
