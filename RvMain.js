@@ -66,9 +66,12 @@ function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
 
   xmlDoc = $.parseXML( data ),
   $xml = $( xmlDoc );
+
   var subBullet = ''
+
+  var element = $xml.find(element)
   //console.log (element)
-  $xml.find(element).each(function () {
+  element.each(function () {
     //console.log($(this))
     for (var key in filter){
       //console.log(filter[i])
@@ -79,9 +82,7 @@ function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
     
     var subBulletItem = ''
     for (var parameter in parameters){
-
         var paramValue = $.trim($(this).find(parameters[parameter]).first().text())
-
         if (parameter in adjustments){
             paramValue = adjustSpec(paramValue, adjustments[parameter])
         }
@@ -156,15 +157,15 @@ nothing yet</div>'
     var item_data = data;
   	var item_link = type_to_link[bullet_type];
     
-    var item_id = item_name;
+    var item_id = item_name.split(" ").join("");;
     if(bullet_type=='log'){
       item_id = item_name.replace('Log')
     }
     
     
-    var button_id = "btn_" + item_name;
+    var button_id = "btn_" + item_id;
     var item_summary = "nothing yet";
-    var item_target = '#' + item_name;
+    var item_target = '#' + item_id;
 
 
     var bullet_content = {
@@ -586,10 +587,13 @@ function parseMoreHostInfo(item_all_data) {
     }
     var number_of_displays = 0
     var gpus_bullet = ''
+    var gpuNames=[]
     for (var i in graphics_subel){
         
         var gpu = graphics_subel[i]
         var gpu_name = (gpu['sppci_model'])
+        if (gpuNames.includes(gpu_name)){gpu_name+="_"+i}
+        gpuNames.push(gpu_name)
         var displays = []
         for (var i in gpu['spdisplays_ndrvs']){
             number_of_displays++
@@ -603,18 +607,21 @@ function parseMoreHostInfo(item_all_data) {
             //CreateBullet(item_name, bullet_type, data = '', icon_url)
         } 
         if (displays==""){displays='No displays connected.'}
-        var gpu_bullet = CreateBullet(gpu_name, 'Custom', displays, "https://image.flaticon.com/icons/svg/2303/2303023.svg",1)
+        var gpu_bullet = CreateBullet(gpu_name, 'Custom', displays, icons.gpu,1)
         gpus_bullet += gpu_bullet
         }
         //console.log(gpus_bullet)
 
         if(number_of_displays>0){
-        markBullet("MoreHostInfo", "screens")
+        markBullet("MoreHostInfo", 'screens')
         markBullet("MoreHostInfo", "Custom", '<a>'+number_of_displays+'* </a>')
+          }
+          else {
+            markBullet("MoreHostInfo", 'no_screens')
           }
       
         
-        return CreateBullet('Gpus', 'Custom', gpus_bullet, "https://image.flaticon.com/icons/svg/2302/2302939.svg")
+        return gpus_bullet
         
 
   }
@@ -644,7 +651,7 @@ function parseLoadedDrivers(item_all_data) {
     var non_apple_str = non_apple_arr.join('\r\n');
     
     if (hasBadKexts==false){
-      markBullet('LoadedDrivers','warning')}
+      markBullet('LoadedDrivers', 'warning')}
       else{
         markBullet('LoadedDrivers','bad')}
       
@@ -897,6 +904,7 @@ function computerModel() {
 
   function ExtractSpecs(allmacs, cpu, mac_element){
     var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
+     if(mac.length==0){mac = allmacs.find("table:nth-child(3)")}//if I can't parce CPU correctly, then just taking the 1st model
     var mac_type = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(3) > td:nth-child(2)').text()
     var produced_from = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(2)').text()
     var produced_till = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(4)').text()
@@ -1190,4 +1198,5 @@ const icons = {
 'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-512.png',
 'splitted':'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-512.png',
 'trim':'https://i.ibb.co/XpVhPZ9/unnamed.png',
-'webcam':'https://image.flaticon.com/icons/png/128/179/179879.png'}
+'webcam':'https://image.flaticon.com/icons/png/128/179/179879.png',
+'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg"}

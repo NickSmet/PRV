@@ -50,15 +50,6 @@ function editItemStyle(item, styleDict){
       editItemStyle(item,all_items[item]['style'])
     }
 
-//sometimes userscript fails to load external CSS, below is a workaround
-// for (i in incl_css_timeline){
-//   if ($('head').html().match(incl_css_timeline[i])){
-//     console.log('skipping css, since already present: '+ incl_css_timeline[i])
-//     continue}
-//   else
-//   {$('head').append('<link rel="stylesheet" type="text/css" href="'+incl_css_timeline[i]+'">');
-// }
-// }
 
 
 var head = $("body");
@@ -83,15 +74,15 @@ $("#restore").click(function(){
   });
 });
 
-  for (var key in all_groups) {
+  for (var key in curr_groups) {
     var curr_id = global_id
     global_id++
-    var nested = buildRange(global_id,global_id+Object.keys(all_groups[key]).length)
+    var nested = buildRange(global_id,global_id+Object.keys(curr_groups[key]).length)
   
     groups.add([{id:curr_id, content:key, nestedGroups:nested, showNested:true}])
     groupIds[key]=curr_id
   
-    for (var skey in all_groups[key]) {
+    for (var skey in curr_groups[key]) {
       var scurr_id = global_id
       global_id++
       groups.add([{id:scurr_id, content:skey}])
@@ -101,7 +92,7 @@ $("#restore").click(function(){
     
     function getLineDate(line) {
   
-    var line_date_string = line.substring(0, 14)
+    var line_date_string = line.match(line_message_regex)[1]
     //console.log(line_date_str)
     var datetime_string = "2020-" + line_date_string /*there is not year in log, so setting to
     current year by default and process_log_date adjusts it to previous year where needed */
@@ -125,8 +116,9 @@ $("#restore").click(function(){
           prev_line_content = lines[i+1]
           curr_line_content = lines[i]
           next_line_content = lines[i-1]
-          var line_message_regex = /\d\d\-\d\d \d\d:\d\d:\d\d\.\d\d\d(.*)/ 
-          try{var line_message = curr_line_content.match(line_message_regex)[1]
+
+          
+          try{var line_message = curr_line_content.match(line_message_regex)[2]
 } //if line doesn't start with datetime, we skip it 
           catch{continue}
           //console.log(line_content)
@@ -239,11 +231,31 @@ $("#restore").click(function(){
   items = new vis.DataSet();
   global_id = 1
 
+  function setupVars(page){
+    switch (page) {
+      case 'parallels-system.log':
+      return
+      case 'system.log':
+      curr_groups = all_syslog_groups
+      all_items = syslog_items
+      break
+      case 'vm.log':
+      curr_groups = all_vm_groups
+      all_items = vmlog_all_items
+      checkRule = checkRuleVmLog
+      break     
+}
+  }
+
+
 
 
   window.addEventListener("load", function() {
-    if (curr_url.match(url_regex)){
-      all_items = vmlog_all_items
+    page = curr_url.match(url_regex)[0]
+    setupVars(page)
+
+    if (curr_url.match(page)&&curr_groups){
+      console.log(curr_groups)
       var head = $("body");
       head.prepend($(' <button id="Generate" >Generate Timeline</button>'))
       $("#Generate").click(function(){
@@ -256,26 +268,27 @@ $("#restore").click(function(){
 //The below stuff is what I'm regularly editing
 
 
-  var vmlog_regex = /vm\.log/
-  var testenv_regex = /(vm\.log\.html)/
+  var vmlog_regex = /vm\.log|system.log/
+  var testenv_regex = /(vm\.log\.html|)/
   
   url_regex=vmlog_regex
 
+  var checkRule
 
 
-  function  checkRule(item, line_message, prev_line, next_line, item_time){
+  function  checkRuleVmLog(item, line_message, prev_line, next_line, item_time){
     
     var result = {value:all_items[item].name}
     
     switch (item) { 
       case 'crash'://need a rule that works in case there are some more lines after 'VM process exiting with code 0'
-      if (!prev_line.match('VM process exiting with code 0')&&line_message.match(/===========================================================/))
+      if (!prev_line.match(/'VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
       {return result}else{return false
       }
 
       case 'app_launched': 
       
-      if (line_message.match(regular_apps)){return false}
+      if (line_message.match(regular_win_apps)){return false}
       var glregex = /(OpenGL\.\d{3})\.\d{3}\.[^\n]*\\(.*\.exe|.*\.EXE).*/
       var d3dregex = /(D3D\d+\.\d+): C:.*\\(.*\.exe|.*\.EXE).*/
       if(line_message.match(glregex)){
@@ -304,6 +317,50 @@ $("#restore").click(function(){
 
   return result
 }
+
+  function  checkRuleSysLog(item, line_message, prev_line, next_line, item_time){
+    
+  var result = {value:all_items[item].name}
+  
+  switch (item) { 
+    case 'crash'://need a rule that works in case there are some more lines after 'VM process exiting with code 0'
+    if (!prev_line.match(/'VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
+    {return result}else{return false
+    }
+
+    case 'app_launched': 
+    
+    if (line_message.match(regular_win_apps)){return false}
+    var glregex = /(OpenGL\.\d{3})\.\d{3}\.[^\n]*\\(.*\.exe|.*\.EXE).*/
+    var d3dregex = /(D3D\d+\.\d+): C:.*\\(.*\.exe|.*\.EXE).*/
+    if(line_message.match(glregex)){
+      var video_regex =  glregex}
+    else if (line_message.match(d3dregex)){
+      var video_regex =  d3dregex
+    } else {return false}
+
+      var exe = line_message.match(video_regex)[2]
+      var version = line_message.match(video_regex)[1]
+      result.value = exe+'\n ('+version+')'
+      //if (result.value.includes('Dropbox')){result.style='background-color:black'} // this is not to forget that we can do styles conditionally
+      return result
+      
+    
+    case 'tools_outdated': {
+      var last_seen = rule_vars.tools_outdated.last_seen
+      if(!last_seen||last_seen-item_time>200000){
+        //"tools outdated" messagesusually go in pairs, of it the last one was seen 200 sec apart or more, we skip it.
+        rule_vars.tools_outdated.last_seen = item_time
+        return result
+        }else{return false}
+    }
+    }
+
+
+return result
+}
+
+
   
   options = {
 
@@ -333,22 +390,25 @@ $("#restore").click(function(){
     
     };
   
-  const regular_apps = //apps that will be ignored from the timeline
+  const regular_win_apps = //apps that will be ignored from the timeline
   (/(\\Dwm\.exeexplorer\.exe|consent\.exe|wwahost|WindowsApps|SkypeApp|StartMenuExperienceHost|SystemSettings|LogonUI|ShellExperienceHost|WindowsInternal|taskhostw|SearchUI|WinStore|GameBar|CredentialUIBroker|LockApp|Explorer\.EXE|YourPhone|dwm\.exe)/)
   
   var rule_vars = {'tools_outdated':{'last_seen':undefined},'vm_exited':{'last_seen':undefined}}//dynamic conditions for checkRule()
-  
-  const incl_css_timeline = [
-    'https://visjs.github.io/vis-timeline/styles/vis-timeline-graph2d.min.css',
-    'https://gistcdn.githack.com/NickSmet/1a4a042572589061f63140c03b5acba9/raw/feedback.css',
-    //'https://codepen.io/nicksmet-the-vuer/pen/XWbNxLB.css' feedback css for dev testing (updates immediately)
     
-  ] //it's a userscript after all
-  
-  
+  var curr_groups
+  var all_items
+
   const all_groups = {
     'vm.log':{'Pause/Resume':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}},
     'parallels-system.log':{'Prl_Errors':{}},
+  }
+
+  const all_vm_groups = {
+    'vm.log':{'Pause/Resume':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}}
+  }
+
+  const all_syslog_groups = {
+    'system.log':{'Pause/Resume':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}}
   }
   
   const vmlog_all_items = {
@@ -384,7 +444,13 @@ $("#restore").click(function(){
     "app_launched":{'regex':/(\.exe|\.EXE)/,"group":"VM_Apps","name":"App",'style':{'background-color':'#4b95ef','font-size':'0.8em'},'rule':true}
     //add suspend,unsuspend
   }
+
+
+  const syslog_items = {
+    "shutdown":{'regex':/SHUTDOWN_TIME/,"group":"Stop/Shutdown/Restart","name":"shutdown",'style':{'background-color':'rgb(179, 156, 123)'}},
+    "start":{'regex':/BOOT_TIME/,"group":"Stop/Shutdown/Restart","name":"start",'style':{'background-color':'rgb(127, 219, 181)'}},
+  }
   
   const special_item_styles = {}
-  
-  
+ 
+  var line_message_regex = /(\w{3,4} \d\d \d\d:\d\d:\d\d|\d\d\-\d\d \d\d:\d\d:\d\d)(.*)/

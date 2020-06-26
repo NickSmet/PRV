@@ -12,7 +12,7 @@ css_feedback = ['https://codepen.io/nicksmet-the-vuer/pen/XWbNxLB.css']
 //   }
 
 var curr_rvmain
-var curr_vmLog_prod = /\=?vm\.log/
+var curr_vmLog_prod = /Log\.aspx\?ReportId/
 var curr_vmLog_test = /vm\.log\.html/
 
 var curr_vmLog = curr_vmLog_prod
