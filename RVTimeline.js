@@ -282,7 +282,7 @@ $("#restore").click(function(){
     
     switch (item) { 
       case 'crash'://need a rule that works in case there are some more lines after 'VM process exiting with code 0'
-      if (!prev_line.match(/'VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
+      if (!prev_line.match(/VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
       {return result}else{return false
       }
 
@@ -391,7 +391,7 @@ return result
     };
   
   const regular_win_apps = //apps that will be ignored from the timeline
-  (/(\\Dwm\.exeexplorer\.exe|consent\.exe|wwahost|WindowsApps|SkypeApp|StartMenuExperienceHost|SystemSettings|LogonUI|ShellExperienceHost|WindowsInternal|taskhostw|SearchUI|WinStore|GameBar|CredentialUIBroker|LockApp|Explorer\.EXE|YourPhone|dwm\.exe)/)
+  (/(\\Dwm\.exe|explorer\.exe|consent\.exe|wwahost|WindowsApps|SkypeApp|StartMenuExperienceHost|SystemSettings|LogonUI|ShellExperienceHost|WindowsInternal|taskhostw|SearchUI|WinStore|GameBar|CredentialUIBroker|LockApp|Explorer\.EXE|YourPhone|dwm\.exe)/)
   
   var rule_vars = {'tools_outdated':{'last_seen':undefined},'vm_exited':{'last_seen':undefined}}//dynamic conditions for checkRule()
     
