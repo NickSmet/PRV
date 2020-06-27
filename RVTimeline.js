@@ -391,7 +391,7 @@ return result
     };
   
   const regular_win_apps = //apps that will be ignored from the timeline
-  (/(\\Dwm\.exe|\.exe|explorer\.exe|consent\.exe|wwahost|WindowsApps|SkypeApp|StartMenuExperienceHost|SystemSettings|LogonUI|ShellExperienceHost|WindowsInternal|taskhostw|SearchUI|WinStore|GameBar|CredentialUIBroker|LockApp|Explorer\.EXE|YourPhone|dwm\.exe)/)
+  (/(\\Dwm\.exe|explorer\.exe|consent\.exe|wwahost|WindowsApps|SkypeApp|StartMenuExperienceHost|SystemSettings|LogonUI|ShellExperienceHost|WindowsInternal|taskhostw|SearchUI|WinStore|GameBar|CredentialUIBroker|LockApp|Explorer\.EXE|YourPhone|dwm\.exe)/)
   
   var rule_vars = {'tools_outdated':{'last_seen':undefined},'vm_exited':{'last_seen':undefined}}//dynamic conditions for checkRule()
     
