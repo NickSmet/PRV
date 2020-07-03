@@ -437,7 +437,7 @@ function parseNetConfig(item_all_data) {
 
       var proxies = item_all_data.match(proxies_regex)[0]
 
-      if (proxies.match(/HTTPEnable : 1/)){markBullet("ClientProxyInfo","red")}else{markBullet("ClientProxyInfo",'all good')}
+      if (proxies.match(/HTTPEnable : 1/)){markBullet("ClientProxyInfo","bad")}else{markBullet("ClientProxyInfo",'all good')}
     
     
          return ;
@@ -445,9 +445,13 @@ function parseNetConfig(item_all_data) {
 }
 
 function parseAdvancedVmInfo(item_all_data) {
-  console.log(typeof item_all_data)
+  
+  if (item_all_data.match(/writeattr/)){
+    markBullet('AdvancedVmInfo','ACL')
+  }
+
   var number_of_snapshots = item_all_data.match(/SavedStateItem/g);
-  console.log(number_of_snapshots)
+  
   
   if(number_of_snapshots<1){
     markBullet("AdvancedVmInfo", "no_snapshots")
@@ -1199,4 +1203,5 @@ const icons = {
 'splitted':'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-512.png',
 'trim':'https://i.ibb.co/XpVhPZ9/unnamed.png',
 'webcam':'https://image.flaticon.com/icons/png/128/179/179879.png',
-'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg"}
+'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg",
+'ACL':'https://findicons.com/files/icons/2796/metro_uinvert_dock/128/security_denied.png'}
