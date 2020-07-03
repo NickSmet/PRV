@@ -324,7 +324,7 @@ function parseCurrentVm(item_all_data) {
     'Sync Default Printer':$xml.find('VirtualPrintersInfo > SyncDefaultPrinter').text(),
     'Show Page Setup':$xml.find('VirtualPrintersInfo > ShowHostPrinterUI').text(),
     'Shared Camera':$xml.find('SharedCamera > Enabled').text(),
-    
+
     'Shared CCID':$xml.find('SharedCCID > Enabled').text(),
     'Shared Bluetooth':$xml.find('SharedBluetooth > Enabled').text(),
     'Enter Travel Mode':$xml.find('TravelOptions > Condition > Enter').text(),
@@ -389,20 +389,32 @@ function parseCurrentVm(item_all_data) {
       'Graphic Switching':{1:'Off',0:'On'},
       'Hypervisor':{0:'Parallels', 1:'Apple'}
     }
+
+
+    keysWithIcons = {'Share Host Printers':'printers'}
     
 
-    for (var key in specs_regex) {
-       var spec
-       var spec_value = specs_regex[key];
+    for (var key in specs_regex) {//я немного запутался, но оно рабоатет
+      var spec
+       var specName = key
+       var specValue = specs_regex[key];
+       
        if (key in specs_to_name) {
-           spec_value = specs_to_name[key][spec_value]
-           spec = '<u>'+key+'</u>'+ ': ' + spec_value + '\n';
+        specValue = specs_to_name[key][specValue]
+           spec = '<u>'+specName+'</u>'+ ': ' + specValue + '\n';
         }
-        else if (key.match('Section')) {
-        spec = '\n<strong>⫸'+spec_value+'⫷</strong>\n'
+
+        if (key in keysWithIcons) {
+          icon = markBullet('this',keysWithIcons[key])
+          specName = icon.concat(specName)
+       }
+
+        
+      if (key.match('Section')) {
+        spec = '\n<strong>⫸'+specValue+'⫷</strong>\n'
      } else if (key.match('Subbullet')) {
-      spec = spec_value }  else {
-      spec = '<u>'+key+'</u>' + ': ' + spec_value + '\n';
+      spec = specValue }  else {
+      spec = '<u>'+specName+'</u>' + ': ' + specValue + '\n';
      }
 
         all_specs = all_specs + spec}
@@ -1114,7 +1126,9 @@ else
   if (color=='Custom'){
     img = html
   }
-  $('.container > div > a:contains("'+bullet_name+'")').prepend($(img))}
+  if(bullet_name=='this'){return img}
+  else
+  {$('.container > div > a:contains("'+bullet_name+'")').prepend($(img))}}
 
 
 //all report items for which bullets will be constructed in the bullet container
@@ -1188,6 +1202,7 @@ window.addEventListener("load", function(event) {
 
 
 const icons = {
+  'printers':'https://image.flaticon.com/icons/svg/2489/2489670.svg',
   'all good':'https://image.flaticon.com/icons/png/128/1828/1828520.png',
   'warning' : 'https://image.flaticon.com/icons/svg/497/497738.svg',
   'bad': 'https://image.flaticon.com/icons/svg/1672/1672451.svg',
