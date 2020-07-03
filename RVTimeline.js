@@ -420,6 +420,7 @@ return result
   
   const vmlog_all_items = {
     "Report_collected":{'style':{'background-color':'rgb(179, 156, 123)'}},
+    "Started_report_collection":{'regex':/VM state\(VmStateProblemReport\)\: started/,"group":"vm.log","name":"Collecting report",'style':{'background-color':'rgb(179, 12, 123)'}},
     "shutdown":{'regex':/SHUTDOWN: type 0x21/,"group":"Stop/Shutdown/Restart","name":"shutdown",'style':{'background-color':'rgb(179, 156, 123)'}},
     "start":{'regex':/VM state\(VmState((?!Paused).)*?\): enqueued 'VmLocalCmdStart'\(\d+\)/,"group":"Stop/Shutdown/Restart","name":"start",'style':{'background-color':'rgb(127, 219, 181)'}},
     "stop":{'regex':/VM state\(VmStateSuspending\): changed to VmStateStopped/,"group":"Stop/Shutdown/Restart","name":"stopped",'style':{'background-color':'rgb(161, 13, 50)'}},
