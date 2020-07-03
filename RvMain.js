@@ -273,7 +273,7 @@ function parseCurrentVm(item_all_data) {
     var iconVMUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
 
     var VMUSBs_data = parseXMLItem ( item_all_data, element = "USBPort", ParamVMUSBs,AdjustsVMUSBs)
-    var VMUSBs = CreateBullet('Guest USBs','Custom', VMUSBs_data, iconVMUSBs)
+    var VMUSBs = CreateBullet('USBs','Custom', VMUSBs_data, iconVMUSBs)
 
     if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
     if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
@@ -320,7 +320,11 @@ function parseCurrentVm(item_all_data) {
 		'Graphic Switching':$xml.find('OptimizePowerConsumptionMode').text(),
     'Enter Travel Mode':$xml.find('TravelOptions > Condition > Enter').text(),
     'Section':'Devices',
+    'Share Host Printers':$xml.find('VirtualPrintersInfo > UseHostPrinters').text(),
+    'Sync Default Printer':$xml.find('VirtualPrintersInfo > SyncDefaultPrinter').text(),
+    'Show Page Setup':$xml.find('VirtualPrintersInfo > ShowHostPrinterUI').text(),
     'Shared Camera':$xml.find('SharedCamera > Enabled').text(),
+    
     'Shared CCID':$xml.find('SharedCCID > Enabled').text(),
     'Shared Bluetooth':$xml.find('SharedBluetooth > Enabled').text(),
     'Enter Travel Mode':$xml.find('TravelOptions > Condition > Enter').text(),
