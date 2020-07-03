@@ -37,7 +37,7 @@ function FeedbackToNormal(){
 }
 
 function doSubmit(e){
-  $.get(url, $('#form').serialize()+'&url='+curr_url)
+  $.get(url, $('#form').serialize()+'&url='+curr_url.replace("&","%26"))//because url contains '&' which is '%26' in curl (otherwise everything after & is percieved as next parameter)
  
  setTimeout(FeedbackToNormal, 1000);
 
@@ -110,10 +110,11 @@ $(".help-button-wrapper").toggleClass("expanded");
 }
 
 var url = "https://script.google.com/macros/s/AKfycbyIieYDWx-25wYZmpEuB4o8j6Tj03c_MjIoMIes/exec"
-var curr_url = window.location.href
+var curr_url
 var form_html
 
 
 window.addEventListener("load", function(event) {
+curr_url = window.location.href
  SetUpFeedback()
 });
