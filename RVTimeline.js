@@ -405,7 +405,13 @@ return result
   }
 
   const all_vm_groups = {
-    'vm.log':{'Pause/Resume':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}}
+    'vm.log':{
+    'Pause/Resume':{},
+    'Stop/Shutdown/Restart':{},
+    'VM_Errors':{},
+    'VM_Device':{},
+    'VM_Apps':{},
+    'VM_Network':{}}
   }
 
   const all_syslog_groups = {
@@ -442,8 +448,13 @@ return result
     
     
   
-    "app_launched":{'regex':/(\.exe|\.EXE)/,"group":"VM_Apps","name":"App",'style':{'background-color':'#4b95ef','font-size':'0.8em'},'rule':true}
+    "app_launched":{'regex':/(\.exe|\.EXE)/,"group":"VM_Apps","name":"App",'style':{'background-color':'#4b95ef','font-size':'0.8em'},'rule':true},
     //add suspend,unsuspend
+
+
+    "PDFM_98595":{'regex':/Failed to setup bind-mode virtual netif/,"group":'VM_Network',"name":"PDFM-98595",'style':{'background-color':'rgb(230, 163, 186)'}},
+  
+
   }
 
 
