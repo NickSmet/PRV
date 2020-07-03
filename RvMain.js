@@ -312,7 +312,6 @@ function parseCurrentVm(item_all_data) {
         'Mac>Win Sharing': $xml.find('FromMacToWin').text(),
         'Clipboard Sync': $xml.find('ClipboardSync > Enabled').text(),
         'Time Sync': $xml.find('TimeSync > Enabled').text(),
-        'SharedPrinter': $xml.find('UseHostPrinters').text(),
         'Section3':'Other',
       'SmartGuard': $xml.find('Autoprotect > Enabled').text(),
       'Opt.TimeMachine': $xml.find('Autoprotect > Schema').text(),
