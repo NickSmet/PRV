@@ -450,7 +450,7 @@ function parseAdvancedVmInfo(item_all_data) {
     markBullet('AdvancedVmInfo','ACL')
   }
 
-  var number_of_snapshots = item_all_data.match(/SavedStateItem/g);
+  var number_of_snapshots = item_all_data.match(/SavedStateItem/g).length/2-1;
   
   
   if(number_of_snapshots<1){
@@ -459,7 +459,7 @@ function parseAdvancedVmInfo(item_all_data) {
   } else 
     {
   markBullet("AdvancedVmInfo", "snapshots")
-  markBullet("AdvancedVmInfo", "Custom", '<a>'+number_of_snapshots.length/2-1+'* </a>')
+  markBullet("AdvancedVmInfo", "Custom", '<a>'+number_of_snapshots+'* </a>')
     }
 
   //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's off.
