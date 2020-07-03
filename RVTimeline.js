@@ -453,6 +453,8 @@ return result
 
 
     "PDFM_98595":{'regex':/Failed to setup bind-mode virtual netif/,"group":'VM_Network',"name":"PDFM-98595",'style':{'background-color':'rgb(230, 163, 186)'}},
+
+    "kexts_not_loaded":{'regex':/USB Connect Service not found\!/,"group":'VM_Errors',"name":"need kext-consent",'style':{'background-color':'rgb(234, 40, 40)'}},
   
 
   }
