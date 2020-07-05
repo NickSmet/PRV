@@ -126,7 +126,7 @@ nothing yet</div>'
 
     if (bullet_type=='Custom'){
       collapsible_template = '<div>'+sublevel_space.repeat(sublevel)+'\
-{{if icon_url}}   <img src="{{:icon_url}}" style= "display: linline; height: 1.5em;">  {{else}}       {{/if}}\
+{{if icon_url}}   <img src="{{:icon_url}}" style= "display: inline; height: 1.5em;">  {{else}}       {{/if}}\
 <button type="button" id={{:button_id}} class="btn btn-info btn-xs" aria-pressed="true" data-toggle="collapse" data-target={{:item_target}}>\
 ➤\
 </button>\
@@ -137,12 +137,13 @@ nothing yet</div>'
 
 
     if (bullet_type=='blank'){
-    collapsible_template = '<div>\
-    <button type="button" id={{:button_id}} class="btn btn-outline-secondary btn-xs" aria-pressed="true" data-toggle="collapse" data-target={{:item_target}}>\
-    ➤\
-    </button>\<a style="text-decoration: none; background-color: unset !important; color:lightgray">\
-    {{:item_name}}</a>\
-    </div>'
+    collapsible_template = '<div>'+sublevel_space.repeat(sublevel)+'\
+{{if icon_url}}   <img src="{{:icon_url}}" style= "display: inline; height: 1.5em; filter: saturate(0%);">  {{else}}       {{/if}}\
+<button type="button" id={{:button_id}} class="btn btn-outline-secondary btn-xs" aria-pressed="true" data-toggle="collapse" data-target={{:item_target}}>\
+➤\
+</button>\<a style="text-decoration: none; background-color: unset !important; color:lightgray">\
+{{:item_name}}</a>\
+</div>'
     }
 
 
@@ -625,8 +626,11 @@ function parseMoreHostInfo(item_all_data) {
             displays += display
             //CreateBullet(item_name, bullet_type, data = '', icon_url)
         } 
-        if (displays==""){displays='No displays connected.'}
-        var gpu_bullet = CreateBullet(gpu_name, 'Custom', displays, icons.gpu,1)
+        var bulletType
+        if (displays==""){
+          bulletType = 'blank'
+        }else{bulletType = 'Custom'}
+        var gpu_bullet = CreateBullet(gpu_name, bulletType, displays, icons.gpu,1)
         gpus_bullet += gpu_bullet
         }
         //console.log(gpus_bullet)
