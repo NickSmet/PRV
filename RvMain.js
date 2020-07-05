@@ -141,7 +141,8 @@ nothing yet</div>'
 {{if icon_url}}   <img src="{{:icon_url}}" style= "display: inline; height: 1.5em; filter: saturate(0%);">  {{else}}       {{/if}}\
 <button type="button" id={{:button_id}} class="btn btn-outline-secondary btn-xs" aria-pressed="true" data-toggle="collapse" data-target={{:item_target}}>\
 ➤\
-</button>\<a style="text-decoration: none; background-color: unset !important; color:lightgray">\
+</button>\
+  <a style="text-decoration: none; background-color: unset !important; color:lightgray">\
 {{:item_name}}</a>\
 </div>'
     }
@@ -540,15 +541,15 @@ var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
   var CCIDs_data = parseXMLItem( item_all_data, element = "SmartCardReaders", ParamCCIDs)
   var camerasData = parseXMLItem( item_all_data, element = "Cameras", paramCameras)
   
-
+//that's definitely super-repetative; but ok for now
   var specs_definition = {
-  'Subbullet1': CreateBullet('Host_USBs','Custom', USBs_data, iconUSBs),
-  'Subbullet2': CreateBullet('Host_Nets','Custom', Network_data, iconNetwork),
-  'Subbullet3': CreateBullet('Host_HDDs','Custom', HDDs_data, iconHDDS),
-  'Subbullet4': CreateBullet('Host_Cams','Custom', camerasData, icons.webcam),
-  'Subbullet5': CreateBullet('Host_Input_Devices','Custom', Inputs_data, iconInputs),
-  'Subbullet6': CreateBullet('Host_Printers','Custom', Printers_data, iconPrinters),
-  'Subbullet7': CreateBullet('Host_CCIDs','Custom', CCIDs_data, iconCCIDS),
+  'Subbullet1': (USBs_data=='Nothing') ? CreateBullet('Host_USBs','blank', USBs_data, iconUSBs) : CreateBullet('Host_USBs','Custom', USBs_data, iconUSBs),
+  'Subbullet2': (Network_data=='Nothing') ? CreateBullet('Host_Nets','blank', Network_data, iconNetwork) : CreateBullet('Host_Nets','Custom', Network_data, iconNetwork),
+  'Subbullet3': (HDDs_data=='Nothing') ? CreateBullet('Host_HDDs','blank', HDDs_data, iconHDDS) : CreateBullet('Host_HDDs','Custom', HDDs_data, iconHDDS),
+  'Subbullet4': (camerasData=='Nothing') ? CreateBullet('Host_Cams','blank', camerasData, icons.webcam) : CreateBullet('Host_Cams','Custom', camerasData, icons.webcam),
+  'Subbullet5': (Inputs_data=='Nothing') ? CreateBullet('Host_Input_Devices','blank', Inputs_data, iconInputs) : CreateBullet('Host_Input_Devices','Custom', Inputs_data, iconInputs),
+  'Subbullet6': (Printers_data=='Nothing') ? CreateBullet('Host_Printers','blank', Printers_data, iconPrinters) : CreateBullet('Host_Printers','Custom', Printers_data, iconPrinters),
+  'Subbullet7': (CCIDs_data=='Nothing') ?CreateBullet('Host_CCIDs','blank', CCIDs_data, iconCCIDS) : CreateBullet('Host_CCIDs','Custom', CCIDs_data, iconCCIDS),
 
   };
   var all_specs = '';
