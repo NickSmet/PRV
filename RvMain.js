@@ -467,7 +467,7 @@ function parseAdvancedVmInfo(item_all_data) {
     markBullet('AdvancedVmInfo','ACL')
   }
 
-  var number_of_snapshots = item_all_data.match(/SavedStateItem/g).length/2-1;
+  var number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length/2-1 : 0;
   
   
   if(number_of_snapshots<1){
