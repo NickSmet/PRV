@@ -286,7 +286,7 @@ function parseCurrentVm(item_all_data) {
         'Section5':'Startup',
         'AutoStart': $xml.find('AutoStart').text(),
         'OnVmWindowClose': $xml.find('OnVmWindowClose').text(),
-        'Pause When Possible': $xml.find('PauseIdleVM').text(),
+        'Pause When Possible': $xml.find('Coherence > PauseIdleVM').text(),
 
         'Section0':'General',
         'PVM Location': $xml.find('VmHome').text().replace("\/config.pvs",''),
