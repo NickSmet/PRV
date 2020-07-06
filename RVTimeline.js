@@ -440,6 +440,7 @@ return result
   
     'tools_outdated':{'regex':/\[PTIAHOST\] Guest tools started: outdated/,"group":'VM_Apps',"name":"Tools outdated",'style':{'background-color':'rgb(109, 163, 117)'}, 'rule':true},
     'tools_update':{'regex':/\[PTIA_GUEST\] Start installation:/,"group":'VM_Apps',"name":"Tools upd",'style':{'background-color':'rgb(80, 242, 131)'}},
+    'tools_update_failed':{'regex':/\[PTIA_GUEST\] Tools installation failed./,"group":'VM_Apps',"name":"Tools upd failed",'style':{'background-color':'rgb(230, 163, 186)'}},
     
   
     "snapshot":{'regex':/VM state(VmStateRunning): enqueued 'DspCmdVmCreateSnapshot'/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
@@ -458,6 +459,8 @@ return result
     "kexts_not_loaded":{'regex':/USB Connect Service not found\!/,"group":'VM_Errors',"name":"need kext-consent",'style':{'background-color':'rgb(234, 40, 40)'}},
 
     "PDFM_97737":{'regex':/\[Tpm2\] TVNS \- invalid signature/,"group":'VM_Device',"name":"PDFM-97737",'style':{'background-color':'rgb(234, 40, 40)'}},
+
+
   
 
   }
