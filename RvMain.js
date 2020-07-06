@@ -1224,7 +1224,7 @@ window.addEventListener("load", function(event) {
   }
 });
 
-
+//note to self -- start hosting those somewhere (github even?)
 const icons = {
   'printers':'https://image.flaticon.com/icons/svg/2489/2489670.svg',
   'all good':'https://image.flaticon.com/icons/png/128/1828/1828520.png',
