@@ -298,7 +298,8 @@ function parseCurrentVm(item_all_data) {
         'Cpus': $xml.find('Hardware > Cpu > Number').text(),
         'Ram': $xml.find('Hardware > Memory > RAM').text(),
         'VRam': $xml.find('Video > VideoMemorySize').text(),
-        'Video Mode':"",
+        'Video Mode': parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text()),
+        'Scale To Fit Screen':$xml.find('FullScreen > ScaleViewMode').text(),
         '3D Acceleration': $xml.find('Video > Enable3DAcceleration').text(),
         'Lan Adapter': $xml.find('AdapterType').text(),
         'Network': $xml.find('NetworkAdapter > EmulatedType').text(),
@@ -349,9 +350,14 @@ function parseCurrentVm(item_all_data) {
     }
 
     //Setting readable string for videomode.
-    var videomode = parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text())
-    var videomodes = {0:'Scaled',1:'Best for Retina',2:'Best for external displays'}
-    specs_regex['Video Mode'] = videomodes[videomode]
+    // var scaleToFitMode = parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text())
+    // var scaleToFitModes = {0:'Scaled',1:'Best for Retina',2:'Best for external displays'}
+    // specs_regex['Video Mode'] = videomodes[scaleToFitMode]
+
+
+    // var videomode = parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text())
+    // var videomodes = {0:'Scaled',1:'Best for Retina',2:'Best for external displays'}
+    // specs_regex['Video Mode'] = videomodes[videomode]
 
     //Setting correct value for vram
     if (specs_regex['VRam']=="0"){specs_regex['VRam']="Auto"}
@@ -388,11 +394,13 @@ function parseCurrentVm(item_all_data) {
       'Network':{1: 'Shared',2 :'Bridged'},
       'Opt.TimeMachine':{1: 'On',2 :'Off'},
       'Graphic Switching':{1:'Off',0:'On'},
-      'Hypervisor':{0:'Parallels', 1:'Apple'}
+      'Hypervisor':{0:'Parallels', 1:'Apple'},
+      'Video Mode':{0:'Scaled',1:'Best for Retina',2:'Best for external displays'},
+      'Scale To Fit Screen':{0:'Off',1:'Auto',2:'Keep ratio',3:'Stretch'}
     }
 
 
-    keysWithIcons = {'Share Host Printers':'printers'}
+    keysWithIcons = {'Share Host Printers':'printers','Scale To Fit Screen':'fullscreen'}
     
 
     for (var key in specs_regex) {//я немного запутался, но оно рабоатет
@@ -924,7 +932,7 @@ function parsetoolsLog(item_all_data) {
 //
 /** @description  This one appemds Mac's specs next to the Model (gets them at everymac.com)
  */
-function computerModel() {
+function loadMacSpecs(mac_url, mac_cpu, macelement) {
 
   function ExtractSpecs(allmacs, cpu, mac_element){
     var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
@@ -961,22 +969,31 @@ function GetMacsModel (fetchURL, cpu, mac_element) {
         } );
     }
 
-
-    var computer_model = $('td:contains("Computer Model")');
-    if (computer_model == null){return}
-
-    var mac_model = computer_model.next();
-    try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
-    catch(e){var mac_cpu = ""}
-    console.log(mac_cpu)
-    var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.cmle.ru/ultimate-mac-lookup/?search_keywords='+mac_model.text()//at some point everymac banned my IP. So opening through anonymizer.
-    var mac_model_linked = $('<td> <a href='+mac_url+'>'+mac_model.text()+'</a></td>')
-    mac_model.replaceWith(mac_model_linked)
-
-    var macelement = computer_model.next();
     GetMacsModel(mac_url, mac_cpu, macelement)
+   
     
 
+}
+
+function computerModel(){
+
+  var computer_model = $('td:contains("Computer Model")');
+  if (computer_model == null){return}
+
+  var mac_model = computer_model.next();
+  try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
+  catch(e){var mac_cpu = ""}
+  console.log(mac_cpu)
+  var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+mac_model.text()//at some point everymac banned my IP. So opening through anonymizer.
+  var mac_model_linked = $('<td> <a href='+mac_url+'>'+mac_model.text()+'</a><button type="button" class="btn btn-outline-secondary" id=loadMacSpecs>Load specs</button></td>')
+  mac_model.replaceWith(mac_model_linked)
+
+  var macelement = computer_model.next();
+  $('#loadMacSpecs').click(function() {
+    loadMacSpecs(mac_url, mac_cpu, macelement)
+    this.remove()
+  });
+ 
 }
 
 /** @description  Appends customer time im addition to server's local
@@ -1227,4 +1244,5 @@ const icons = {
 'trim':'https://i.ibb.co/XpVhPZ9/unnamed.png',
 'webcam':'https://image.flaticon.com/icons/png/128/179/179879.png',
 'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg",
-'ACL':'https://findicons.com/files/icons/2796/metro_uinvert_dock/128/security_denied.png'}
+'ACL':'https://findicons.com/files/icons/2796/metro_uinvert_dock/128/security_denied.png',
+'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-512.png'}
