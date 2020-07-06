@@ -935,9 +935,12 @@ function parsetoolsLog(item_all_data) {
 //
 /** @description  This one appemds Mac's specs next to the Model (gets them at everymac.com)
  */
-function loadMacSpecs(mac_url, mac_cpu, macelement) {
+function loadMacSpecs(mac_url, mac_cpu, macModel, macElement) {
+    
+  var macID = macModel.concat(mac_cpu)
+  var macSpecs = GM_getValue(macID)  
 
-  function ExtractSpecs(allmacs, cpu, mac_element){
+  function ExtractSpecs(allmacs, cpu, macElement){
     var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
      if(mac.length==0){mac = allmacs.find("table:nth-child(3)")}//if I can't parce CPU correctly, then just taking the 1st model
     var mac_type = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(3) > td:nth-child(2)').text()
@@ -947,16 +950,22 @@ function loadMacSpecs(mac_url, mac_cpu, macelement) {
     var vram = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(4) > td:nth-child(4)').text()
     var storage = mac.find ('tbody > tr > td.detail_info > table > tbody > tr:nth-child(5) > td:nth-child(2)').text()
     
-    mac_element.append('</br>',
-                        "Model: ", mac_type,'</br>',
-                        "Storage: ", storage, '</br>',
-                        "Ram:",ram,'</br>', 
-                        "Vram:",vram,'</br>',
-                        "Year: ", produced_from, " - ", produced_till)
+    macSpecs = ['</br>',
+    "Model: ", mac_type,'</br>',
+    "Storage: ", storage, '</br>',
+    "Ram:",ram,'</br>', 
+    "Vram:",vram,'</br>',
+    "Year: ", produced_from, " - ", produced_till]
+
+
+    macElement.append(macSpecs)
+    GM_setValue(macID, macSpecs)
+    console.log(macID, " added!")
+    
 }
 
 //https://stackoverflow.com/questions/11377191/how-to-use-gm-xmlhttprequest-in-injected-code
-function GetMacsModel (fetchURL, cpu, mac_element) {
+function GetMacsModel (fetchURL, cpu, macElement) {
         GM_xmlhttpRequest ( {
             method:     'GET',
             url:        fetchURL,
@@ -966,13 +975,17 @@ function GetMacsModel (fetchURL, cpu, mac_element) {
                                 var cool = responseDetails.responseText.match(/<center>[^$]*<\/center>/)[0]
                                 //var allmacs = $('center', cool)
                                 var allmacs = $(cool)
-                                ExtractSpecs(allmacs, cpu, mac_element)
+                                ExtractSpecs(allmacs, cpu, macElement)
                             
                         }
         } );
     }
 
-    GetMacsModel(mac_url, mac_cpu, macelement)
+    if(macSpecs){
+      macElement.append(macSpecs)
+      console.log("Specs loaded from local storage")
+    }else
+    {GetMacsModel(mac_url, mac_cpu, macElement)}
    
     
 
@@ -991,9 +1004,9 @@ function computerModel(){
   var mac_model_linked = $('<td> <a href='+mac_url+'>'+mac_model.text()+'</a><a>   </a><button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button></td>')
   mac_model.replaceWith(mac_model_linked)
 
-  var macelement = computer_model.next();
+  var macElement = computer_model.next();
   $('#loadMacSpecs').click(function() {
-    loadMacSpecs(mac_url, mac_cpu, macelement)
+    loadMacSpecs(mac_url, mac_cpu, mac_model.text(), macElement)
     this.remove()
   });
  
