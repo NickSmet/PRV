@@ -384,6 +384,9 @@ function parseCurrentVm(item_all_data) {
     {//markBullet("CurrentVm",'not headless')
   }
 
+      //Identifying if Timesync is off
+      if (specs_regex['Time Sync']==0){markBullet("CurrentVm","noTimeSync")}
+
     //Identifying if Isolated and marking bullet accordingly
     if (specs_regex['Isolated']=='1'){markBullet("CurrentVm","isolated")}
 
@@ -985,7 +988,7 @@ function computerModel(){
   catch(e){var mac_cpu = ""}
   console.log(mac_cpu)
   var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+mac_model.text()//at some point everymac banned my IP. So opening through anonymizer.
-  var mac_model_linked = $('<td> <a href='+mac_url+'>'+mac_model.text()+'</a><button type="button" class="btn btn-outline-secondary" id=loadMacSpecs>Load specs</button></td>')
+  var mac_model_linked = $('<td> <a href='+mac_url+'>'+mac_model.text()+'</a><a>   </a><button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button></td>')
   mac_model.replaceWith(mac_model_linked)
 
   var macelement = computer_model.next();
@@ -1245,4 +1248,5 @@ const icons = {
 'webcam':'https://image.flaticon.com/icons/png/128/179/179879.png',
 'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg",
 'ACL':'https://findicons.com/files/icons/2796/metro_uinvert_dock/128/security_denied.png',
-'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-512.png'}
+'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-512.png',
+'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-512.png'}
