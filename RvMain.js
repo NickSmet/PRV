@@ -935,10 +935,9 @@ function parsetoolsLog(item_all_data) {
 //
 /** @description  This one appemds Mac's specs next to the Model (gets them at everymac.com)
  */
-function loadMacSpecs(mac_url, mac_cpu, macModel, macElement) {
+function loadMacSpecs(mac_url, mac_cpu, macModel, macElement, macID) {
     
-  var macID = macModel.concat(mac_cpu)
-  var macSpecs = GM_getValue(macID)  
+  
 
   function ExtractSpecs(allmacs, cpu, macElement){
     var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
@@ -981,11 +980,7 @@ function GetMacsModel (fetchURL, cpu, macElement) {
         } );
     }
 
-    if(macSpecs){
-      macElement.append(macSpecs)
-      console.log("Specs loaded from local storage")
-    }else
-    {GetMacsModel(mac_url, mac_cpu, macElement)}
+    GetMacsModel(mac_url, mac_cpu, macElement)
    
     
 
@@ -996,19 +991,29 @@ function computerModel(){
   var computer_model = $('td:contains("Computer Model")');
   if (computer_model == null){return}
 
-  var mac_model = computer_model.next();
+  var macModel = computer_model.next();
   try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
   catch(e){var mac_cpu = ""}
   console.log(mac_cpu)
-  var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+mac_model.text()//at some point everymac banned my IP. So opening through anonymizer.
-  var mac_model_linked = $('<td> <a href='+mac_url+'>'+mac_model.text()+'</a><a>   </a><button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button></td>')
-  mac_model.replaceWith(mac_model_linked)
+  var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel.text()//at some point everymac banned my IP. So opening through anonymizer.
+  var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel.text()+'</a></td>')
+  macModel.replaceWith(mac_model_linked)
+
+  var macID = macModel.text().concat(mac_cpu)
+  var macSpecs = GM_getValue(macID)  
 
   var macElement = computer_model.next();
-  $('#loadMacSpecs').click(function() {
-    loadMacSpecs(mac_url, mac_cpu, mac_model.text(), macElement)
+
+  if (macSpecs){
+    macElement.append(macSpecs)
+    console.log("Specs loaded from local storage")
+  }else
+  {
+    $("#macmodel").append($('<button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button>'))
+    $('#loadMacSpecs').click(function() {
+    loadMacSpecs(mac_url, mac_cpu, macModel.text(), macElement,macID)
     this.remove()
-  });
+  });}
  
 }
 
