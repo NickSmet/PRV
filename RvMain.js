@@ -935,7 +935,7 @@ function parsetoolsLog(item_all_data) {
 //
 /** @description  This one appemds Mac's specs next to the Model (gets them at everymac.com)
  */
-function loadMacSpecs(mac_url, mac_cpu, macModel, macElement, macID) {
+function loadMacSpecs(mac_url, mac_cpu, macElement, macID) {
     
   
 
@@ -991,15 +991,19 @@ function computerModel(){
   var computer_model = $('td:contains("Computer Model")');
   if (computer_model == null){return}
 
-  var macModel = computer_model.next();
+  var macModelElement = computer_model.next();
+  var macModel = macModelElement.text()
+
+  if (!macModel.match(/MacBook|iMac/)){return}
+
   try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
   catch(e){var mac_cpu = ""}
   console.log(mac_cpu)
-  var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel.text()//at some point everymac banned my IP. So opening through anonymizer.
-  var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel.text()+'</a></td>')
-  macModel.replaceWith(mac_model_linked)
+  var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
+  var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel+'</a></td>')
+  macModelElement.replaceWith(mac_model_linked)
 
-  var macID = macModel.text().concat(mac_cpu)
+  var macID = macModel.concat(mac_cpu)
   var macSpecs = GM_getValue(macID)  
 
   var macElement = computer_model.next();
@@ -1011,7 +1015,7 @@ function computerModel(){
   {
     $("#macmodel").append($('<button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button>'))
     $('#loadMacSpecs').click(function() {
-    loadMacSpecs(mac_url, mac_cpu, macModel.text(), macElement,macID)
+    loadMacSpecs(mac_url, mac_cpu, macElement,macID)
     this.remove()
   });}
  
