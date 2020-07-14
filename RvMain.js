@@ -994,7 +994,7 @@ function computerModel(){
   var macModelElement = computer_model.next();
   var macModel = macModelElement.text()
 
-  if (!macModel.match(/MacBook|iMac/)){return}
+  if (!macModel.match(/MacBook|iMac|Macmini/)){return}
 
   try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
   catch(e){var mac_cpu = ""}
