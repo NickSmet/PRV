@@ -28,7 +28,8 @@ function editItemStyle(item, styleDict){
     return result;
   };
   
-  function buildTimeline(){
+  function buildTimeline(daysBack){
+    options.zoomMax = daysBack*24*60*60*1000
     timeline.setOptions(options);
     timeline.setGroups(groups);
     timeline.setItems(items);
@@ -108,6 +109,7 @@ $("#restore").click(function(){
   function processLines(data, days) {
       var last_line_date = "undefined"
       var period = 60 * 60 * 1000 * 24 * days; /* in ms */
+      console.log(days)
   
       var lines = data.split("\n").reverse()
   
@@ -138,7 +140,7 @@ $("#restore").click(function(){
       }
           
           if (line_date < last_line_date - period) { 
-            console.log("done at line "+1)
+            console.log("done at line "+i+" "+line_message)
             break; 
           } //stops when date is longer than 10 days before report's collection date
   
@@ -178,7 +180,7 @@ $("#restore").click(function(){
   function createItem(item, group, content, datetime, line_content, style, customTime){
     if(!customTime){time = datetime}
 
-    console.log(style)
+
     items.add({
       id: global_id,
       group: groupIds[group],
@@ -208,9 +210,10 @@ $("#restore").click(function(){
   
   function doTimeline()
   {
+  var daysBack = $("#TimelineDays").val()
   setUpTimeline()
-  processLines(getLogData(), 7)
-  buildTimeline()
+  processLines(getLogData(), daysBack)
+  buildTimeline(daysBack)
   }
 
   
@@ -255,9 +258,11 @@ $("#restore").click(function(){
     setupVars(page)
 
     if (curr_url.match(page)&&curr_groups){
-      console.log(curr_groups)
+ 
       var head = $("body");
       head.prepend($(' <button id="Generate" >Generate Timeline</button>'))
+      head.prepend($('<form><label for="TimelineDays" style="display: block">How far back(days):</label>\
+      <input type="number" id="TimelineDays" name="TimelineDays" value="7"></form>      '))
       $("#Generate").click(function(){
       doTimeline()
     });
@@ -367,7 +372,6 @@ return result
 
     align:'left',
     maxHeight:"500px",
-    zoomMax: 7*24*60*60*1000, //7 ways
     margin: {
       item: 5
     },
