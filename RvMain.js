@@ -664,12 +664,22 @@ function parseMoreHostInfo(item_all_data) {
 function parseLoadedDrivers(item_all_data) {
 
     var non_apple_regex = /^((?!com.apple|LoadedDrivers|com.parallels).)*$/gm;
+    var prl_arr = item_all_data.match(/com.parallels/gm)
+    console.log(prl_arr)
     var non_apple_arr = item_all_data.match(non_apple_regex);
-    if (non_apple_arr == null) {
+    if (non_apple_arr == null && prl_arr != null) {
         $('#LoadedDrivers').text("Only apple+prl");
         markBullet('LoadedDrivers','all good')
         return;
     }
+
+    if (non_apple_arr == null && prl_arr == null) {
+      $('#LoadedDrivers').html('Only apple, <b style="color:red">no prl(!)</b>');
+      markBullet('LoadedDrivers','serious warning')
+      return;
+  }
+
+
     var kext
     var hasBadKexts = false
     var drv_name_regex = / (\w+\.[^ ]*)/gm;
@@ -1251,6 +1261,7 @@ const icons = {
   'printers':'https://image.flaticon.com/icons/svg/2489/2489670.svg',
   'all good':'https://image.flaticon.com/icons/png/128/1828/1828520.png',
   'warning' : 'https://image.flaticon.com/icons/svg/497/497738.svg',
+  'serious warning':'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/OOjs_UI_icon_alert-warning.svg/1200px-OOjs_UI_icon_alert-warning.svg.png',
   'bad': 'https://image.flaticon.com/icons/svg/1672/1672451.svg',
   'headless':'https://image.flaticon.com/icons/png/128/1089/1089503.png',
   'not headless':'https://cdn0.iconfinder.com/data/icons/people-and-lifestyle-1/64/people-male-man-head-512.png',
