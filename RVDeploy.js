@@ -3,7 +3,7 @@
 // @version            0.9.8.7
 // @author 	Nikolai Smetannikov
 
-// @updateURL    https://gist.github.com/NickSmet/e64f7f26520be1402f3a624071419ad7/raw/reportViewer.user.js 
+// @updateURL    https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/RVDeploy.js 
 
 // @include      http://reports.prls.net/Reports/Report.aspx?ReportId=*
 // @include      http://reports.parallels.com/Reports/Report.aspx?ReportId=*
