@@ -3,7 +3,7 @@
 // @version            0.9.8.9
 // @author 	Nikolai Smetannikov
 
-// @updateURL    https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/RVDeploy.js 
+// @updateURL    https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/RVDeploy.js?2 
 
 // @include      http://reports.prls.net/Reports/Report.aspx?ReportId=*
 // @include      http://reports.parallels.com/Reports/Report.aspx?ReportId=*
