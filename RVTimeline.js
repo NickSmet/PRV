@@ -296,8 +296,8 @@ $("#restore").click(function(){
       if(line_message.match(/BlockSize|.SizeOnDisk|PackingOptions|InternalVmInfo|.Profile.Custom|HibernateState|BootingOrder|UserFriendlyName|SystemName|AppVersion/)){return}
       let settings = line_message.match(/VmCfgCommitDiff: Key: '.*\.(.*)', New value: ('.*'), Old value: ('.*')/)
       let parameter = settings[1]
-      let oldVal = settings[2]
-      let newVal = settings[3]
+      let oldVal = settings[3]
+      let newVal = settings[2]
 
       result.value = parameter+': '+oldVal+' > '+newVal
 
