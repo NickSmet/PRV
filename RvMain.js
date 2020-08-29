@@ -663,10 +663,11 @@ function parseMoreHostInfo(item_all_data) {
 
 function parseLoadedDrivers(item_all_data) {
 
-    var non_apple_regex = /^((?!com.apple|LoadedDrivers|com.parallels).)*$/gm;
+    var non_apple_regex = /^((?!com.apple|LoadedDrivers|Linked Against|com.parallels).)*$/gm;//filter out non apple/non parallels kexts+extra lines
     var prl_arr = item_all_data.match(/com.parallels/gm)
-    console.log(prl_arr)
+
     var non_apple_arr = item_all_data.match(non_apple_regex);
+    console.log(non_apple_arr)
     if (non_apple_arr == null && prl_arr != null) {
         $('#LoadedDrivers').text("Only apple+prl");
         markBullet('LoadedDrivers','all good')
@@ -683,11 +684,11 @@ function parseLoadedDrivers(item_all_data) {
     var kext
     var hasBadKexts = false
     var drv_name_regex = / (\w+\.[^ ]*)/gm;
-    var i
-    for (i = 0; i < non_apple_arr.length; i++) {
-        kext = non_apple_arr[i].match(drv_name_regex)
+
+//Don't remember why, but seems to work.
+    for (let i = 0; i < non_apple_arr.length; i++) {
+        kext = non_apple_arr[i].match(drv_name_regex) || '-----'
         non_apple_arr[i] = kext
-        //console.log(kext[0].trim())
         if (bad_kexts.indexOf(kext[0].trim()) > -1){
           hasBadKexts = true
         }
@@ -1004,7 +1005,7 @@ function computerModel(){
   var macModelElement = computer_model.next();
   var macModel = macModelElement.text()
 
-  if (!macModel.match(/MacBook|iMac|Macmini/)){return}
+  if (!macModel.match(/MacBook|iMac|Macmini|MacPro/)){return}
 
   try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
   catch(e){var mac_cpu = ""}
