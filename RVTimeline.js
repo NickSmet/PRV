@@ -235,12 +235,17 @@ $("#restore").click(function(){
   global_id = 1
 
   function setupVars(page){
+    console.log(page)
     switch (page) {
       case 'parallels-system.log':
+        curr_groups = all_prl_syslog_groups
+        all_items = prl_syslog_items
+        checkRule = checkRulePrlSysLog
       return
       case 'system.log':
       curr_groups = all_syslog_groups
       all_items = syslog_items
+      checkRule = checkRuleSysLog
       break
       case 'vm.log':
       curr_groups = all_vm_groups
@@ -273,12 +278,65 @@ $("#restore").click(function(){
 //The below stuff is what I'm regularly editing
 
 
-  var vmlog_regex = /vm\.log|system.log/
+  var prod_regex = /vm\.log|system.log|parallels-system.log/
   var testenv_regex = /(vm\.log\.html|)/
   
-  url_regex=vmlog_regex
+  url_regex=prod_regex
 
   var checkRule
+
+
+  function  checkRulePrlSysLog(item, line_message, prev_line, next_line, item_time){
+    
+    var result = {value:all_items[item].name}
+    
+    switch (item) { 
+      case 'settings'://
+      console.log(line_message)
+      if(line_message.match(/BlockSize|.SizeOnDisk|PackingOptions|InternalVmInfo|.Profile.Custom|HibernateState|BootingOrder|UserFriendlyName|SystemName|AppVersion/)){return}
+      let settings = line_message.match(/VmCfgCommitDiff: Key: '.*\.(.*)', New value: ('.*'), Old value: ('.*')/)
+      let parameter = settings[1]
+      let oldVal = settings[2]
+      let newVal = settings[3]
+
+      result.value = parameter+': '+oldVal+' > '+newVal
+
+      if (parameter == "SystemFlags"){result.style='background-color:grey'}
+
+      
+
+      return result
+      case '---': 
+      
+      if (line_message.match(regular_win_apps)){return false}
+      var glregex = /(OpenGL\.\d{3})\.\d{3}\.[^\n]*\\(.*\.exe|.*\.EXE).*/
+      var d3dregex = /(D3D\d+\.\d+): C:.*\\(.*\.exe|.*\.EXE).*/
+      if(line_message.match(glregex)){
+        var video_regex =  glregex}
+      else if (line_message.match(d3dregex)){
+        var video_regex =  d3dregex
+      } else {return false}
+
+        var exe = line_message.match(video_regex)[2]
+        var version = line_message.match(video_regex)[1]
+        result.value = exe+'\n ('+version+')'
+        //if (result.value.includes('Dropbox')){result.style='background-color:black'} // this is not to forget that we can do styles conditionally
+        return result
+        
+      
+      case '---': {
+        var last_seen = rule_vars.tools_outdated.last_seen
+        if(!last_seen||last_seen-item_time>200000){
+          //"tools outdated" messagesusually go in pairs, of it the last one was seen 200 sec apart or more, we skip it.
+          rule_vars.tools_outdated.last_seen = item_time
+          return result
+          }else{return false}
+      }
+      }
+
+
+  return result
+}
 
 
   function  checkRuleVmLog(item, line_message, prev_line, next_line, item_time){
@@ -408,6 +466,8 @@ return result
     'parallels-system.log':{'Prl_Errors':{}},
   }
 
+  const all_prl_syslog_groups = {'VM_Errors':{}, 'System_Errors':{}, 'PRL_Errors':{},"PD":{}}
+
   const all_vm_groups = {
     'vm.log':{
     'Pause/Resume':{},
@@ -469,6 +529,14 @@ return result
 
   }
 
+
+  const prl_syslog_items = {
+    "closed_incorrectly":{'regex':/Image was incorrectly closed/,"group":"VM_Errors","name":"INCORRECTLY_CLOSED",'style':{'background-color':'rgb(130, 14, 16)'}}, 
+    "bad_internet":{'regex':/Updater lost connection timeout expired/,"group":"System_Errors","name":"Bad internet",'style':{'background-color':'rgb(212, 28, 129)'}},
+    "font_not_found":{'regex':/not found, using Courier/,"group":"System_Errors","name":"Font missing",'style':{'background-color':'rgb(255, 102, 102)'}},
+    'settings':{'regex':/VmCfgCommitDiff/,"group":'PD',"name":"Settings changed",'style':{'background-color':'rgb(109, 163, 117)'}, 'rule':true},
+ 
+  }
 
   const syslog_items = {
     "shutdown":{'regex':/SHUTDOWN_TIME/,"group":"Stop/Shutdown/Restart","name":"shutdown",'style':{'background-color':'rgb(179, 156, 123)'}},
