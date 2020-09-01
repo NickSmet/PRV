@@ -84,6 +84,7 @@ function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
     for (var parameter in parameters){
         var paramValue = $.trim($(this).find(parameters[parameter]).first().text())
         if (parameter in adjustments){
+          console.log(paramValue, adjustments[parameter])
             paramValue = adjustSpec(paramValue, adjustments[parameter])
         }
         if (paramValue){
@@ -263,10 +264,17 @@ function parseCurrentVm(item_all_data) {
 
     var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode'}
     var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
-    var iconVMHDDs = "https://image.flaticon.com/icons/svg/1689/1689016.svg"
+    var iconVMHDDs = icons.hdds
 
     var VMHDDs_data = parseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
     var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
+
+    var ParamVMNETWORKs = {'Type':'AdapterType', 'Name':'AdapterName', 'Mode':'EmulatedType', "Mac":'MAC'}
+    var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
+    var iconVMNETWORKs = icons.networkAdapter
+
+    var VMNETWORKs_data = parseXMLItem ( item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
+    var VMNETWORKs = CreateBullet('Networks','Custom', VMNETWORKs_data, iconVMNETWORKs)
     
 
 
@@ -301,8 +309,9 @@ function parseCurrentVm(item_all_data) {
         'Video Mode': parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text()),
         'Scale To Fit Screen':$xml.find('FullScreen > ScaleViewMode').text(),
         '3D Acceleration': $xml.find('Video > Enable3DAcceleration').text(),
-        'Lan Adapter': $xml.find('AdapterType').text(),
-        'Network': $xml.find('NetworkAdapter > EmulatedType').text(),
+        //'Lan Adapter': $xml.find('AdapterType').text(),
+        //'Networks': $xml.find('NetworkAdapter > EmulatedType').text(),
+        'Subbullet3': VMNETWORKs,
         'Subbullet2':VMHDDs,
         
         'Hypervisor': $xml.find('HypervisorType').text(),
@@ -1055,26 +1064,36 @@ function fixTime(timediff, time = '') {
 
 //Adjusts time, converts values etc. Where for example we get bytes but want to render gb/tb
 function adjustSpec(spec_value, adjustment){
+spec_value=spec_value||"---"
   switch (adjustment) { 
       case 'time': 
       spec_value = fixTime(timediff, spec_value)
-          break;
+      break;
       case 'bytes': 
-      console.log("it's bytes!!!")
       spec_value = humanFileSize(spec_value, true);
       break;
       case 'hddtype': 
-      var hddtypes = {0: 'IDE', 1: 'SCSI', 2: 'SATA', 3: 'NVMe'}
+      let hddtypes = {0: 'IDE', 1: 'SCSI', 2: 'SATA', 3: 'NVMe'}
       spec_value = hddtypes[spec_value]
       break;
       case 'mbytes':
       spec_value = humanFileSize(spec_value*1024*1024, false)
       break;
       case 'appleMbytes':
-      spec_value = humanFileSize(spec_value*1024*1024, true)//because for Apple kilo is actually 1000 :) 
+      spec_value = humanFileSize(spec_value*1024*1024, true)//because for Apple kilo is actually 1000 :)
+      break; 
+      case 'networkAdapter':
+      let networkAdapters = {0: 'Legacy',1 :'RealTek RTL8029AS',2: 'Intel(R) PRO/1000MT',3:'Virtio', 4:'Intel(R) Gigabit CT (82574l)'}
+      spec_value = networkAdapters[spec_value]
+      break;
+      case 'networkMode':
+      let networkTypes = {0: 'Host-Only', 1: 'Shared',2 :'Bridged'}
+      spec_value = networkTypes[spec_value]
+      break;
+      case 'networkMac':
+      spec_value = spec_value.replace(/(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)/,'$1:$2:$3:$4:$5:$6')
+      // // break;
 }
-
-
 return spec_value}
 
 //https://stackoverflow.com/users/65387/mpen
@@ -1283,4 +1302,6 @@ const icons = {
 'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg",
 'ACL':'https://findicons.com/files/icons/2796/metro_uinvert_dock/128/security_denied.png',
 'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-512.png',
-'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-512.png'}
+'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-512.png',
+'hdds':"https://image.flaticon.com/icons/svg/1689/1689016.svg",
+'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg'}
