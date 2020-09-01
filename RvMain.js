@@ -269,7 +269,7 @@ function parseCurrentVm(item_all_data) {
     var VMHDDs_data = parseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
     var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
 
-    var ParamVMNETWORKs = {'Type':'AdapterType', 'Name':'AdapterName', 'Mode':'EmulatedType', "Mac":'MAC'}
+    var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
     var iconVMNETWORKs = icons.networkAdapter
 
@@ -1064,6 +1064,7 @@ function fixTime(timediff, time = '') {
 
 //Adjusts time, converts values etc. Where for example we get bytes but want to render gb/tb
 function adjustSpec(spec_value, adjustment){
+  console.log(spec_value, adjustment)
 spec_value=spec_value||"---"
   switch (adjustment) { 
       case 'time': 
