@@ -351,21 +351,27 @@ $("#restore").click(function(){
       }
 
       case 'app_launched': 
-      
+    
       if (line_message.match(regular_win_apps)){return false}
-      var glregex = /(OpenGL\.\d{3})\.\d{3}\.[^\n]*\\(.*\.exe|.*\.EXE).*/
+      var glregex = /(OpenGL\.\d{3}\.\d{3})\.[^\n]*\\(.*\.exe|.*\.EXE).*/
       var d3dregex = /(D3D\d+\.\d+): C:.*\\(.*\.exe|.*\.EXE).*/
       if(line_message.match(glregex)){
         var video_regex =  glregex}
       else if (line_message.match(d3dregex)){
         var video_regex =  d3dregex
       } else {return false}
-
+  
         var exe = line_message.match(video_regex)[2]
         var version = line_message.match(video_regex)[1]
+        
         result.value = exe+'\n ('+version+')'
+        if(result.value.match(/210\.330/)){
+          result.value+="!"
+          result.style='background-color:rgb(255, 89, 103)' 
+        }//because this profile causes issues
         //if (result.value.includes('Dropbox')){result.style='background-color:black'} // this is not to forget that we can do styles conditionally
         return result
+        
         
       
       case 'tools_outdated': {
@@ -395,24 +401,6 @@ $("#restore").click(function(){
     if (!prev_line.match(/'VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
     {return result}else{return false
     }
-
-    case 'app_launched': 
-    
-    if (line_message.match(regular_win_apps)){return false}
-    var glregex = /(OpenGL\.\d{3})\.\d{3}\.[^\n]*\\(.*\.exe|.*\.EXE).*/
-    var d3dregex = /(D3D\d+\.\d+): C:.*\\(.*\.exe|.*\.EXE).*/
-    if(line_message.match(glregex)){
-      var video_regex =  glregex}
-    else if (line_message.match(d3dregex)){
-      var video_regex =  d3dregex
-    } else {return false}
-
-      var exe = line_message.match(video_regex)[2]
-      var version = line_message.match(video_regex)[1]
-      result.value = exe+'\n ('+version+')'
-      //if (result.value.includes('Dropbox')){result.style='background-color:black'} // this is not to forget that we can do styles conditionally
-      return result
-      
     
     case 'tools_outdated': {
       var last_seen = rule_vars.tools_outdated.last_seen
