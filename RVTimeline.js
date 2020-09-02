@@ -306,22 +306,16 @@ $("#restore").click(function(){
       
 
       return result
-      case '---': 
-      
-      if (line_message.match(regular_win_apps)){return false}
-      var glregex = /(OpenGL\.\d{3})\.\d{3}\.[^\n]*\\(.*\.exe|.*\.EXE).*/
-      var d3dregex = /(D3D\d+\.\d+): C:.*\\(.*\.exe|.*\.EXE).*/
-      if(line_message.match(glregex)){
-        var video_regex =  glregex}
-      else if (line_message.match(d3dregex)){
-        var video_regex =  d3dregex
-      } else {return false}
+      case 'PDFM_100983': 
 
-        var exe = line_message.match(video_regex)[2]
-        var version = line_message.match(video_regex)[1]
-        result.value = exe+'\n ('+version+')'
-        //if (result.value.includes('Dropbox')){result.style='background-color:black'} // this is not to forget that we can do styles conditionally
-        return result
+      if(!rule_vars.PDFM_100983){rule_vars['PDFM_100983']={'last_seen':undefined}}
+
+     var last_seen = rule_vars.PDFM_100983.last_seen
+        if(!last_seen||last_seen-item_time>200000){
+          //"tools outdated" messagesusually go in pairs, of it the last one was seen 200 sec apart or more, we skip it.
+          rule_vars.PDFM_100983.last_seen = item_time
+          return result
+          }else{return false}
         
       
       case '---': {
@@ -528,6 +522,7 @@ return result
     "bad_internet":{'regex':/Updater lost connection timeout expired/,"group":"System_Errors","name":"Bad internet",'style':{'background-color':'rgb(212, 28, 129)'}},
     "font_not_found":{'regex':/not found, using Courier/,"group":"System_Errors","name":"Font missing",'style':{'background-color':'rgb(255, 102, 102)'}},
     'settings':{'regex':/VmCfgCommitDiff/,"group":'PD',"name":"Settings changed",'style':{'background-color':'rgb(109, 163, 117)'}, 'rule':true},
+    'PDFM_100983':{'regex':/KMErrorDomain Code\=1/,"group":'System_Errors',"name":"PDFM-100983",'style':{'background-color':'rgb(230, 0, 0)'}, 'rule':true},
  
   }
 
