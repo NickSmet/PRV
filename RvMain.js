@@ -262,7 +262,7 @@ function parseCurrentVm(item_all_data) {
     //var hdds_regex = /\<Hdd[^\>]*\>[^$]*<\/CommandName>/g
 
 
-    var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode'}
+    var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode', 'Expanding':'DiskType'}
     var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
     var iconVMHDDs = icons.hdds
 
@@ -271,6 +271,7 @@ function parseCurrentVm(item_all_data) {
 
     if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
     if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
+    if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
     
     var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit > Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
@@ -419,8 +420,6 @@ function parseCurrentVm(item_all_data) {
     if (specs_regex['TPM']!=0){
       markBullet("CurrentVm",icons.TPM)
     }
-
-
 
     keysWithIcons = {'Share Host Printers':'printers','Scale To Fit Screen':'fullscreen'}
     
@@ -1333,4 +1332,5 @@ const icons = {
 'hdds':"https://image.flaticon.com/icons/svg/1689/1689016.svg",
 'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg',
 'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-512.png',
-'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg'}
+'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
+'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-512.png'}
