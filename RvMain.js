@@ -269,13 +269,15 @@ function parseCurrentVm(item_all_data) {
     var VMHDDs_data = parseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
     var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
 
-    var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC'}//also had '"Name':'AdapterName'", but it's kind of pointless
+    if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
+    if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
+    
+    var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit > Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
-    var iconVMNETWORKs = icons.networkAdapter
-
+    var iconVMNETWORKs = icons["network conditioner"]
     var VMNETWORKs_data = parseXMLItem ( item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
     var VMNETWORKs = CreateBullet('Networks','Custom', VMNETWORKs_data, iconVMNETWORKs)
-    
+    if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){markBullet('CurrentVm', icons.networkConditioner)}
 
 
     var ParamVMUSBs = {'Name':'SystemName', 'Last connected':'Timestamp'}
@@ -285,8 +287,7 @@ function parseCurrentVm(item_all_data) {
     var VMUSBs_data = parseXMLItem ( item_all_data, element = "USBPort", ParamVMUSBs,AdjustsVMUSBs)
     var VMUSBs = CreateBullet('USBs','Custom', VMUSBs_data, iconVMUSBs)
 
-    if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
-    if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
+
 
   //console.log(guestUSB)
 
@@ -358,6 +359,7 @@ function parseCurrentVm(item_all_data) {
       specs_regex['Ram']+='<b style="color:orange">! Uneven amount </b>',
       markBullet("CurrentVm",'warning')
     }
+    
 
     //Setting readable string for videomode.
     // var scaleToFitMode = parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text())
@@ -1329,4 +1331,5 @@ const icons = {
 'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-512.png',
 'hdds':"https://image.flaticon.com/icons/svg/1689/1689016.svg",
 'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg',
-'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-512.png'}
+'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-512.png',
+'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg'}
