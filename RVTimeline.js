@@ -268,11 +268,11 @@ $("#restore").click(function(){
       var head = $("body");
       head.prepend('<p id=timelineGui><p>')
       var Gui = $("#timelineGui");
-      Gui.prepend($(' <button id="Generate" >Generate Timeline</button>'))
+      Gui.prepend($('<br><button id="Generate" >Generate Timeline</button>'))
       Gui.prepend($(' <button id="100days" >100</button>'))
       Gui.prepend($(' <button id="20days" >20</button>'))
       Gui.prepend($(' <button id="3days" >3</button>'))
-      Gui.prepend($('<br><form><label for="TimelineDays" style="display: block">How far back(days):</label>\
+      Gui.prepend($('<form><label for="TimelineDays" style="display: block">How far back(days):</label>\
       <input type="number" id="TimelineDays" name="TimelineDays" value="7"></form>      '))
       $( "#TimelineDays" ).keyup(function(event) {
         if ( event.which == 13 ) {
