@@ -415,7 +415,7 @@ return result
   options = {
 
     align:'left',
-    maxHeight:"500px",
+    maxHeight:"900px",
     margin: {
       item: 5
     },
@@ -469,7 +469,7 @@ return result
   }
   
   const vmlog_all_items = {
-    "PD_Version":{'regex':/Parallels Desktop (\d\d)\.(\d)\.(\d)/,"group":"vm.log","name":"PD_Version",'style':{'background-color':'rgb(252, 148, 3)'},'rule':true},
+    "PD_Version":{'regex':/Parallels Desktop (\d\d)\.(\d)\.(\d)/,"group":"vm.log","name":"PD_Version",'style':{'background-color':'rgb(252, 148, 3)','font-size':'0.8em'},'rule':true},
     "Report_collected":{'style':{'background-color':'rgb(179, 156, 123)'}},
     "Started_report_collection":{'regex':/VM state\(VmStateProblemReport\)\: started/,"group":"vm.log","name":"Collecting report",'style':{'background-color':'rgb(179, 12, 123)'}},
     "shutdown":{'regex':/SHUTDOWN: type 0x21/,"group":"Stop/Shutdown/Restart","name":"shutdown",'style':{'background-color':'rgb(179, 156, 123)'}},
