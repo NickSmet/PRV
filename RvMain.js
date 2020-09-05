@@ -354,11 +354,6 @@ function parseCurrentVm(item_all_data) {
       specs_regex['Ram']+='<b style="color:red">!!!!! Too Much</b>',
       markBullet("CurrentVm",'bad')
     }
-
-    if (vmram>hostram/2){
-      specs_regex['Ram']+='<b style="color:red">!!!!! Too Much</b>',
-      markBullet("CurrentVm",'bad')
-    }
     if((vmram % 256) != 0){
       specs_regex['Ram']+='<b style="color:orange">! Uneven amount </b>',
       markBullet("CurrentVm",'warning')
@@ -416,6 +411,12 @@ function parseCurrentVm(item_all_data) {
       'Video Mode':{0:'Scaled',1:'Best for Retina',2:'Best for external displays'},
       'Scale To Fit Screen':{0:'Off',1:'Auto',2:'Keep ratio',3:'Stretch'}
     }
+
+
+    if (specs_regex['TPM']!=0){
+      markBullet("CurrentVm",icons.TPM)
+    }
+
 
 
     keysWithIcons = {'Share Host Printers':'printers','Scale To Fit Screen':'fullscreen'}
