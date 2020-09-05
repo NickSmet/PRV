@@ -84,7 +84,6 @@ function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
     for (var parameter in parameters){
         var paramValue = $.trim($(this).find(parameters[parameter]).first().text())
         if (parameter in adjustments){
-          console.log(paramValue, adjustments[parameter])
             paramValue = adjustSpec(paramValue, adjustments[parameter])
         }
         if (paramValue){
@@ -682,7 +681,6 @@ function parseLoadedDrivers(item_all_data) {
     var prl_arr = item_all_data.match(/com.parallels/gm)
 
     var non_apple_arr = item_all_data.match(non_apple_regex);
-    console.log(non_apple_arr)
     if (non_apple_arr == null && prl_arr != null) {
         $('#LoadedDrivers').text("Only apple+prl");
         markBullet('LoadedDrivers','all good')
@@ -1070,7 +1068,6 @@ function fixTime(timediff, time = '') {
 
 //Adjusts time, converts values etc. Where for example we get bytes but want to render gb/tb
 function adjustSpec(spec_value, adjustment){
-  console.log(spec_value, adjustment)
 spec_value=spec_value||"---"
   switch (adjustment) { 
       case 'time': 
