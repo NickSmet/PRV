@@ -275,10 +275,6 @@ function parseCurrentVm(item_all_data) {
 
     let externalVhddRegex = RegExp('(<u>Location<\\\/u>: ((?!'+$xml.find('VmHome').text().replace("\/config.pvs",'').replace("\\",'\\\\')+').)+)') //chckse if there are vHDDs with "Location" outside of PVM
     if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
-  
-
-
-    
 
     VMHDDs.match('Location: '+VMHDDs.match($xml.find('VmHome').text().replace("\/config.pvs",'')))
     
@@ -371,16 +367,6 @@ function parseCurrentVm(item_all_data) {
       markBullet("CurrentVm",'warning')
     }
     
-
-    //Setting readable string for videomode.
-    // var scaleToFitMode = parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text())
-    // var scaleToFitModes = {0:'Scaled',1:'Best for Retina',2:'Best for external displays'}
-    // specs_regex['Video Mode'] = videomodes[scaleToFitMode]
-
-
-    // var videomode = parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text())
-    // var videomodes = {0:'Scaled',1:'Best for Retina',2:'Best for external displays'}
-    // specs_regex['Video Mode'] = videomodes[videomode]
 
     //Setting correct value for vram
     if (specs_regex['VRam']=="0"){specs_regex['VRam']="Auto"}
