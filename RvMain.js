@@ -272,6 +272,15 @@ function parseCurrentVm(item_all_data) {
     if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
     if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
     if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
+
+    let externalVhddRegex = RegExp('(<u>Location<\\\/u>: ((?!'+$xml.find('VmHome').text().replace("\/config.pvs",'').replace("\\",'\\\\')+').)+)') //chckse if there are vHDDs with "Location" outside of PVM
+    if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
+  
+
+
+    
+
+    VMHDDs.match('Location: '+VMHDDs.match($xml.find('VmHome').text().replace("\/config.pvs",'')))
     
     var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit > Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
@@ -1333,4 +1342,5 @@ const icons = {
 'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg',
 'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-512.png',
 'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
-'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-512.png'}
+'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-512.png',
+'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png'}
