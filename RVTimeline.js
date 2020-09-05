@@ -208,9 +208,10 @@ $("#restore").click(function(){
     return $('pre').text()
   }
   
-  function doTimeline()
+  function doTimeline(daysBack)
   {
-  var daysBack = $("#TimelineDays").val()
+  $('#timelineGui').remove()
+  if(!daysBack){daysBack = $("#TimelineDays").val()}
   setUpTimeline()
   processLines(getLogData(), daysBack)
   buildTimeline(daysBack)
@@ -265,9 +266,22 @@ $("#restore").click(function(){
     if (curr_url.match(page)&&curr_groups){
  
       var head = $("body");
-      head.prepend($(' <button id="Generate" >Generate Timeline</button>'))
-      head.prepend($('<form><label for="TimelineDays" style="display: block">How far back(days):</label>\
+      head.prepend('<p id=timelineGui><p>')
+      var Gui = $("#timelineGui");
+      Gui.prepend($(' <button id="Generate" >Generate Timeline</button>'))
+      Gui.prepend($(' <button id="100days" >100</button>'))
+      Gui.prepend($(' <button id="20days" >20</button>'))
+      Gui.prepend($(' <button id="3days" >3</button>'))
+      Gui.prepend($('<br><form><label for="TimelineDays" style="display: block">How far back(days):</label>\
       <input type="number" id="TimelineDays" name="TimelineDays" value="7"></form>      '))
+      $( "#TimelineDays" ).keyup(function(event) {
+        if ( event.which == 13 ) {
+          doTimeline()
+        }
+      });
+      $("#3days").click(function(){doTimeline(3)});
+      $("#20days").click(function(){doTimeline(20)});
+      $("#100days").click(function(){doTimeline(100)});
       $("#Generate").click(function(){
       doTimeline()
     });
