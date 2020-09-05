@@ -340,6 +340,7 @@ function parseCurrentVm(item_all_data) {
     'Shared Bluetooth':$xml.find('SharedBluetooth > Enabled').text(),
     'Enter Travel Mode':$xml.find('TravelOptions > Condition > Enter').text(),
     'USB 3.0': $xml.find('XhcEnabled').text(),
+    'TPM': $xml.find('TpmChip > Type').text(),
     'Subbullet1': VMUSBs
     };
     var all_specs = '';
@@ -348,6 +349,11 @@ function parseCurrentVm(item_all_data) {
     var hostram = $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
     
     var vmram = specs_regex['Ram']
+
+    if (vmram>hostram/2){
+      specs_regex['Ram']+='<b style="color:red">!!!!! Too Much</b>',
+      markBullet("CurrentVm",'bad')
+    }
 
     if (vmram>hostram/2){
       specs_regex['Ram']+='<b style="color:red">!!!!! Too Much</b>',
@@ -657,7 +663,7 @@ function parseMoreHostInfo(item_all_data) {
         //console.log(gpus_bullet)
 
         if(number_of_displays>0){
-        markBullet("MoreHostInfo", 'screens')
+        markBullet("MoreHostInfo", icons.screens)
         markBullet("MoreHostInfo", "Custom", '<a>'+number_of_displays+'* </a>')
           }
           else {
@@ -1184,23 +1190,39 @@ $('a[href*="Signature"]').each(function() {
  * semi-ok (e.g. when some extra kexts are loaded) 
  * or bad (e.g. LittleSnitch or Hackintosh)
  * @param {string} bullet_name Actual name (text in <div></div> ) of the bullet.
- * @param {string} color What color to mark the aforementioned bullet. For now it's 'all good', 'warning','bad'
- * if color is set to 'custom, then the appended element is defined by
- * @param {string} html if color is 'custom', this defines element to be appended as a mark
+ * @param {string} color What icon to mark the aforementioned bullet. For now it's 'all good', 'warning','bad'
+ * if icon is set to 'custom, then the appended element is defined by
+ * @param {string} html if icon is 'custom', this defines element to be appended as a mark
  */
-function markBullet(bullet_name, color,html){  
-  
-if (color.match(/^no_/))
-{console.log(color)
-  var img = '<img src="'+icons[color.match(/^no_(.*)/)[1]]+'" style= "display: linline; height: 1.5em; filter: saturate(0%);"> '
+function markBullet(bullet_name, icon,html){  
+  let icon_name
+  let icon_url
+  let img
+
+
+//if icon is url
+if(icon.match(/https\:/)){
+    icon_name = Object.keys(icons).find(key => icons[key] === icon);
+    icon_url = icon
+    img = '<img src="'+icon_url+'" title = "'+icon_name+'" style= "display: linline; height: 1.5em";> '
+}
+//if icon is name from
+else if (icon.match(/^no_/))
+{
+  icon_name = icon
+  icon_url = icons[icon.match(/^no_(.*)/)[1]]
+  img = '<img src="'+icon_url+'" title = "'+icon_name+'" style= "display: linline; height: 1.5em; filter: saturate(0%);"> '
 }
 else
 {
-  var img = '<img src="'+icons[color]+'" title = "'+color+'" style= "display: linline; height: 1.5em";> '
+  icon_name = icon
+  icon_url = icons[icon]
+  img = '<img src="'+icons[icon]+'" title = "'+icon_name+'" style= "display: linline; height: 1.5em";> '
 }
+
   
   
-  if (color=='Custom'){
+  if (icon=='Custom'){
     img = html
   }
   if(bullet_name=='this'){return img}
@@ -1305,4 +1327,5 @@ const icons = {
 'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-512.png',
 'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-512.png',
 'hdds':"https://image.flaticon.com/icons/svg/1689/1689016.svg",
-'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg'}
+'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg',
+'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-512.png'}
