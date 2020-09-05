@@ -274,10 +274,11 @@ function parseCurrentVm(item_all_data) {
     
     var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit > Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
-    var iconVMNETWORKs = icons["network conditioner"]
+    var iconVMNETWORKs = icons.networkAdapter
+
     var VMNETWORKs_data = parseXMLItem ( item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
     var VMNETWORKs = CreateBullet('Networks','Custom', VMNETWORKs_data, iconVMNETWORKs)
-    if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){markBullet('CurrentVm', icons.networkConditioner)}
+    if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){markBullet('CurrentVm', icons["network conditioner"])}
 
 
     var ParamVMUSBs = {'Name':'SystemName', 'Last connected':'Timestamp'}
