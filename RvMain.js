@@ -416,6 +416,8 @@ function parseCurrentVm(item_all_data) {
       markBullet("CurrentVm",icons.TPM)
     }
 
+    if($xml.find('LinkedVmUuid').text()!=''){markBullet('CurrentVm', icons["linked clone"])}
+
     keysWithIcons = {'Share Host Printers':'printers','Scale To Fit Screen':'fullscreen'}
     
 
@@ -1329,4 +1331,5 @@ const icons = {
 'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-512.png',
 'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
 'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-512.png',
-'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png'}
+'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png',
+'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-512.png'}
