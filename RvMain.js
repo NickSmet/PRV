@@ -272,10 +272,15 @@ function parseCurrentVm(item_all_data) {
     if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
     if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
 
-    let externalVhddRegex = RegExp('(<u>Location<\\\/u>: ((?!'+$xml.find('VmHome').text().replace("\/config.pvs",'').replace("\\",'\\\\')+').)+)') //chckse if there are vHDDs with "Location" outside of PVM
+    let vmlocation = $xml.find('VmHome').text().replace("\/config.pvs",'').replace(/\[/,'\\\[').replace(/\]/,'\\\]')//because "REGEXP" doesn't deal with square brackets
+     console.log(vmlocation)
+    let externalVhddRegex = RegExp('(<u>Location</u>: ((?!'+vmlocation+').)+)','gm') //chckse if there are vHDDs with "Location" outside of PVM
     if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
 
-    VMHDDs.match('Location: '+VMHDDs.match($xml.find('VmHome').text().replace("\/config.pvs",'')))
+    console.log(externalVhddRegex)
+    console.log(VMHDDs)
+
+    //VMHDDs.match('Location: '+VMHDDs.match($xml.find('VmHome').text().replace("\/config.pvs",'')))
     
     var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit > Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
