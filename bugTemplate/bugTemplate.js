@@ -27,7 +27,7 @@ var bgt_html = '<div class="bug-wrapper">\
 $("body").append($(bgt_html))
 
 let reporturl = window.location.href.match(/(http.*\d{9})/)[1]
-let guestOS =  $("#form1 > table.reportList > tbody > tr:nth-child(19) > td:nth-child(2)").text().replace(/(Windows|Linux): /,'')
+let guestOS =  $("#form1 > table.reportList > tbody > tr:nth-child(19) > td:nth-child(2)").text().replace(/Windows:|Linux:|: OS X/,'')
 let hostOS = $("#form1 > table.reportList > tbody > tr:nth-child(13) > td:nth-child(2)").text()
 
 var bugTemplate = '*Description of problem:*\n\
