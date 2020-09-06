@@ -260,8 +260,8 @@ $("#restore").click(function(){
 
 
   window.addEventListener("load", function() {
-    page = curr_url.match(url_regex)[0]
-    setupVars(page)
+    page = curr_url.match(url_regex) || '---'
+    setupVars(page[0])
 
     if (curr_url.match(page)&&curr_groups){
  
@@ -295,7 +295,7 @@ $("#restore").click(function(){
   var prod_regex = /vm\.log|system.log|parallels-system.log/
   var testenv_regex = /(vm\.log\.html|)/
   
-  url_regex=prod_regex
+  var url_regex=prod_regex
 
   var checkRule
 
