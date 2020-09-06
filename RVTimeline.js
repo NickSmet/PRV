@@ -269,6 +269,7 @@ $("#restore").click(function(){
       head.prepend('<p id=timelineGui><p>')
       var Gui = $("#timelineGui");
       Gui.prepend($('<br><button id="Generate" >Generate Timeline</button>'))
+      Gui.prepend($(' <a> days</a>'))
       Gui.prepend($(' <button id="100days" >100</button>'))
       Gui.prepend($(' <button id="20days" >20</button>'))
       Gui.prepend($(' <button id="3days" >3</button>'))
