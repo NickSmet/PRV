@@ -60,9 +60,11 @@ function ConstructBullets (elements_array, elements_type, append_to) {
  */
 function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
   //console.log(data)
-  data = data.replace(/\<\-\>/,"")
-  data = data.replace(/<\?xml[^>]*>/,"")
-  data = data.replace(/\&/,"")
+  data = data.replace(/\<\-\>/g,"")
+  data = data.replace(/<\?xml[^>]*>/g,"")
+  data = data.replace(/\&/g,"")
+  data = data.replace(/ \& /g,"")
+
 
   xmlDoc = $.parseXML( data ),
   $xml = $( xmlDoc );

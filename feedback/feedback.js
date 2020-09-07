@@ -92,7 +92,7 @@ Bug description<br>\
 </div>'}
 
 $("body").append($(form_html))
-$('#form').submit(function(e) {
+$('.submit').click(function(e) {
 doSubmit(e)
 });
 
