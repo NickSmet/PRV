@@ -272,7 +272,7 @@ function parseCurrentVm(item_all_data) {
     if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
     if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
 
-    let vmlocation = $xml.find('VmHome').text().replace("\/config.pvs",'').replace(/\[/,'\\\[').replace(/\]/,'\\\]')//because "REGEXP" doesn't deal with square brackets
+    let vmlocation = $xml.find('VmHome').text().replace("\/config.pvs",'').replace(/\[/,'\\\[').replace(/\]/,'\\\]').replace(/\)/,'\\\)').replace(/\(/,'\\\(')//because "REGEXP" doesn't deal with brackets
      console.log(vmlocation)
     let externalVhddRegex = RegExp('(<u>Location</u>: ((?!'+vmlocation+').)+)','gm') //chckse if there are vHDDs with "Location" outside of PVM
     if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
