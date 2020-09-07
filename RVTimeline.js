@@ -210,11 +210,11 @@ $("#restore").click(function(){
   
   function doTimeline(daysBack)
   {
-  $('#timelineGui').remove()
   if(!daysBack){daysBack = $("#TimelineDays").val()}
   setUpTimeline()
   processLines(getLogData(), daysBack)
   buildTimeline(daysBack)
+  $('#timelineGui').remove()
   }
 
   
