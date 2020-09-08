@@ -63,7 +63,7 @@ function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
   data = data.replace(/\<\-\>/g,"")
   data = data.replace(/<\?xml[^>]*>/g,"")
   data = data.replace(/\&/g,"")
-  data = data.replace(/ \& /g,"")
+  data = data.replace(/[&]]/g,"")
 
 
   xmlDoc = $.parseXML( data ),
@@ -714,7 +714,14 @@ function parseLoadedDrivers(item_all_data) {
         }
     }
     
+    if(prl_arr == null){
+      non_apple_arr.unshift('<b style="color:red"> no prl(!)</b>');
+      markBullet('LoadedDrivers','serious warning')
+    }
+
     var non_apple_str = non_apple_arr.join('\r\n');
+
+    
     
     if (hasBadKexts==false){
       markBullet('LoadedDrivers', 'warning')}
