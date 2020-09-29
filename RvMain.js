@@ -153,8 +153,8 @@ nothing yet</div>'
     
 
     var type_to_link = {
-      'item':'http://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_name,
-      'log' : 'http://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_name,
+      'item':'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_name,
+      'log' : 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_name,
         'blank' : ''
     };
 
@@ -201,8 +201,8 @@ function BulletData(item_id, option) {
     
     
     
-    var request_link = 'http://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
-    if (item_id.match('.log')){request_link = 'http://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
+    var request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
+    if (item_id.match('.log')){request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
   }
   
     $.ajaxSetup({
