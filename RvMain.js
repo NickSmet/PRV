@@ -1262,8 +1262,7 @@ const bad_kexts = ['as.vit9696.Lilu',
 'AAA.LoadEarly.MouSSE',
 'com.usboverdrive.driver.hid',
 'com.squirrels.airparrot.framebuffer',
-'com.squirrels.driver.AirParrotSpeakers',
-'com.github.osxfuse.filesystems.osxfuse']
+'com.squirrels.driver.AirParrotSpeakers']
 
 const vpn_kexts = ['at.obdev.nke.LittleSnitch',]
 
