@@ -37,7 +37,8 @@ function FeedbackToNormal(){
 }
 
 function doSubmit(e){
-  $.get(url, $('#form').serialize()+'&url='+curr_url.replace("&","%26"))//because url contains '&' which is '%26' in curl (otherwise everything after & is percieved as next parameter)
+  console.log($('#form.help-list').serialize())
+  $.get(url, $('#form.help-list').serialize()+'&url='+curr_url.replace("&","%26"))//because url contains '&' which is '%26' in curl (otherwise everything after & is percieved as next parameter)
  
  setTimeout(FeedbackToNormal, 1000);
 
