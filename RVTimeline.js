@@ -249,6 +249,7 @@ $("#restore").click(function(){
       checkRule = checkRuleSysLog
       break
       case 'vm.log':
+      case 'vm.1.gz.log':
       curr_groups = all_vm_groups
       all_items = vmlog_all_items
       checkRule = checkRuleVmLog
@@ -293,7 +294,7 @@ $("#restore").click(function(){
 //The below stuff is what I'm regularly editing
 
 
-  var prod_regex = /vm\.log|system.log|parallels-system.log/
+  var prod_regex = /vm\.1\.gz\.log|vm\.log|system.log|parallels-system.log/
   var testenv_regex = /(vm\.log\.html|)/
   
   var url_regex=prod_regex
