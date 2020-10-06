@@ -262,8 +262,6 @@ $("#restore").click(function(){
 
   window.addEventListener("load", function() {
     page = curr_url.match(url_regex) || '---'
-    console.log(curr_url.match(page)&&curr_groups)
-
     if (curr_url.match(page[0])&&curr_groups){
       var head = $("body");
       head.prepend('<p id=timelineGui><p>')
