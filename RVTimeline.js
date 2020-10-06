@@ -539,7 +539,7 @@ return result
     "font_not_found":{'regex':/not found, using Courier/,"group":"System_Errors","name":"Font missing",'style':{'background-color':'rgb(255, 102, 102)'}},
     'settings':{'regex':/VmCfgCommitDiff/,"group":'PD',"name":"Settings changed",'style':{'background-color':'rgb(109, 163, 117)'}, 'rule':true},
     'PDFM_100983':{'regex':/KMErrorDomain Code\=1/,"group":'System_Errors',"name":"PDFM-100983",'style':{'background-color':'rgb(230, 0, 0)'}, 'rule':true},
- 
+    'PDFM-102106':{'regex':/PRL_NET_PRLNET_OPEN_FAILED/,"group":'System_Errors',"name":"~PDFM-102106",'style':{'background-color':'rgb(230, 111, 0)'}},
   }
 
   const syslog_items = {
