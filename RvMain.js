@@ -923,6 +923,7 @@ function parseGuestCommands(item_all_data) {
 }
 
 function parseVmDirectory(item_all_data) {
+  item_all_data = item_all_data.replace(/&/g, "_") //cuz & in xml causes parsing issues
   //counts number of VMs and marks bullet accordingly
   var numberofvms = item_all_data.match(/VmName/g).length/2
   if(numberofvms>0){
