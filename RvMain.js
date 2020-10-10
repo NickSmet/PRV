@@ -313,7 +313,7 @@ function parseCurrentVm(item_all_data) {
         'Pause When Possible': $xml.find('Coherence > PauseIdleVM').text(),
 
         'Section0':'General',
-        'PVM Location': $xml.find('VmHome').text().replace("\/config.pvs",''),
+        'PVM Location': $xml.find('VmHome').text().replace(/\/config\.pvsp?/,''), //cuz it shows path to .pvs and .pvsp in case of a pvmi
         'Creation date': $xml.find('VmCreationDate').text(),
         'This VM UUID': $xml.find('VmUuid').text(),
         'Source   UUID': $xml.find('SourceVmUuid').text(), 
@@ -355,6 +355,7 @@ function parseCurrentVm(item_all_data) {
     'Shared CCID':$xml.find('SharedCCID > Enabled').text(),
     'Shared Bluetooth':$xml.find('SharedBluetooth > Enabled').text(),
     'Enter Travel Mode':$xml.find('TravelOptions > Condition > Enter').text(),
+    'Smart Guard': $xml.find('Autoprotect > Enabled').text(),
     'USB 3.0': $xml.find('XhcEnabled').text(),
     'TPM': $xml.find('TpmChip > Type').text(),
     'Subbullet1': VMUSBs
@@ -426,7 +427,13 @@ function parseCurrentVm(item_all_data) {
 
     if($xml.find('LinkedVmUuid').text()!=''){markBullet('CurrentVm', icons["linked clone"])}
 
-    keysWithIcons = {'Share Host Printers':'printers','Scale To Fit Screen':'fullscreen'}
+    if (specs_regex['Smart Guard']==1)
+    {markBullet("CurrentVm","smart guard")}
+
+    keysWithIcons = {
+      'Share Host Printers':'printers',
+      'Scale To Fit Screen':'fullscreen',
+    'Smart Guard':'smart guard'}
     
 
     for (var key in specs_regex) {//я немного запутался, но оно рабоатет
@@ -1361,4 +1368,5 @@ const icons = {
 'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
 'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-512.png',
 'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png',
-'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-512.png'}
+'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-512.png',
+'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png'}
