@@ -228,6 +228,8 @@ function BulletData(item_id, option) {
         eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
         //console.log(bullet_parsed_data)
 
+        if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
+
         if(typeof option === "undefined") {
         $('#' + item_id).html(bullet_parsed_data);
         return
@@ -684,6 +686,21 @@ function parseMoreHostInfo(item_all_data) {
 
 function parseLoadedDrivers(item_all_data) {
 
+  GM_xmlhttpRequest({
+    method: "GET",
+    url: "https://gist.githubusercontent.com/NickSmet/53b6d6b947372cbf59f791cff0dcc046/raw/kexts.json",
+    synchronous:    true,
+    onload: function(xhr) {
+      var data = JSON.parse( xhr.responseText)
+     bad_kexts = Object.keys(data)
+     $('#LoadedDrivers').html(GetDriverList(bad_kexts));
+     
+     
+   }
+ });
+ 
+
+    function GetDriverList(bad_kexts){
     var non_apple_regex = /^((?!com.apple|LoadedDrivers|Linked Against|com.parallels).)*$/gm;//filter out non apple/non parallels kexts+extra lines
     var prl_arr = item_all_data.match(/com.parallels/gm)
 
@@ -730,6 +747,7 @@ function parseLoadedDrivers(item_all_data) {
       
     return non_apple_str
 
+      }
 
 }
 
@@ -1250,21 +1268,21 @@ const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','Guest
 
 const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo']
 
-const bad_kexts = ['as.vit9696.Lilu',
-'as.vit9696.WhateverGreen',
-'as.lvs1974.NvidiaGraphicsFixup',
-'org.netkas.driver.FakeSMC',
-'as.vit9696.AppleALC',
-'org.vulgo.NoVPAJpeg',
-'as.vit9696.WhateverGreen',
-'org.hwsensors.driver.CPUSensors',
-'com.parrotgeek.SIPManager',
-'AAA.LoadEarly.MouSSE',
-'com.usboverdrive.driver.hid',
-'com.squirrels.airparrot.framebuffer',
-'com.squirrels.driver.AirParrotSpeakers']
+// const bad_kexts = ['as.vit9696.Lilu',
+// 'as.vit9696.WhateverGreen',
+// 'as.lvs1974.NvidiaGraphicsFixup',
+// 'org.netkas.driver.FakeSMC',
+// 'as.vit9696.AppleALC',
+// 'org.vulgo.NoVPAJpeg',
+// 'as.vit9696.WhateverGreen',
+// 'org.hwsensors.driver.CPUSensors',
+// 'com.parrotgeek.SIPManager',
+// 'AAA.LoadEarly.MouSSE',
+// 'com.usboverdrive.driver.hid',
+// 'com.squirrels.airparrot.framebuffer',
+// 'com.squirrels.driver.AirParrotSpeakers']
 
-const vpn_kexts = ['at.obdev.nke.LittleSnitch',]
+// const vpn_kexts = ['at.obdev.nke.LittleSnitch',]
 
 
 //Filling bullet content with appropriate data.
