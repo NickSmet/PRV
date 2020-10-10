@@ -272,9 +272,14 @@ function parseCurrentVm(item_all_data) {
     var VMHDDs_data = parseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
     var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
 
-    if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
-    if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
-    if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
+    if(VMHDDs.match(/<u>Expanding<\/u>: 0/)&&VMHDDs.match(/<u>Actual Size<\/u>: 0 B/)){markBullet('CurrentVm', 'Boot Camp')}
+    else{//if it's Boot Camp, we don't care about the rest of vHDD info.
+      if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
+      if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
+      if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
+    }
+    
+
 
     let vmlocation = $xml.find('VmHome').text().replace(/\/config.pvsp?/,'').replace(/\[/,'\\\[').replace(/\]/,'\\\]').replace(/\)/,'\\\)').replace(/\(/,'\\\(')//because "REGEXP" doesn't deal with brackets
      console.log(vmlocation)
@@ -1369,4 +1374,5 @@ const icons = {
 'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-512.png',
 'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png',
 'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-512.png',
-'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png'}
+'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png',
+'Boot Camp':'http://www.icons101.com/icons/27/Unibody_Drive_by_komfortzone/32/Bootcamp.png'}
