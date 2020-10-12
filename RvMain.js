@@ -513,6 +513,10 @@ function parseAdvancedVmInfo(item_all_data) {
     markBullet('AdvancedVmInfo','ACL')
   }
 
+  if (item_all_data.match(/ root /)){
+    markBullet('AdvancedVmInfo','root owner')
+  }
+
   var number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length/2-1 : 0;
   
   
@@ -1375,4 +1379,5 @@ const icons = {
 'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png',
 'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-512.png',
 'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png',
-'Boot Camp':'http://www.icons101.com/icons/27/Unibody_Drive_by_komfortzone/32/Bootcamp.png'}
+'Boot Camp':'http://www.icons101.com/icons/27/Unibody_Drive_by_komfortzone/32/Bootcamp.png',
+'root owner':'https://www.freeiconspng.com/thumbs/stop-icon/stop-icon-21.png'}
