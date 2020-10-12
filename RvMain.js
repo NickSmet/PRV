@@ -327,6 +327,7 @@ function parseCurrentVm(item_all_data) {
         'Cpus': $xml.find('Hardware > Cpu > Number').text(),
         'Ram': $xml.find('Hardware > Memory > RAM').text(),
         'VRam': $xml.find('Video > VideoMemorySize').text(),
+        'Resource Quota':$xml.find('ResourceQuota').text(),
         'Video Mode': parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text()),
         'Scale To Fit Screen':$xml.find('FullScreen > ScaleViewMode').text(),
         '3D Acceleration': $xml.find('Video > Enable3DAcceleration').text(),
@@ -434,6 +435,10 @@ function parseCurrentVm(item_all_data) {
 
     if (specs_regex['Smart Guard']==1)
     {markBullet("CurrentVm","smart guard")}
+
+
+    if (specs_regex['Resource Quota']<100)
+    {markBullet("CurrentVm","resource quota")}
 
     keysWithIcons = {
       'Share Host Printers':'printers',
@@ -1352,9 +1357,9 @@ const icons = {
   'serious warning':'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/OOjs_UI_icon_alert-warning.svg/1200px-OOjs_UI_icon_alert-warning.svg.png',
   'bad': 'https://image.flaticon.com/icons/svg/1672/1672451.svg',
   'headless':'https://image.flaticon.com/icons/png/128/1089/1089503.png',
-  'not headless':'https://cdn0.iconfinder.com/data/icons/people-and-lifestyle-1/64/people-male-man-head-512.png',
-'isolated':'https://cdn4.iconfinder.com/data/icons/real-estate-1/512/prison-512.png',
-'flags':'https://cdn3.iconfinder.com/data/icons/seo-and-digital-marketing-5-3/48/211-512.png',
+  'not headless':'https://cdn0.iconfinder.com/data/icons/people-and-lifestyle-1/64/people-male-man-head-128.png',
+'isolated':'https://cdn4.iconfinder.com/data/icons/real-estate-1/512/prison-128.png',
+'flags':'https://cdn3.iconfinder.com/data/icons/seo-and-digital-marketing-5-3/48/211-128.png',
 'nosnapshots':'https://image.flaticon.com/icons/svg/2803/2803253.svg',
 'snapshots':'https://image.flaticon.com/icons/svg/502/502559.svg',
 'screens':'https://getdrawings.com/free-icon/desktop-pc-icon-54.png',
@@ -1363,21 +1368,22 @@ const icons = {
 'external drive':"http://www.icons101.com/icon_png/size_32/id_81556/External_Drive.png",
 'copied vm':'https://www.subrosasoft.com/wp-content/uploads/2016/03/DiskCopyIcon.png',
 'AppleHV':'https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/OS_Apple.png',
-'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-512.png',
-'splitted':'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-512.png',
+'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-128.png',
+'splitted':'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-32.png',
 'trim':'https://i.ibb.co/XpVhPZ9/unnamed.png',
 'webcam':'https://image.flaticon.com/icons/png/128/179/179879.png',
 'gpu':"https://image.flaticon.com/icons/svg/2302/2302939.svg",
 'ACL':'https://findicons.com/files/icons/2796/metro_uinvert_dock/128/security_denied.png',
-'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-512.png',
-'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-512.png',
+'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-128.png',
+'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-128.png',
 'hdds':"https://image.flaticon.com/icons/svg/1689/1689016.svg",
 'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg',
-'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-512.png',
+'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-128.png',
 'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
-'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-512.png',
+'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-128.png',
 'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png',
-'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-512.png',
+'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-128.png',
 'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png',
 'Boot Camp':'http://www.icons101.com/icons/27/Unibody_Drive_by_komfortzone/32/Bootcamp.png',
-'root owner':'https://www.freeiconspng.com/thumbs/stop-icon/stop-icon-21.png'}
+'root owner':'https://www.freeiconspng.com/thumbs/stop-icon/stop-icon-21.png',
+'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png'}
