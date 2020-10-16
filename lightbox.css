@@ -36,3 +36,8 @@
 	/** Unhide lightbox **/
 	display: block;
 }
+
+mark {
+	padding: .05em !important;
+    background-color: #ffec8b !important;
+}

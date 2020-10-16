@@ -224,12 +224,11 @@ function BulletData(item_id, option) {
 
 
       bullet_all_data = bullet_all_data.replace('<?xml version="1.0" encoding="UTF-8"?>','')
-
+        AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
         eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
         //console.log(bullet_parsed_data)
 
         if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
-
         if(typeof option === "undefined") {
         $('#' + item_id).html(bullet_parsed_data);
         return
@@ -259,6 +258,7 @@ function BulletData(item_id, option) {
     })}
 
 function parseCurrentVm(item_all_data) {
+
     xmlDoc = $.parseXML( item_all_data ),
     $xml = $( xmlDoc );
 
@@ -282,7 +282,7 @@ function parseCurrentVm(item_all_data) {
 
 
     let vmlocation = $xml.find('VmHome').text().replace(/\/config.pvsp?/,'').replace(/\[/,'\\\[').replace(/\]/,'\\\]').replace(/\)/,'\\\)').replace(/\(/,'\\\(')//because "REGEXP" doesn't deal with brackets
-     console.log(vmlocation)
+  
     let externalVhddRegex = RegExp('(<u>Location</u>: ((?!'+vmlocation+').)+)','gm') //chckse if there are vHDDs with "Location" outside of PVM
     if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
 
@@ -692,7 +692,7 @@ function parseMoreHostInfo(item_all_data) {
         //console.log(gpus_bullet)
 
         if(number_of_displays>0){
-        markBullet("MoreHostInfo", icons.screens)
+        markBullet("MoreHostInfo", 'screens')
         markBullet("MoreHostInfo", "Custom", '<a>'+number_of_displays+'* </a>')
           }
           else {
@@ -1006,6 +1006,13 @@ function parsetoolsLog(item_all_data) {
   else {markBullet('tools.log','warning')}
 }
 
+function parseLicenseData(item_all_data){
+  let licenseData = JSON.parse(item_all_data.match(/\<License[^>]*>([^<]*)<\/LicenseData>/m)[1])
+  let expirationDate = Date.parse(licenseData['license']['main_period_ends_at'])
+  if(expirationDate-Date.now()>2*365*24*3600*1000){markBullet('LicenseData','pirated')}
+  return "Expires: "+licenseData['license']['main_period_ends_at']
+
+}
 
 
 //Extra functions
@@ -1281,15 +1288,127 @@ else
   {$('.container > div > a:contains("'+bullet_name+'")').prepend($(img))}}
 
 
+  function setupSearch(){
+    $(".reportList").prepend($(`
+    <div id=nodeSearch style="margin-left:13px">
+    
+    <div class="button dropdown"> 
+    
+    <select id="nodeselector">
+    </select>
+    
+    </div>
+    
+    <input id="searchField">
+    <button id="next">Next</button><a id="resultCounter"style="color:#ff7f50; background-color: unset !important; padding:3px; text-decoration: none;"></a>
+    <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap"></pre>
+    </div>
+ `))
+
+ $("#searchField").attr('autocomplete', 'off');
+
+ $("#next").on('click', function(e) {
+  updateResults()
+});
+
+$("#nodeselector").change(function(){
+  doSearch()
+})
+
+ $("#searchField").on('input', function(e) {
+    doSearch()
+ });
+ }
+
+ function AddNodeToSearch(nodeAllData, nodeName){
+  $("#nodeselector").append($('<option value="'+nodeName+'">'+nodeName+'</option>'))
+  let nodelines=nodeAllData.split("\n")
+  //if((typeof nodeAllData)!="string"){return}
+  let node = {'lines':nodelines,
+    'curr_index':0,
+    'curr_indexes':[]
+  }
+  nodeContents[nodeName]=node
+
+}
+
+ function doSearch(){
+
+  thequery=$("#searchField").val()
+
+  // if (thequery ==''){
+  //   $("#searchResults").html('')
+  //   return
+  // }
+
+  nodeName=$("#nodeselector").val()
+
+  //if (thequery.length<3){return}
+  let lines = nodeContents[nodeName]['lines']
+  nodeContents[nodeName]['curr_index']=0
+  nodeContents[nodeName]['curr_indexes']=[]
+  
+  for (let i = 0; i < lines.length; i++)
+  {
+  if(lines[i].match(new RegExp(thequery, 'i'))){nodeContents[nodeName]['curr_indexes'].push(i)}
+  }
+  updateResults()
+  }
+
+  function updateResults(){
+
+    thequery=$("#searchField").val()
+   
+    
+    if (thequery ==''){
+      $("#searchResults").html('')
+      $("#resultCounter").html('')
+      return
+    }
+
+    nodeName=$("#nodeselector").val()
+    
+    let lines = nodeContents[nodeName]['lines']
+    let curr_index = nodeContents[nodeName]['curr_index']
+    let curr_indexes = nodeContents[nodeName]['curr_indexes']
+    let result_line = curr_indexes[curr_index]
+
+    let searchCounterCurrent = parseInt([curr_index])+1
+    let searchCounterTotal = curr_indexes.length
+
+    $("#resultCounter").html(searchCounterCurrent+"/"+searchCounterTotal)
+
+    let match = lines[result_line].match(new RegExp(thequery, 'i'))[0];
+    
+    let startLine
+    let endLine
+  
+    if (result_line-2<0){startLine=result_line}else{startLine=result_line-2}
+    if (result_line+6>lines.length){endLine=lines.length}else{endLine=result_line+6}
+
+    let resultPreview = lines.slice(startLine,endLine).join("\r\n").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll(match,"<mark>"+match+"</mark>")
+    
+    //$("#header").text(nodeName)
+    $("#searchResults").html(resultPreview)
+    
+      
+    if(nodeContents[nodeName]['curr_index']==nodeContents[nodeName]['curr_indexes'].length-1){nodeContents[nodeName]['curr_index']=0}else{nodeContents[nodeName]['curr_index']++}
+      
+    }
+     
+   
+
+
 //all report items for which bullets will be constructed in the bullet container
-const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig'];
+const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
 //report log links that will be cloned to the bullet container
 const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log","tools.log"];
 //pinned_items that will have a collapsible with parsed info
-const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig'];
+const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
 
-const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo']
+const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData']
 
+var nodeContents = {}
 // const bad_kexts = ['as.vit9696.Lilu',
 // 'as.vit9696.WhateverGreen',
 // 'as.lvs1974.NvidiaGraphicsFixup',
@@ -1316,7 +1435,7 @@ var timediff
 
 var current_url = window.location.href;
 var report_id = current_url.match(/\d{7,9}/);
-
+let index
 
 function doReportOverview() {
   
@@ -1325,6 +1444,9 @@ function doReportOverview() {
   BulletData('TimeZone','time');
   computerModel();
   signatureBugs();
+  setupSearch()
+
+      $("#form1").attr('action', 'javascript:void(0);');
   
       for (var item in process_immediately){
         console.log(process_immediately[item]+' ran right away.')
@@ -1362,7 +1484,7 @@ const icons = {
 'flags':'https://cdn3.iconfinder.com/data/icons/seo-and-digital-marketing-5-3/48/211-128.png',
 'nosnapshots':'https://image.flaticon.com/icons/svg/2803/2803253.svg',
 'snapshots':'https://image.flaticon.com/icons/svg/502/502559.svg',
-'screens':'https://getdrawings.com/free-icon/desktop-pc-icon-54.png',
+'screens':'http://getdrawings.com/free-icon/desktop-pc-icon-54.png',
 'vms':'https://insmac.org/uploads/posts/2017-08/1503641514_parallels.png',
 'vpn':'https://image.flaticon.com/icons/png/128/1451/1451546.png',
 'external drive':"http://www.icons101.com/icon_png/size_32/id_81556/External_Drive.png",
@@ -1386,4 +1508,5 @@ const icons = {
 'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png',
 'Boot Camp':'http://www.icons101.com/icons/27/Unibody_Drive_by_komfortzone/32/Bootcamp.png',
 'root owner':'https://www.freeiconspng.com/thumbs/stop-icon/stop-icon-21.png',
-'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png'}
+'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png',
+'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png'}
