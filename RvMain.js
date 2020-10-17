@@ -1084,7 +1084,7 @@ function computerModel(){
   try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
   catch(e){var mac_cpu = ""}
   console.log(mac_cpu)
-  var mac_url = 'http://proxycrime.com/browse.php?u=https://everymac.com/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
+  var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
   var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel+'</a></td>')
   macModelElement.replaceWith(mac_model_linked)
 
@@ -1290,7 +1290,7 @@ else
 
   function setupSearch(){
     $("#doc_top_bar").prepend($(`
-    <div id=nodeSearch style="margin-left:13px">
+    <div id=nodeSearch style="margin-left:-24em">
     
     <div class="button dropdown"> 
     
@@ -1300,15 +1300,34 @@ else
     </div>
     
     <input id="searchField">
-    <button id="next">Next</button><a id="resultCounter"style="color:#ff7f50;  font-weight: bold; background-color: unset !important; padding:3px; text-decoration: none;"></a>
-    <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap"></pre>
+    <button id="previous">Prev.</button><button id="next">Next\></button><a id="resultCounter"style="color:#ff7f50;  font-weight: bold; background-color: unset !important; padding:3px; text-decoration: none;"></a>
+    <span style="*/float: right/*" id="previewBtns">
+    <button id="clearSearch" >clear 🞩</button>
+    <button id="resetPreview" >shrink ⟳</button>
+    <button id="expandPreview" >expand 🞥</button>
+    </span>
+    <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap; */max-height:90em/*"></pre>
     </div>
  `))
 
  $("#searchField").attr('autocomplete', 'off');
 
- $("#next").on('click', function(e) {
-  updateResults()
+ $("#previewBtns").hide()
+
+ $("#expandPreview").on('click', function(e) {
+  changePreviewLength(10)
+});
+
+$("#resetPreview").on('click', function(e) {
+  changePreviewLength(-1000000000000000)
+});
+
+$("#next").on('click', function(e) {
+  updateResults(this.id)
+});
+
+$("#previous").on('click', function(e) {
+  updateResults(this.id)
 });
 
 $("#nodeselector").change(function(){
@@ -1378,16 +1397,35 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
   updateResults()
   }
 
-  function updateResults(){
+  function changePreviewLength(lines){
+    let currLines = GM_getValue("previewLength", 6)
+    let newLines = currLines+lines
+    if(newLines<6){newLines=6}
+    GM_setValue("previewLength", newLines)
+    updateResults()
+  }
+
+  function updateResults(direction){
+    previewLength = GM_getValue("previewLength",6)
+
+    
+    if (direction=='next'){
+      if(nodeContents[nodeName]['curr_index']==nodeContents[nodeName]['curr_indexes'].length-1){nodeContents[nodeName]['curr_index']=0}else{nodeContents[nodeName]['curr_index']++}
+    }else if (direction=='previous'){
+      if(nodeContents[nodeName]['curr_index']==0){nodeContents[nodeName]['curr_index']=nodeContents[nodeName]['curr_indexes'].length-1}else{nodeContents[nodeName]['curr_index']--}
+    }
+
 
     thequery=$("#searchField").val()
    
     
     if (thequery ==''){
+      $("#previewBtns").hide()
       $("#searchResults").html('')
       $("#resultCounter").html('')
       return
     }
+    $("#previewBtns").show()
 
     nodeName=$("#nodeselector").val()
     
@@ -1415,7 +1453,7 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
     let endLine
   
     if (result_line-2<0){startLine=result_line}else{startLine=result_line-2}
-    if (result_line+6>lines.length){endLine=lines.length}else{endLine=result_line+6}
+    if (result_line+previewLength>lines.length){endLine=lines.length}else{endLine=result_line+previewLength}
 
 
 //I will clean this up, honestly
@@ -1425,10 +1463,7 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
     
     //$("#header").text(nodeName)
     $("#searchResults").html(resultPreview)
-    
-      
-    if(nodeContents[nodeName]['curr_index']==nodeContents[nodeName]['curr_indexes'].length-1){nodeContents[nodeName]['curr_index']=0}else{nodeContents[nodeName]['curr_index']++}
-      
+
     }
      
    
