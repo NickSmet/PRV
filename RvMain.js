@@ -1009,7 +1009,7 @@ function parsetoolsLog(item_all_data) {
 function parseLicenseData(item_all_data){
   let licenseData = JSON.parse(item_all_data.match(/\<License[^>]*>([^<]*)<\/LicenseData>/m)[1])
   let expirationDate = Date.parse(licenseData['license']['main_period_ends_at'])
-  if(expirationDate-Date.now()>2*365*24*3600*1000){markBullet('LicenseData','pirated')}
+  if(expirationDate-Date.now()>5*365*24*3600*1000){markBullet('LicenseData','pirated')}
   return "Expires: "+licenseData['license']['main_period_ends_at']
 
 }
@@ -1289,7 +1289,7 @@ else
 
 
   function setupSearch(){
-    $(".reportList").prepend($(`
+    $("#doc_top_bar").prepend($(`
     <div id=nodeSearch style="margin-left:13px">
     
     <div class="button dropdown"> 
@@ -1300,7 +1300,7 @@ else
     </div>
     
     <input id="searchField">
-    <button id="next">Next</button><a id="resultCounter"style="color:#ff7f50; background-color: unset !important; padding:3px; text-decoration: none;"></a>
+    <button id="next">Next</button><a id="resultCounter"style="color:#ff7f50;  font-weight: bold; background-color: unset !important; padding:3px; text-decoration: none;"></a>
     <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap"></pre>
     </div>
  `))
@@ -1320,6 +1320,11 @@ $("#nodeselector").change(function(){
  });
  }
 
+ function focusOnSearch(nodeName){
+  $("#nodeselector").val(nodeName)
+  $("#searchField").focus()
+ }
+
  function AddNodeToSearch(nodeAllData, nodeName){
   $("#nodeselector").append($('<option value="'+nodeName+'">'+nodeName+'</option>'))
   let nodelines=nodeAllData.split("\n")
@@ -1329,7 +1334,20 @@ $("#nodeselector").change(function(){
     'curr_indexes':[]
   }
   nodeContents[nodeName]=node
+  
+  let searchIcon = `<img src="https://png2.cleanpng.com/sh/804e22c9e949d871b99effaadf14b24c/L0KzQYm3VsE4N5h6fpH0aYP2gLBuTf1ib59ufutybnewd73okCMua5DyiOd9ZYKwebT2jwMubZ9oeeJ8dXzkhLbrTgBwe6V4RdV4bX3kg7b3ggJifJZpRehqbIXog368gsI3OGQ3StcEOXKzRXABWcgyOmc2SaMAMkm1QYiBUsY6PWcARuJ3Zx==/kisspng-magnifying-glass-computer-icons-encapsulated-posts-commaseparated-values-5b260322e99b05.8981261115292178269569.png" 
+  id=`+nodeName+`_searchFocus
+  title="search" 
+  style="display: linline; height: 1.5em; margin-left:-1.5em; cursor: pointer; ">`
+  
+  $("#btn_"+nodeName).parent().prepend($(searchIcon))
 
+  $("#"+nodeName+"_searchFocus").click(function(){
+    console.log(nodeName)
+    focusOnSearch(nodeName)
+  })
+
+  
 }
 
  function doSearch(){
@@ -1386,7 +1404,9 @@ $("#nodeselector").change(function(){
     if (result_line-2<0){startLine=result_line}else{startLine=result_line-2}
     if (result_line+6>lines.length){endLine=lines.length}else{endLine=result_line+6}
 
-    let resultPreview = lines.slice(startLine,endLine).join("\r\n").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll(match,"<mark>"+match+"</mark>")
+
+//I will clean this up, honestly
+    let resultPreview = [].concat(lines.slice(startLine,result_line),lines[result_line].replaceAll(match, '<u>'+match+"</u>"),lines.slice(result_line+1,endLine)).join("\r\n").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('&lt;u&gt;'+match+'&lt;/u&gt;','<u style="color:red; font-weigh:600">'+match+'</u>').replaceAll(match,"<mark>"+match+"</mark>")
     
     //$("#header").text(nodeName)
     $("#searchResults").html(resultPreview)
@@ -1484,10 +1504,10 @@ const icons = {
 'flags':'https://cdn3.iconfinder.com/data/icons/seo-and-digital-marketing-5-3/48/211-128.png',
 'nosnapshots':'https://image.flaticon.com/icons/svg/2803/2803253.svg',
 'snapshots':'https://image.flaticon.com/icons/svg/502/502559.svg',
-'screens':'http://getdrawings.com/free-icon/desktop-pc-icon-54.png',
+'screens':'https://user-images.githubusercontent.com/10322311/96313515-5cf7ca00-1016-11eb-87d7-4eb1784e6eab.png',
 'vms':'https://insmac.org/uploads/posts/2017-08/1503641514_parallels.png',
 'vpn':'https://image.flaticon.com/icons/png/128/1451/1451546.png',
-'external drive':"http://www.icons101.com/icon_png/size_32/id_81556/External_Drive.png",
+'external drive':"https://user-images.githubusercontent.com/10322311/96314064-87e21e00-1016-11eb-9620-44f2fb8615e3.png",
 'copied vm':'https://www.subrosasoft.com/wp-content/uploads/2016/03/DiskCopyIcon.png',
 'AppleHV':'https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/OS_Apple.png',
 'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-128.png',
@@ -1506,7 +1526,7 @@ const icons = {
 'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png',
 'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-128.png',
 'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png',
-'Boot Camp':'http://www.icons101.com/icons/27/Unibody_Drive_by_komfortzone/32/Bootcamp.png',
+'Boot Camp':'https://user-images.githubusercontent.com/10322311/96314275-97616700-1016-11eb-9990-8b2e92d49052.png',
 'root owner':'https://www.freeiconspng.com/thumbs/stop-icon/stop-icon-21.png',
 'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png',
 'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png'}
