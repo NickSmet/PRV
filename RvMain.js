@@ -1303,7 +1303,7 @@ else
     <button id="previous">Prev.</button><button id="next">Next\></button><a id="resultCounter"style="color:#ff7f50;  font-weight: bold; background-color: unset !important; padding:3px; text-decoration: none;"></a>
     <span style="*/float: right/*" id="previewBtns">
     <button id="clearSearch" >clear 🞩</button>
-    <button id="resetPreview" >shrink ⟳</button>
+    <button id="resetPreview" >⟳</button>
     <button id="expandPreview" >expand 🞥</button>
     </span>
     <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap; */max-height:90em/*"></pre>
@@ -1320,6 +1320,12 @@ else
 
 $("#resetPreview").on('click', function(e) {
   changePreviewLength(-1000000000000000)
+});
+
+$("#clearSearch").on('click', function(e) {
+  changePreviewLength(-1000000000000000)
+  $("#searchField").val('')
+  updateResults()
 });
 
 $("#next").on('click', function(e) {
