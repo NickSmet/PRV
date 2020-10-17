@@ -3,10 +3,12 @@
   bottom:30px;
   left:0px;
   visibility:hidden;
+  pointer-events: none; 
   }
   
   #wrapper:hover .text {
   visibility:visible;
+  pointer-events: none; 
   }
   
   input {
@@ -20,6 +22,7 @@
     bottom: 1em;
     right: 1em;
     text-align: center;
+    pointer-events: none; 
   }
   .help-button {
     height: 5em;
@@ -33,26 +36,31 @@
     box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
     transform: scale(1);
     transition: all 200ms ease;
+    pointer-events: auto; 
   }
   .help-button:hover,
   .help-button:focus,
   .help-button:active {
     box-shadow: 0 8px 17px 0 rgba(0, 0, 0, 0.2);
     outline: 0;
+    pointer-events: auto; 
   }
   .help-button span {
     display: block;
     font-size: 2em;
     transform: scale(1);
     transition: transform 100ms ease;
+    pointer-events: auto; 
   }
   .help-button:hover span,
   .expanded .help-button span,
   .expanded .help-button span {
     transform: scale(1.25);
+    pointer-events: auto; 
   }
   .expanded .help-button {
     transform: scale(0.5);
+    pointer-events: auto; 
   
   }
   .help-list {
@@ -65,10 +73,12 @@
      opacity: 0.0;
     background-color:rgba(46, 46, 46, 0.35);
     border-radius: 5px;
+    pointer-events: auto; 
   }
   .expanded .help-list {
     transform: translate(0px, 0px) scale(1);
     opacity: 1;
+    pointer-events: auto; 
   }
   .help-list li {
     margin-bottom: 1em;

@@ -2,11 +2,11 @@
     position:relative;
     bottom:30px;
     left:0px;
-    visibility:hidden;
+    visibility:none ;
     }
     
     #wrapper:hover .text {
-    visibility:visible;
+    visibility:none;
     }
     
     input {
@@ -20,6 +20,8 @@
       bottom: 1em;
       right: 1em;
       text-align: center;
+      pointer-events: none; 
+
     }
     .bug-button {
       height: 3em;
@@ -33,18 +35,21 @@
       box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
       transform: scale(1);
       transition: all 200ms ease;
+      pointer-events: auto; 
     }
     .bug-button:hover,
     .bug-button:focus,
     .bug-button:active {
       box-shadow: 0 8px 17px 0 rgba(0, 0, 0, 0.2);
       outline: 0;
+      
     }
     .bug-button span {
       display: block;
       font-size: 2em;
       transform: scale(1);
       transition: transform 100ms ease;
+      pointer-events: auto; 
     }
     .bug-button:hover span,
     .expanded .bug-button span,
@@ -65,6 +70,7 @@
        opacity: 0.0;
       background-color:rgba(46, 46, 46, 0.35);
       border-radius: 5px;
+      pointer-events: auto; 
     }
     .expanded .bug-list {
       transform: translate(0px, 0px) scale(1);

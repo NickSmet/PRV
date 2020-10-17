@@ -224,7 +224,7 @@ function BulletData(item_id, option) {
 
 
       bullet_all_data = bullet_all_data.replace('<?xml version="1.0" encoding="UTF-8"?>','')
-        AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
+        AddNodeToSearch(bullet_all_data, item_id) // AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
         eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
         //console.log(bullet_parsed_data)
 
@@ -1323,9 +1323,12 @@ $("#nodeselector").change(function(){
  function focusOnSearch(nodeName){
   $("#nodeselector").val(nodeName)
   $("#searchField").focus()
+  doSearch()
  }
 
  function AddNodeToSearch(nodeAllData, nodeName){
+   let excludeFromSearch = ['TimeZone']
+   if(excludeFromSearch.includes(nodeName)){return}
   $("#nodeselector").append($('<option value="'+nodeName+'">'+nodeName+'</option>'))
   let nodelines=nodeAllData.split("\n")
   //if((typeof nodeAllData)!="string"){return}
@@ -1335,14 +1338,16 @@ $("#nodeselector").change(function(){
   }
   nodeContents[nodeName]=node
   
-  let searchIcon = `<img src="https://png2.cleanpng.com/sh/804e22c9e949d871b99effaadf14b24c/L0KzQYm3VsE4N5h6fpH0aYP2gLBuTf1ib59ufutybnewd73okCMua5DyiOd9ZYKwebT2jwMubZ9oeeJ8dXzkhLbrTgBwe6V4RdV4bX3kg7b3ggJifJZpRehqbIXog368gsI3OGQ3StcEOXKzRXABWcgyOmc2SaMAMkm1QYiBUsY6PWcARuJ3Zx==/kisspng-magnifying-glass-computer-icons-encapsulated-posts-commaseparated-values-5b260322e99b05.8981261115292178269569.png" 
+  let searchIcon = `<img src="https://icons.iconarchive.com/icons/vexels/office/64/document-search-icon.png" 
   id=`+nodeName+`_searchFocus
   title="search" 
-  style="display: linline; height: 1.5em; margin-left:-1.5em; cursor: pointer; ">`
+  style="display: linline; height: 1.5em; margin-left:-1.5em; cursor: pointer; opacity: 0.7;">`
   
-  $("#btn_"+nodeName).parent().prepend($(searchIcon))
+let nodeID = nodeName.replaceAll('\.','\\\.')
 
-  $("#"+nodeName+"_searchFocus").click(function(){
+  $("#btn_"+nodeID).parent().prepend($(searchIcon))
+
+  $("#"+nodeID+"_searchFocus").click(function(){
     console.log(nodeName)
     focusOnSearch(nodeName)
   })
@@ -1389,12 +1394,20 @@ $("#nodeselector").change(function(){
     let lines = nodeContents[nodeName]['lines']
     let curr_index = nodeContents[nodeName]['curr_index']
     let curr_indexes = nodeContents[nodeName]['curr_indexes']
+
+    
+
     let result_line = curr_indexes[curr_index]
 
     let searchCounterCurrent = parseInt([curr_index])+1
     let searchCounterTotal = curr_indexes.length
 
     $("#resultCounter").html(searchCounterCurrent+"/"+searchCounterTotal)
+
+    if (searchCounterTotal==0){
+      $("#searchResults").html('<a style="color:red; font-width:600">Nothing.</a>')
+      $("#resultCounter").html('-/-')
+    return}
 
     let match = lines[result_line].match(new RegExp(thequery, 'i'))[0];
     
@@ -1406,6 +1419,8 @@ $("#nodeselector").change(function(){
 
 
 //I will clean this up, honestly
+
+    
     let resultPreview = [].concat(lines.slice(startLine,result_line),lines[result_line].replaceAll(match, '<u>'+match+"</u>"),lines.slice(result_line+1,endLine)).join("\r\n").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('&lt;u&gt;'+match+'&lt;/u&gt;','<u style="color:red; font-weigh:600">'+match+'</u>').replaceAll(match,"<mark>"+match+"</mark>")
     
     //$("#header").text(nodeName)
@@ -1424,9 +1439,9 @@ const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommand
 //report log links that will be cloned to the bullet container
 const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log","tools.log"];
 //pinned_items that will have a collapsible with parsed info
-const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
+const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
 
-const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData']
+const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig']
 
 var nodeContents = {}
 // const bad_kexts = ['as.vit9696.Lilu',
@@ -1461,15 +1476,14 @@ function doReportOverview() {
   
   upper_menu();
   screenshots();
-  BulletData('TimeZone','time');
   computerModel();
   signatureBugs();
   setupSearch()
-
+  BulletData('TimeZone','time');
+ 
       $("#form1").attr('action', 'javascript:void(0);');
   
       for (var item in process_immediately){
-        console.log(process_immediately[item]+' ran right away.')
             BulletData(process_immediately[item])
         
       }
