@@ -1606,7 +1606,7 @@ const icons = {
 'screens':'https://user-images.githubusercontent.com/10322311/96313515-5cf7ca00-1016-11eb-87d7-4eb1784e6eab.png',
 'vms':'https://insmac.org/uploads/posts/2017-08/1503641514_parallels.png',
 'vpn':'https://image.flaticon.com/icons/png/128/1451/1451546.png',
-'external drive':"https://user-images.githubusercontent.com/10322311/96314064-87e21e00-1016-11eb-9620-44f2fb8615e3.png",
+'external drive':"https://cdn4.iconfinder.com/data/icons/computer-58/64/external-hard-disk-drive-storage-64.png",
 'copied vm':'https://www.subrosasoft.com/wp-content/uploads/2016/03/DiskCopyIcon.png',
 'AppleHV':'https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/OS_Apple.png',
 'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-128.png',
