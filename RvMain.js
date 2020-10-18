@@ -169,7 +169,7 @@ nothing yet</div>'
     
     var button_id = "btn_" + item_id;
     var item_summary = "nothing yet";
-    var item_target = '#' + item_id;
+    var item_target = '#' + item_id.replaceAll('\.','\\\.');
 
 
     var bullet_content = {
@@ -194,7 +194,7 @@ function BulletData(item_id, option) {
   if (tries[item_id]){tries[item_id]--}else{tries[item_id]=tries['tries']}
     var bullet_parsed_data = 'nothing yet';
 
-    if (pinned_collapsibles.includes(item_id)){$('#' + item_id).text('loading...');}
+    if (pinned_collapsibles.includes(item_id)){$('#' + item_id.replaceAll('\.','\\\.')).text('loading...');}
 
     //console.log(item_id);
     var theerror = ''
@@ -202,7 +202,10 @@ function BulletData(item_id, option) {
     
     
     var request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
-    if (item_id.match('.log')){request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
+    if (item_id.match('[^c].log')){request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
+  }else if (item_id.match('panic.log')){
+    request_link='https://reports.prls.net/Reports/Log.aspx?ReportId=+'+report_id+'+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
+  var panic=true
   }
   
     $.ajaxSetup({
@@ -214,23 +217,23 @@ function BulletData(item_id, option) {
           });
     
     $.get(request_link, function ldd(data) {
-;
-        var bullet_all_data = $('pre', data).eq(0).text()
-
+        var bullet_all_data
+        if (panic==true){
+          data=JSON.parse(data)
+          bullet_all_data=data["log_path"]+"\n\n"+data["panic_string"]}
+        else{bullet_all_data = $('pre', data).eq(0).text().replace('<?xml version="1.0" encoding="UTF-8"?>','')}
         if(!bullet_all_data){
           bullet_parsed_data = "Some kind of (likely server) error"
           return
         }
 
-
-      bullet_all_data = bullet_all_data.replace('<?xml version="1.0" encoding="UTF-8"?>','')
         AddNodeToSearch(bullet_all_data, item_id) // AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
         eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
         //console.log(bullet_parsed_data)
 
         if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
         if(typeof option === "undefined") {
-        $('#' + item_id).html(bullet_parsed_data);
+        $('#' + item_id.replaceAll('\.','\\\.')).html(bullet_parsed_data);
         return
         }
         else if (option == 'time') {
@@ -256,6 +259,37 @@ function BulletData(item_id, option) {
 
 
     })}
+
+function parsepanicLog(item_all_data){
+let panicDateRegex = /^.*panic-full-(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-(?<hour>\d{2})(?<min>\d{2})(?<sec>\d{2}).*/u
+let panicDateRegex2 = /\/Library\/Logs\/DiagnosticReports\/Kernel.(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-(?<hour>\d{2})(?<min>\d{2})(?<sec>\d{2}).*/u
+let panicCreationString = ""
+if(item_all_data.match(panicDateRegex))
+{panicCreationString = item_all_data.match(panicDateRegex)[0]}
+else if(item_all_data.match(panicDateRegex2)
+){
+panicCreationString = item_all_data.match(panicDateRegex2)[0]
+panicDateRegex = panicDateRegex2
+}
+
+console.log({panicCreationString})
+
+let dateString = panicCreationString.replace(panicDateRegex,"$<month>-$<day>-$<year> $<hour>:$<min>:$<sec>")
+
+panicTime=Date.parse(dateString)
+var time_seconds = panicTime/1000;
+var correct_time = new Date(0);
+correct_time.setUTCSeconds(time_seconds)
+panicTime = correct_time.toString().substring(4,24)
+
+
+item_all_data = item_all_data.replace(panicCreationString, "<b>Panic time: "+dateString+"</b>")
+item_all_data = item_all_data.replaceAll(/(last loaded kext)/g, "<b><u>$1</u></b>")
+item_all_data = item_all_data.replaceAll(/(Kernel Extensions in backtrace)/g, "<b><u>$1</u></b>")
+//item_all_data = item_all_data.replaceAll(/(backtrace|loaded)/,"<b>$1</b>")
+
+return item_all_data
+}
 
 function parseCurrentVm(item_all_data) {
 
@@ -1304,7 +1338,8 @@ else
     <span style="*/float: right/*" id="previewBtns">
     <button id="clearSearch" >clear 🞩</button>
     <button id="resetPreview" >⟳</button>
-    <button id="expandPreview" >expand 🞥</button>
+    <button id="expandDown" >expand ▽</button>
+    <button id="expandUp" >expand △</button>
     </span>
     <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap; */max-height:90em/*"></pre>
     </div>
@@ -1314,16 +1349,20 @@ else
 
  $("#previewBtns").hide()
 
- $("#expandPreview").on('click', function(e) {
-  changePreviewLength(10)
+ $("#expandDown").on('click', function(e) {
+  changePreviewLength(10,0)
+});
+
+$("#expandUp").on('click', function(e) {
+  changePreviewLength(0,10)
 });
 
 $("#resetPreview").on('click', function(e) {
-  changePreviewLength(-1000000000000000)
+  changePreviewLength(-1000000000000000,-10000000000)
 });
 
 $("#clearSearch").on('click', function(e) {
-  changePreviewLength(-1000000000000000)
+  changePreviewLength(-1000000,-100000)
   $("#searchField").val('')
   updateResults()
 });
@@ -1403,16 +1442,21 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
   updateResults()
   }
 
-  function changePreviewLength(lines){
-    let currLines = GM_getValue("previewLength", 6)
-    let newLines = currLines+lines
-    if(newLines<6){newLines=6}
-    GM_setValue("previewLength", newLines)
+  function changePreviewLength(down, up){
+    let currUp = GM_getValue("previewUp", 2)
+    let currDown = GM_getValue("previewDown", 6)
+    let newUp = currUp+up
+    let newDown = currDown+down
+    if(newDown<6){newDown=6}
+    if(newUp<2){newUp=2}
+    GM_setValue("previewUp", newUp)
+    GM_setValue("previewDown", newDown)
     updateResults()
   }
 
   function updateResults(direction){
-    previewLength = GM_getValue("previewLength",6)
+    let previewDown = GM_getValue("previewDown",6)
+    let previewUp = GM_getValue("previewUp",2)
 
     
     if (direction=='next'){
@@ -1458,8 +1502,8 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
     let startLine
     let endLine
   
-    if (result_line-2<0){startLine=result_line}else{startLine=result_line-2}
-    if (result_line+previewLength>lines.length){endLine=lines.length}else{endLine=result_line+previewLength}
+    if (result_line-previewUp<0){startLine=result_line}else{startLine=result_line-previewUp}
+    if (result_line+previewDown>lines.length){endLine=lines.length}else{endLine=result_line+previewDown}
 
 
 //I will clean this up, honestly
@@ -1478,11 +1522,11 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
 //all report items for which bullets will be constructed in the bullet container
 const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
 //report log links that will be cloned to the bullet container
-const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log","tools.log"];
+const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log", 'install.log', 'panic.log'];
 //pinned_items that will have a collapsible with parsed info
-const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
+const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData','panic.log'];
 
-const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig']
+const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig','install.log','panic.log']
 
 var nodeContents = {}
 // const bad_kexts = ['as.vit9696.Lilu',
