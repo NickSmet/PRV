@@ -1232,7 +1232,7 @@ function screenshots(){
   </a>'
   $(mypiclink).appendTo('.container')
   
-  $(mypic).appendTo('form')
+  $(mypic).appendTo('body')
     
 }
 var screens_el = $('span:contains("Screenshots")').next()
@@ -1379,9 +1379,18 @@ $("#nodeselector").change(function(){
   doSearch()
 })
 
- $("#searchField").on('input', function(e) {
-    doSearch()
- });
+$("#searchField").on('keyup', function (e) {
+  if (e.key === 'Enter' || e.keyCode === 13) {
+    updateResults('next')
+  }else{doSearch()}
+});
+
+
+
+//  $("#searchField").on('input', function(e) {
+   
+//     doSearch()
+//  });
  }
 
  function focusOnSearch(nodeName){
@@ -1522,7 +1531,7 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
 //all report items for which bullets will be constructed in the bullet container
 const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
 //report log links that will be cloned to the bullet container
-const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log", 'install.log', 'panic.log'];
+const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log", 'install.log','tools.log', 'panic.log'];
 //pinned_items that will have a collapsible with parsed info
 const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData','panic.log'];
 
@@ -1566,8 +1575,11 @@ function doReportOverview() {
   setupSearch()
   BulletData('TimeZone','time');
  
-      $("#form1").attr('action', 'javascript:void(0);');
-  
+      //$("#form1").replaceWith("<div>" + $("#form1").html() + "</div>"); //it's a form that messes up my forms (I don't understand why it's needed. Nothing breaks when replacing it with div)
+    
+      $("#form1").replaceWith(function(){
+        return $("<div />").append($(this).contents());
+    });
       for (var item in process_immediately){
             BulletData(process_immediately[item])
         
