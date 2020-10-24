@@ -1,9 +1,9 @@
 //Костыль, чтобы работало на reportus
 
 var x2js = new X2JS();
-var site
-let reports = {'appendTo':'.reportList','nodeProperty':'href'}
-let reportus = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
+let reportus
+let reportsPrms = {'appendTo':'.reportList','nodeProperty':'href'}
+let reportusPrms = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
 let params
 
 
@@ -51,7 +51,7 @@ function ConstructBullets (elements_array, elements_type, append_to) {
         //console.log($('a[href*="' + elements_array[i] + '"]').text())
         if ($('a['+nodeProperty+'*="' + elements_array[i] + '"]').length===0) {
             var bulletElement = CreateBullet(elements_array[i], 'blank')
-            if(['GuestCommands','GuestOs','CurrentVm'].includes(elements_array[i])&&site=='reportus'){bulletElement = CreateBullet(elements_array[i], elements_type)}
+            if(['GuestCommands','GuestOs','CurrentVm'].includes(elements_array[i])&&reportus){bulletElement = CreateBullet(elements_array[i], elements_type)}//reportus
         }
         else {
             bulletElement = CreateBullet(elements_array[i], elements_type)
@@ -131,7 +131,8 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
   //it's either "CdRom:{Enabled:0,Connected:1...}" or CdRom:{0:{Enabled:0,Connected:1...},1:{Enabled:0,Connected:1...}}
  if(itemObject[0]){
    for (const item in itemObject) {
-     subBullet = subBullet+CreateSubItem(itemObject[item])+'\n';}}else{
+     let subItem = CreateSubItem(itemObject[item])
+     subBullet = subItem ? subBullet+CreateSubItem(itemObject[item])+'\n' : subBullet ;}}else{
      subBullet=CreateSubItem(itemObject)+'\n'
    }
  function CreateSubItem(itemObject){
@@ -140,16 +141,16 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
    let id = parameters[property]
    let hName = property
    let value = ObjByString(itemObject,id)
-   console.log(value)
      
    if (id in filter){
      console.log(value)
-     if(value=filter[id]){return}
+     console.log(filter[id])
+     if(value==filter[id]){return}
    }
      
    if (hName in adjustments){value = adjustSpec(value, adjustments[hName])}
      subItem +='<u>'+hName+'</u>: '+ value+'\n'
-//  console.log(`${hName}: ${value}`);
+      //console.log(`${hName}: ${value}`);
  }
  return subItem
  }
@@ -164,8 +165,6 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
  * @param {Object} icon_url  
  */
 function CreateBullet(item_name, bullet_type, data, icon_url, sublevel=0) {
-  let siteReportus = (site=="reportus")  
-  console.log(siteReportus)
   //if(!data){return}
   var sublevel_space = "    "
     
@@ -213,14 +212,14 @@ nothing yet</div>'
     
 
     let type_to_link 
-    if (site == 'reports'){type_to_link={
+    if (!reportus){type_to_link={
       'item':'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_name,
       'log' : 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_name,
         'blank' : ''
-    }}else if (site == 'reportus'){
+    }}else if (reportus){
       type_to_link={
         'item':'http://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_name,
-        'log' : $('a[href*="' + item_name + '"]').href,
+        'log' : $('a[href*="' + item_name + '"]').attr('href'),
           'blank' : ''
       }
     }
@@ -254,7 +253,6 @@ nothing yet</div>'
         item_target: item_target,
         button_id: button_id,
         icon_url : icon_url,
-        siteReportus : siteReportus //reportus
     };
 
     collapsible_template = $.templates(collapsible_template);
@@ -274,21 +272,19 @@ function BulletData(item_id, option) {
     var theerror = ''
     
     
-    
-    
     var request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
+    if (reportus){request_link = 'http://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_id;}
 
-
-    if (site == 'reportus'){request_link = 'http://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_id
-  console.log({request_link});}
-
-    if (item_id.match('[^c].log')){
-      if (site == 'reportus'){return}
+if (item_id.match('[^c].log')){
       request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
   }else if (item_id.match('panic.log')){
     request_link='https://reports.prls.net/Reports/Log.aspx?ReportId=+'+report_id+'+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
   var panic=true
   }
+  
+  if (reportus&&item_id.match('\.log')){request_link=$('a[href*="' + item_id + '"]').attr('href')
+}
+
   
     $.ajaxSetup({
  
@@ -304,9 +300,8 @@ function BulletData(item_id, option) {
           data=JSON.parse(data)
           bullet_all_data=data["log_path"]+"\n\n"+data["panic_string"]}
         else{
-          if (site=='reports') {bullet_all_data = $('pre', data).eq(0).text().replace('<?xml version="1.0" encoding="UTF-8"?>','')}
-          else {bullet_all_data=data.replace('<![CDATA[<?xml version="1.0" encoding="UTF-8"?>','').replace(']]>','').replace('\<\!\[CDATA\[','')
-          //console.log(bullet_all_data)
+          if (!reportus) {bullet_all_data = $('pre', data).eq(0).text().replace('<?xml version="1.0" encoding="UTF-8"?>','')}
+          else {bullet_all_data=data.replace('<\!\[CDATA\[\<\?xml version="1\.0" encoding="UTF-8"\?\>','').replace('\]\]>','').replace('\<\!\[CDATA\[','')
         }
          
         }
@@ -317,7 +312,7 @@ function BulletData(item_id, option) {
 
         AddNodeToSearch(bullet_all_data, item_id) // AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
         eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
-        //console.log(bullet_parsed_data)
+        console.log("PARSING"+item_id)
 
         if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
         if(typeof option === "undefined") {
@@ -329,9 +324,10 @@ function BulletData(item_id, option) {
 //need to rewrite the bit below (and maybe FitTime to aligh with it)
             correcttime = fixTime (timediff)
             var gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
-            //console.log(gmt_string)
-            var gmt_regex = /\(\"([\d\-T\:]*)\"\)/
-            var gmt_substr = gmt_string.match(gmt_regex)[1];
+            if (reportus){gmt_string=$("b:contains('Creation Time')").parent().next().text()}
+            console.log(gmt_string)
+            var gmt_regex = reportus ? /\(\"([\d\-T\:]*)\"\)/ : /\(\"([\d\-T\:]*)\"\)/
+            var gmt_substr =  gmt_string.match(gmt_regex)[1];
             var gmt_time = Date.parse(gmt_substr);
             //console.log(gmt_time)
             var time_seconds = gmt_time/1000;
@@ -395,6 +391,7 @@ ObjByString = function(o, s) {
 }
 
 function parseCurrentVm(item_all_data) {
+  console.log(item_all_data)
     xmlDoc = $.parseXML( item_all_data );
     //$xml = $( xmlDoc );
     var jsonObj = x2js.xml2json(xmlDoc);
@@ -405,6 +402,8 @@ function parseCurrentVm(item_all_data) {
     //var hdds_regex = /\<Hdd[^\>]*\>[^$]*<\/CommandName>/g
 
     let vmObj = jsonObj.CurrentVm.ParallelsVirtualMachine
+
+    console.log(vmObj)
 
     var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode', 'Expanding':'DiskType'}
     var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
@@ -508,7 +507,7 @@ function parseCurrentVm(item_all_data) {
     var all_specs = '';
 
     //check if VM ram is not more than 1/2 of Host.
-    var hostram = $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
+    var hostram = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(14) > td:nth-child(2)") : $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
     
     var vmram = currentVmSpecs['Ram']
 
@@ -610,6 +609,8 @@ function parseCurrentVm(item_all_data) {
 
         all_specs = all_specs + spec}
 
+        console.log(all_specs)
+
         return all_specs;
 
 
@@ -640,8 +641,6 @@ function parseNetConfig(item_all_data) {
   //console.log(network)
 
   //var networkBullet = CreateBullet('Networks', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
-
-
 
      return network;}
 
@@ -994,16 +993,19 @@ function parseGuestOs(item_all_data) {
 }
 
 function parseGuestCommands(item_all_data) {
-
+  console.log(item_all_data)
   if(item_all_data.length<100){return "Nothing"} //instead of matching empty guest commands, just ignoring when it's very small
 
   var guest_commands_results = []
 
     function ExtractCommandOutput(command) {
       
-        var command_result_regex = new RegExp ('\<CommandName\>'+command+'<\/CommandName>\n +\<CommandResult\>([^]*?)<\/CommandResult\>')
+        var command_result_regex = reportus ? new RegExp ('\<CommandName\>\<\!\\\[CDATA\\\['+command+'\\\]\\\]\>\<\/CommandName\>\n +\<CommandResult\>\<\!\\\[CDATA\\\[([^$]*?)\\\]\\\]\>\<\/CommandResult\>') : new RegExp ('\<CommandName\>'+command+'<\/CommandName>\n +\<CommandResult\>([^$]*?)\<\/CommandResult\>')
+        
+        
         if (item_all_data.match(command_result_regex)){
         var command_result = item_all_data.match(command_result_regex)[1]
+        
         return command_result}
     }
 
@@ -1227,7 +1229,10 @@ function computerModel(){
 
   if (!macModel.match(/MacBook|iMac|Macmini|MacPro/)){return}
 
-  try{var mac_cpu = $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)').text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
+  let cpuElementPath = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(11) > td:nth-child(2)") : $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)')
+
+
+  try{var mac_cpu = cpuElementPath.text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
   catch(e){var mac_cpu = ""}
   console.log(mac_cpu)
   var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
@@ -1255,9 +1260,11 @@ function computerModel(){
 /** @description  Appends customer time im addition to server's local
  */
 function fixTime(timediff, time = '') {
-    var gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
-    //console.log(gmt_string)
-    var gmt_regex = /\(\"([\d\-T\:]*)\"\)/
+    let gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
+    if (reportus) gmt_string = $("b:contains('Creation Time')").parent().next().text()
+    
+    console.log(gmt_string)
+    var gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
     var gmt_substr = gmt_string.match(gmt_regex)[1];
   ///if time is not defined 
     var gmt_time = Date.parse(gmt_substr);
@@ -1347,6 +1354,10 @@ function screenshots(){
   $(mypic).appendTo('body')
     
 }
+
+if(reportus){$('h4:contains("Screenshots")').next().clone().appendTo('.container') 
+return}
+
 var screens_el = $('span:contains("Screenshots")').next()
 screens_el.clone().appendTo('.container') 
 var screenID = 1
@@ -1710,11 +1721,11 @@ function doReportOverview() {
 window.addEventListener("load", function(event) {
   let curr_url = window.location.href
   if (curr_url.match(/Report.aspx\?ReportId=/)){
-  site = 'reports'
+   reportus = false
   }else if (curr_url.match(/webapp\/reports/)){
-  site = 'reportus'
+  reportus = true
   }
-  if(site=='reports'){params = reports}else if(site=='reportus'){params = reportus}
+  if(!reportus){params = reportsPrms}else if(reportus){params = reportusPrms}
   doReportOverview()
 });
 
