@@ -1,7 +1,21 @@
+//Костыль, чтобы работало на reportus
+
+var x2js = new X2JS();
+var site
+let reports = {'appendTo':'.reportList','nodeProperty':'href'}
+let reportus = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
+let params
+
+
+
+
+
 //Constrution of menu with bullets and log links
 function upper_menu() {
+  
+  let appendto = params.appendTo
 //Making the main informationpanel occupy half of the screen
-    var doc_top_bar = $(".reportList");
+    var doc_top_bar = $(appendto).first();
     $(doc_top_bar).css({
       "textAlign":"left"
   });
@@ -29,21 +43,25 @@ function upper_menu() {
 /** @description  Creates bullets and arranges bullets into an array
  */
 function ConstructBullets (elements_array, elements_type, append_to) {
+    let nodeProperty = params.nodeProperty
     var i
     for (i = 0; i < elements_array.length; i++) {
         var item_element
         //if the element is not present on page, will create a greyed out bullet (it's better to see that something is missing)
         //console.log($('a[href*="' + elements_array[i] + '"]').text())
-        if ($('a[href*="' + elements_array[i] + '"]').length===0) {
+        if ($('a['+nodeProperty+'*="' + elements_array[i] + '"]').length===0) {
             var bulletElement = CreateBullet(elements_array[i], 'blank')
+            if(['GuestCommands','GuestOs','CurrentVm'].includes(elements_array[i])&&site=='reportus'){bulletElement = CreateBullet(elements_array[i], elements_type)}
         }
         else {
             bulletElement = CreateBullet(elements_array[i], elements_type)
+
 
         }
 
 
         $(bulletElement).appendTo(append_to)
+
 
 }
 }
@@ -97,6 +115,46 @@ function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
 return subBullet}
 
 
+/** @description  Adds icon before a bullet that signifies that contend has been checked and evaluated, 
+ * Example with LoadedDrivers: they can be either OK (e.g. when only apple and prl kexts are loaded), 
+ * semi-ok (e.g. when some extra kexts are loaded) 
+ * or bad (e.g. LittleSnitch or Hackintosh)
+ * @param {object} itemObject Data that needs to be parsed into a subBullet
+ * @param {object} parameters Obj defining what data to pull from object and how to name it; format {human_name:key_in_data_object} (e.g. 'Actual Size':'SizeOnDisk')
+ * @param {object} adjustments  Obj like {"Size":"bytes"} for parameters that need to be adjusted. (like time for TimZone or bytes to Kb/Mb for readability). Refer to AdjustSpec function for usage 
+ * @param {object} filter Obj defining what values that should be passed to "adjustSpec" function, e.g. passing items to ignore based on some key-value pair in them; format {key_in_data_object:value} (e.g. {'NetworkType':0} will in netw adapters will cause it to skip all adapters that have NetworkType 0)
+ */
+function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
+  if(!itemObject){return}
+  let subBullet = ''
+ 
+  //it's either "CdRom:{Enabled:0,Connected:1...}" or CdRom:{0:{Enabled:0,Connected:1...},1:{Enabled:0,Connected:1...}}
+ if(itemObject[0]){
+   for (const item in itemObject) {
+     subBullet = subBullet+CreateSubItem(itemObject[item])+'\n';}}else{
+     subBullet=CreateSubItem(itemObject)+'\n'
+   }
+ function CreateSubItem(itemObject){
+   var subItem = ''
+   for (const property in parameters) {
+   let id = parameters[property]
+   let hName = property
+   let value = ObjByString(itemObject,id)
+   console.log(value)
+     
+   if (id in filter){
+     console.log(value)
+     if(value=filter[id]){return}
+   }
+     
+   if (hName in adjustments){value = adjustSpec(value, adjustments[hName])}
+     subItem +='<u>'+hName+'</u>: '+ value+'\n'
+//  console.log(`${hName}: ${value}`);
+ }
+ return subItem
+ }
+ 
+ return subBullet}
 
 
 /** @description  Construction of individual bullet
@@ -105,7 +163,10 @@ return subBullet}
  * @param {Object} data Bullet's data. What you want to see when it's expanded.
  * @param {Object} icon_url  
  */
-function CreateBullet(item_name, bullet_type, data = '', icon_url, sublevel=0) {
+function CreateBullet(item_name, bullet_type, data, icon_url, sublevel=0) {
+  let siteReportus = (site=="reportus")  
+  console.log(siteReportus)
+  //if(!data){return}
   var sublevel_space = "    "
     
     //Here it's templating enginge syntax
@@ -114,7 +175,6 @@ function CreateBullet(item_name, bullet_type, data = '', icon_url, sublevel=0) {
 ➤\
 </button>\
   <a style="text-decoration: none; text-decoration: none; background-color: unset !important;" href={{:item_link}}>{{:item_name}}</a>\
-</div>\
 <div id={{:item_id}} style="white-space: pre;" class="collapse">\
 nothing yet</div>'
 
@@ -152,11 +212,21 @@ nothing yet</div>'
 
     
 
-    var type_to_link = {
+    let type_to_link 
+    if (site == 'reports'){type_to_link={
       'item':'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_name,
       'log' : 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_name,
         'blank' : ''
-    };
+    }}else if (site == 'reportus'){
+      type_to_link={
+        'item':'http://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_name,
+        'log' : $('a[href*="' + item_name + '"]').href,
+          'blank' : ''
+      }
+    }
+   
+
+
 
     var item_data = data;
   	var item_link = type_to_link[bullet_type];
@@ -164,6 +234,9 @@ nothing yet</div>'
     var item_id = item_name.split(" ").join("");;
     if(bullet_type=='log'){
       item_id = item_name.replace('Log')
+      console.log($('a[href$="' + item_name + '"]:first').attr('href'));
+      console.log('a[href*="' + item_name + '"]');
+      console.log(item_name);
     }
     
     
@@ -180,7 +253,8 @@ nothing yet</div>'
         item_summary: item_summary,
         item_target: item_target,
         button_id: button_id,
-        icon_url : icon_url
+        icon_url : icon_url,
+        siteReportus : siteReportus //reportus
     };
 
     collapsible_template = $.templates(collapsible_template);
@@ -201,8 +275,16 @@ function BulletData(item_id, option) {
     
     
     
+    
     var request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
-    if (item_id.match('[^c].log')){request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
+
+
+    if (site == 'reportus'){request_link = 'http://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_id
+  console.log({request_link});}
+
+    if (item_id.match('[^c].log')){
+      if (site == 'reportus'){return}
+      request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
   }else if (item_id.match('panic.log')){
     request_link='https://reports.prls.net/Reports/Log.aspx?ReportId=+'+report_id+'+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
   var panic=true
@@ -221,7 +303,13 @@ function BulletData(item_id, option) {
         if (panic==true){
           data=JSON.parse(data)
           bullet_all_data=data["log_path"]+"\n\n"+data["panic_string"]}
-        else{bullet_all_data = $('pre', data).eq(0).text().replace('<?xml version="1.0" encoding="UTF-8"?>','')}
+        else{
+          if (site=='reports') {bullet_all_data = $('pre', data).eq(0).text().replace('<?xml version="1.0" encoding="UTF-8"?>','')}
+          else {bullet_all_data=data.replace('<![CDATA[<?xml version="1.0" encoding="UTF-8"?>','').replace(']]>','').replace('\<\!\[CDATA\[','')
+          //console.log(bullet_all_data)
+        }
+         
+        }
         if(!bullet_all_data){
           bullet_parsed_data = "Some kind of (likely server) error"
           return
@@ -291,165 +379,181 @@ item_all_data = item_all_data.replaceAll(/(Kernel Extensions in backtrace)/g, "<
 return item_all_data
 }
 
-function parseCurrentVm(item_all_data) {
+ObjByString = function(o, s) {
+  s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
+  s = s.replace(/^\./, '');           // strip a leading dot
+  var a = s.split('.');
+  for (var i = 0, n = a.length; i < n; ++i) {
+      var k = a[i];
+      if (k in o) {
+          o = o[k];
+      } else {
+          return;
+      }
+  }
+  return o;
+}
 
-    xmlDoc = $.parseXML( item_all_data ),
-    $xml = $( xmlDoc );
+function parseCurrentVm(item_all_data) {
+    xmlDoc = $.parseXML( item_all_data );
+    //$xml = $( xmlDoc );
+    var jsonObj = x2js.xml2json(xmlDoc);
+    theBigReportObject['vm'] = jsonObj
+
+    //$xml = $(x2js.json2xml(theBigReportObject['vm']['CurrentVm']))
 
     //var hdds_regex = /\<Hdd[^\>]*\>[^$]*<\/CommandName>/g
 
+    let vmObj = jsonObj.CurrentVm.ParallelsVirtualMachine
 
     var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode', 'Expanding':'DiskType'}
     var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
     var iconVMHDDs = icons.hdds
 
-    var VMHDDs_data = parseXMLItem ( item_all_data, element = "Hdd", ParamVMHDDs,AdjustsVMHDDs)
+    var VMHDDs_data = parseJsonItem (vmObj.Hardware.Hdd, ParamVMHDDs,AdjustsVMHDDs)
+    //var VMHDDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMHDDs,AdjustsVMHDDs)
+
     var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
-
-    if(VMHDDs.match(/<u>Expanding<\/u>: 0/)&&VMHDDs.match(/<u>Actual Size<\/u>: 0 B/)){markBullet('CurrentVm', 'Boot Camp')}
-    else{//if it's Boot Camp, we don't care about the rest of vHDD info.
-      if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
-      if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
-      if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
-    }
     
-
-
-    let vmlocation = $xml.find('VmHome').text().replace(/\/config.pvsp?/,'').replace(/\[/,'\\\[').replace(/\]/,'\\\]').replace(/\)/,'\\\)').replace(/\(/,'\\\(')//because "REGEXP" doesn't deal with brackets
-  
-    let externalVhddRegex = RegExp('(<u>Location</u>: ((?!'+vmlocation+').)+)','gm') //chckse if there are vHDDs with "Location" outside of PVM
-    if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
-
-    console.log(externalVhddRegex)
-    console.log(VMHDDs)
-
-    //VMHDDs.match('Location: '+VMHDDs.match($xml.find('VmHome').text().replace("\/config.pvs",'')))
-    
-    var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit > Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
+    var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit.Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
     var iconVMNETWORKs = icons.networkAdapter
 
-    var VMNETWORKs_data = parseXMLItem ( item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
+    //var VMNETWORKs_data = parseXMLItem (item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
+    var VMNETWORKs_data = parseJsonItem ( vmObj['Hardware']['NetworkAdapter'], ParamVMNETWORKs, AdjustsVMNETWORKs)
     var VMNETWORKs = CreateBullet('Networks','Custom', VMNETWORKs_data, iconVMNETWORKs)
-    if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){markBullet('CurrentVm', icons["network conditioner"])}
-
 
     var ParamVMUSBs = {'Name':'SystemName', 'Last connected':'Timestamp'}
     var AdjustsVMUSBs = {'Last connected':'time'}
     var iconVMUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
 
-    var VMUSBs_data = parseXMLItem ( item_all_data, element = "USBPort", ParamVMUSBs,AdjustsVMUSBs)
+    usbObj = vmObj.Hardware.UsbConnectHistory?.USBPort
+    var VMUSBs_data = parseJsonItem (usbObj, ParamVMUSBs,AdjustsVMUSBs)
+    //var VMUSBs_data = parseXMLItem ( item_all_data, element = "USBPort", ParamVMUSBs,AdjustsVMUSBs)
     var VMUSBs = CreateBullet('USBs','Custom', VMUSBs_data, iconVMUSBs)
 
+    var currentVmSpecs = {
+      'Section5':'Startup',
+      'AutoStart': vmObj.Settings.Startup.AutoStart,
+      'OnVmWindowClose': vmObj.Settings.Shutdown.OnVmWindowClose,
+      'Pause When Possible': vmObj.Settings.Tools.Coherence.PauseIdleVM,
+
+      'Section0':'General',
+            
+      //Initially, ".replace" is to remove pvsp/pvs from path (leaving just .pvm), and brackets bit is to account for brackets in VM path so as not to break regexp. 
+      'PVM Location': vmObj.Identification.VmHome.replace(/\/config.pvsp?/,'').replace(/\[/,'\\\[').replace(/\]/,'\\\]').replace(/\)/,'\\\)').replace(/\(/,'\\\('),
+      'Creation date': vmObj.Identification.VmCreationDate,
+      'This VM UUID': vmObj.Identification.VmUuid,
+      'Source   UUID': vmObj.Identification.SourceVmUuid, 
+      
+      'Section1':'Hardware',
+      'Cpus': vmObj.Hardware.Cpu.Number,
+      'Ram': vmObj.Hardware.Memory.RAM,
+      'VRam': vmObj.Hardware.Video.VideoMemorySize,
+      'Resource Quota': vmObj.Settings.Runtime.ResourceQuota,
+      'Video Mode': parseInt(vmObj.Hardware.Video.EnableHiResDrawing) + parseInt(vmObj.Hardware.Video.NativeScalingInGuest),
+      'Scale To Fit Screen': vmObj.Settings.Runtime.FullScreen.ScaleViewMode,
+      '3D Acceleration': vmObj.Hardware.Video.Enable3DAcceleration,
+      //'Lan Adapter': $xml.find('AdapterType').text(),
+      //'Networks': $xml.find('NetworkAdapter > EmulatedType').text(),
+      'Subbullet3': VMNETWORKs,
+      'Subbullet2':VMHDDs,
+      
+      'Hypervisor': vmObj.Settings.Runtime.HypervisorType,
+      'Adaptive Hypervisor': vmObj.Settings.Runtime.EnableAdaptiveHypervisor,
+      'Nested Virtualization': vmObj.Hardware.Cpu.VirtualizedHV,
+      'Section2':'Sharing',
+      'Isolated': vmObj.Settings.Tools.IsolatedVm,
+      'Shared profile': vmObj.Settings.Tools.SharedProfile.Enabled,
+      // 'Win>Mac Sharing': FromWinToMac, NEED TO REWORK SHARING
+      // 'Mac>Win Sharing': FromMacToWin,
+      'Clipboard': vmObj.Settings.Tools.ClipboardSync.Enabled,
+      'Time Sync': vmObj.Settings.Tools.TimeSync.Enabled,
+      'Section3':'Other',
+    'Smart Guard': vmObj.Settings.Autoprotect.Enabled,
+    'Opt.TimeMachine': vmObj.Settings.Autoprotect.Schema,
+    '<b>Boot Flags</b>': vmObj.Settings.Runtime.SystemFlags,
+  'Graphic Switching': vmObj.Settings.Runtime.OptimizePowerConsumptionMode,
+  'Enter Travel Mode': vmObj.Settings.TravelOptions.Condition.Enter,
+  'Section':'Devices',
+  'Share Host Printers': vmObj.Settings.VirtualPrintersInfo.UseHostPrinters,
+  'Sync Default Printer': vmObj.Settings.VirtualPrintersInfo.SyncDefaultPrinter,
+  'Show Page Setup': vmObj.Settings.VirtualPrintersInfo.ShowHostPrinterUI,
+  'Shared Camera': vmObj.Settings.SharedCamera.Enabled,
+
+  'Shared CCID': vmObj.Settings.SharedCCID?.Enabled,
+  'Shared Bluetooth': vmObj.Settings.SharedBluetooth.Enabled,
+  'Enter Travel Mode': vmObj.Settings.TravelOptions.Condition.Enter,
+  'USB 3.0': vmObj.Settings.UsbController.XhcEnabled,
+  'TPM': vmObj.Hardware.TpmChip?.Type,
+  'Subbullet1': VMUSBs
+  };
+
+  if(VMHDDs.match(/<u>Expanding<\/u>: 0/)&&VMHDDs.match(/<u>Actual Size<\/u>: 0 B/)){markBullet('CurrentVm', 'Boot Camp')}
+  else{//if it's Boot Camp, we don't care about the rest of vHDD info.
+    if(VMHDDs.match(/<u>Trim<\/u>: 1/)){markBullet('CurrentVm', 'trim')}
+    if(VMHDDs.match(/<u>Splitted<\/u>: 1/)){markBullet('CurrentVm', 'splitted')}
+    if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
+  }
+  
+  let externalVhddRegex = RegExp('(<u>Location</u>: ((?!'+currentVmSpecs['PVM Location']+').)+)','gm') //chckse if there are vHDDs with "Location" outside of PVM
+  
+  if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
 
 
-  //console.log(guestUSB)
+  if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){markBullet('CurrentVm', icons["network conditioner"])}
 
-    var specs_regex = {
-        'Section5':'Startup',
-        'AutoStart': $xml.find('AutoStart').text(),
-        'OnVmWindowClose': $xml.find('OnVmWindowClose').text(),
-        'Pause When Possible': $xml.find('Coherence > PauseIdleVM').text(),
 
-        'Section0':'General',
-        'PVM Location': $xml.find('VmHome').text().replace(/\/config\.pvsp?/,''), //cuz it shows path to .pvs and .pvsp in case of a pvmi
-        'Creation date': $xml.find('VmCreationDate').text(),
-        'This VM UUID': $xml.find('VmUuid').text(),
-        'Source   UUID': $xml.find('SourceVmUuid').text(), 
-        
-        'Section1':'Hardware',
-        'Cpus': $xml.find('Hardware > Cpu > Number').text(),
-        'Ram': $xml.find('Hardware > Memory > RAM').text(),
-        'VRam': $xml.find('Video > VideoMemorySize').text(),
-        'Resource Quota':$xml.find('ResourceQuota').text(),
-        'Video Mode': parseInt($xml.find('EnableHiResDrawing').text()) + parseInt($xml.find('NativeScalingInGuest').text()),
-        'Scale To Fit Screen':$xml.find('FullScreen > ScaleViewMode').text(),
-        '3D Acceleration': $xml.find('Video > Enable3DAcceleration').text(),
-        //'Lan Adapter': $xml.find('AdapterType').text(),
-        //'Networks': $xml.find('NetworkAdapter > EmulatedType').text(),
-        'Subbullet3': VMNETWORKs,
-        'Subbullet2':VMHDDs,
-        
-        'Hypervisor': $xml.find('HypervisorType').text(),
-        'Adaptive Hypervisor': $xml.find('EnableAdaptiveHypervisor').text(),
-        'Nested Virtualization': $xml.find('VirtualizedHV').text(),
-        'Section2':'Sharing',
-        'Isolated': $xml.find('IsolatedVm').text(),
-        'Shared profile': $xml.find('SharedProfile > Enabled').text(),
-        'Win>Mac Sharing': $xml.find('FromWinToMac').text(),
-        'Mac>Win Sharing': $xml.find('FromMacToWin').text(),
-        'Clipboard Sync': $xml.find('ClipboardSync > Enabled').text(),
-        'Time Sync': $xml.find('TimeSync > Enabled').text(),
-        'Section3':'Other',
-      'SmartGuard': $xml.find('Autoprotect > Enabled').text(),
-      'Opt.TimeMachine': $xml.find('Autoprotect > Schema').text(),
-      '<b>Boot Flags</b>': $xml.find('SystemFlags').text(),
-		'Graphic Switching':$xml.find('OptimizePowerConsumptionMode').text(),
-    'Enter Travel Mode':$xml.find('TravelOptions > Condition > Enter').text(),
-    'Section':'Devices',
-    'Share Host Printers':$xml.find('VirtualPrintersInfo > UseHostPrinters').text(),
-    'Sync Default Printer':$xml.find('VirtualPrintersInfo > SyncDefaultPrinter').text(),
-    'Show Page Setup':$xml.find('VirtualPrintersInfo > ShowHostPrinterUI').text(),
-    'Shared Camera':$xml.find('SharedCamera > Enabled').text(),
-
-    'Shared CCID':$xml.find('SharedCCID > Enabled').text(),
-    'Shared Bluetooth':$xml.find('SharedBluetooth > Enabled').text(),
-    'Enter Travel Mode':$xml.find('TravelOptions > Condition > Enter').text(),
-    'Smart Guard': $xml.find('Autoprotect > Enabled').text(),
-    'USB 3.0': $xml.find('XhcEnabled').text(),
-    'TPM': $xml.find('TpmChip > Type').text(),
-    'Subbullet1': VMUSBs
-    };
+    
     var all_specs = '';
 
     //check if VM ram is not more than 1/2 of Host.
     var hostram = $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
     
-    var vmram = specs_regex['Ram']
+    var vmram = currentVmSpecs['Ram']
 
     if (vmram>hostram/2){
-      specs_regex['Ram']+='<b style="color:red">!!!!! Too Much</b>',
+      currentVmSpecs['Ram']+='<b style="color:red">!!!!! Too Much</b>',
       markBullet("CurrentVm",'bad')
     }
     if((vmram % 256) != 0){
-      specs_regex['Ram']+='<b style="color:orange">! Uneven amount </b>',
+      currentVmSpecs['Ram']+='<b style="color:orange">! Uneven amount </b>',
       markBullet("CurrentVm",'warning')
     }
-    
 
     //Setting correct value for vram
-    if (specs_regex['VRam']=="0"){specs_regex['VRam']="Auto"}
+    if (currentVmSpecs['VRam']=="0"){currentVmSpecs['VRam']="Auto"}
 
     //Identifying if VM was copied
-    if (specs_regex['Source   UUID']!=specs_regex['This VM UUID'])
+    if (currentVmSpecs['Source   UUID']!=currentVmSpecs['This VM UUID'])
     {markBullet("CurrentVm",'copied vm')}
 
     //Identifying if VM is on an external volumes
-    if (specs_regex['PVM Location'].match(/^\/Volumes/)){markBullet("CurrentVm","external drive")}
+    if (currentVmSpecs['PVM Location'].match(/^\/Volumes/)){markBullet("CurrentVm","external drive")}
 
     //Identifying AppleHV and marking bullet accordingly
-    if (specs_regex['Hypervisor']==1)
+    if (currentVmSpecs['Hypervisor']==1)
     {markBullet("CurrentVm","AppleHV")}
 
  //Identifying Nested Virtualization and marking bullet accordingly
-    if (specs_regex['Nested Virtualization']==1)
+    if (currentVmSpecs['Nested Virtualization']==1)
     {markBullet("CurrentVm","Nested")}
 
     //Identifying if headless and marking bullet accordingly
-    if (specs_regex['AutoStart']==1 || specs_regex['AutoStart']==5 || specs_regex['AutoStart']==3)
+    if (currentVmSpecs['AutoStart']==1 || currentVmSpecs['AutoStart']==5 || currentVmSpecs['AutoStart']==3)
     {markBullet("CurrentVm","headless")} 
     else
     {//markBullet("CurrentVm",'not headless')
   }
 
       //Identifying if Timesync is off
-      if (specs_regex['Time Sync']==0){markBullet("CurrentVm","noTimeSync")}
+      if (currentVmSpecs['Time Sync']==0){markBullet("CurrentVm","noTimeSync")}
 
     //Identifying if Isolated and marking bullet accordingly
-    if (specs_regex['Isolated']=='1'){markBullet("CurrentVm","isolated")}
+    if (currentVmSpecs['Isolated']=='1'){markBullet("CurrentVm","isolated")}
 
     //Identifying if has bootflags and marking bullet accordingly
-    if (specs_regex['<b>Boot Flags</b>']!=''){markBullet("CurrentVm","flags")}
+    if (currentVmSpecs['<b>Boot Flags</b>']!=''){markBullet("CurrentVm","flags")}
     var specs_to_name = {
       'Lan Adapter':{0: 'Legacy',1 :'RealTek RTL8029AS',2: 'Intel(R) PRO/1000MT',3:'Virtio', 4:'Intel(R) Gigabit CT (82574l)'},
       'Network':{1: 'Shared',2 :'Bridged'},
@@ -461,17 +565,17 @@ function parseCurrentVm(item_all_data) {
     }
 
 
-    if (specs_regex['TPM']!=0){
+    if (currentVmSpecs['TPM']==1){
       markBullet("CurrentVm",icons.TPM)
     }
 
-    if($xml.find('LinkedVmUuid').text()!=''){markBullet('CurrentVm', icons["linked clone"])}
+    if(vmObj.Identification.LinkedVmUuid!=''){markBullet('CurrentVm', icons["linked clone"])}
 
-    if (specs_regex['Smart Guard']==1)
+    if (currentVmSpecs['Smart Guard']==1)
     {markBullet("CurrentVm","smart guard")}
 
 
-    if (specs_regex['Resource Quota']<100)
+    if (currentVmSpecs['Resource Quota']<100)
     {markBullet("CurrentVm","resource quota")}
 
     keysWithIcons = {
@@ -480,10 +584,11 @@ function parseCurrentVm(item_all_data) {
     'Smart Guard':'smart guard'}
     
 
-    for (var key in specs_regex) {//я немного запутался, но оно рабоатет
+    for (var key in currentVmSpecs) {//я немного запутался, но оно рабоатет
       var spec
        var specName = key
-       var specValue = specs_regex[key];
+       var specValue = currentVmSpecs[key] || 0
+
        
        if (key in specs_to_name) {
         specValue = specs_to_name[key][specValue]
@@ -512,18 +617,26 @@ function parseCurrentVm(item_all_data) {
 
 function parseNetConfig(item_all_data) {
 
+  xmlDoc = $.parseXML( item_all_data );
+  var jsonObj = x2js.xml2json(xmlDoc);
+  theBigReportObject['PD']['NetConfig'] = jsonObj
+
+  console.log(JSON.stringify(jsonObj))
+
+  netCfgObj = jsonObj.NetConfig.ParallelsNetworkConfig
+
   
-  var networkParams = {
+  networkParams = {
     'Name':'Description',
-    'DHCP IP':'DhcpIPAddress',
-    'Net Mask':'IPNetMask',
-    'Host IP':'HostIPAddress',
-    'DHCP Enabled':'DHCPServer > Enabled',
-    'IPv6 DHCP Ehabled':'DHCPv6Server > Enabled',
+    'DHCP IP':'HostOnlyNetwork.DhcpIPAddress',
+    'Net Mask':'HostOnlyNetwork.IPNetMask',
+    'Host IP':'HostOnlyNetwork.HostIPAddress',
+    'DHCP Enabled':'HostOnlyNetwork.DHCPServer.Enabled',
+    'IPv6 DHCP Ehabled':'HostOnlyNetwork.DHCPv6Server.Enabled',
     'NetworkType':'NetworkType'
   }
-  var networkFilter = {'NetworkType':0}
-  var network = parseXMLItem(item_all_data, "VirtualNetwork", networkParams,{}, networkFilter)
+  var networkFilter = {'NetworkType':0}//fix filter in main function
+  var network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams,{}, networkFilter)
   //console.log(network)
 
   //var networkBullet = CreateBullet('Networks', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
@@ -887,7 +1000,7 @@ function parseGuestCommands(item_all_data) {
   var guest_commands_results = []
 
     function ExtractCommandOutput(command) {
-      //console.log(command)
+      
         var command_result_regex = new RegExp ('\<CommandName\>'+command+'<\/CommandName>\n +\<CommandResult\>([^]*?)<\/CommandResult\>')
         if (item_all_data.match(command_result_regex)){
         var command_result = item_all_data.match(command_result_regex)[1]
@@ -910,7 +1023,6 @@ function parseGuestCommands(item_all_data) {
 
   }
   function parseIpconfig(command_result) {
-    
     var adapters_regex = /\n[ \w][^\n\:]*:\n\n( +[^\n]*\n){1,}/gi
     var adapters = command_result.match(adapters_regex)
 
@@ -1537,22 +1649,21 @@ const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','Guest
 
 const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig','install.log','panic.log']
 
-var nodeContents = {}
-// const bad_kexts = ['as.vit9696.Lilu',
-// 'as.vit9696.WhateverGreen',
-// 'as.lvs1974.NvidiaGraphicsFixup',
-// 'org.netkas.driver.FakeSMC',
-// 'as.vit9696.AppleALC',
-// 'org.vulgo.NoVPAJpeg',
-// 'as.vit9696.WhateverGreen',
-// 'org.hwsensors.driver.CPUSensors',
-// 'com.parrotgeek.SIPManager',
-// 'AAA.LoadEarly.MouSSE',
-// 'com.usboverdrive.driver.hid',
-// 'com.squirrels.airparrot.framebuffer',
-// 'com.squirrels.driver.AirParrotSpeakers']
+var nodeContents = {}//it't almost raw data. Mostly for the search function.
 
-// const vpn_kexts = ['at.obdev.nke.LittleSnitch',]
+var theBigReportObject = {//this is the Grand Refactoring bit
+  'customer':{},//email, timezone, LicenseData
+  'report':{},// creation time, timezone
+  'PD':{
+    'NetConfig':{}
+  },//NetConfig, AppConfig...
+  'vm':{},//CurrentVm
+  'guestos':{},//GuestCommands,
+  'host':{},//HostInfo, MountInfo, MoreHostInfo, 
+  'hostos':{},//AllProcesses, ClientProxyInfo, LoadedDrivers, 
+  'logs':{},//not sure if populate with events or just what's in 'nodeContents'. Anyway, I think it should be separate
+}
+
 
 
 //Filling bullet content with appropriate data.
@@ -1597,9 +1708,14 @@ function doReportOverview() {
   }
 
 window.addEventListener("load", function(event) {
+  let curr_url = window.location.href
   if (curr_url.match(/Report.aspx\?ReportId=/)){
-    doReportOverview()
+  site = 'reports'
+  }else if (curr_url.match(/webapp\/reports/)){
+  site = 'reportus'
   }
+  if(site=='reports'){params = reports}else if(site=='reportus'){params = reportus}
+  doReportOverview()
 });
 
 //note to self -- start hosting those somewhere (github even?)
