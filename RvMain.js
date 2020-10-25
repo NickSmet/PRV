@@ -7,9 +7,6 @@ let reportusPrms = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
 let params
 
 
-
-
-
 //Constrution of menu with bullets and log links
 function upper_menu() {
   
@@ -143,8 +140,6 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
    let value = ObjByString(itemObject,id)
      
    if (id in filter){
-     console.log(value)
-     console.log(filter[id])
      if(value==filter[id]){return}
    }
      
@@ -233,9 +228,6 @@ nothing yet</div>'
     var item_id = item_name.split(" ").join("");;
     if(bullet_type=='log'){
       item_id = item_name.replace('Log')
-      console.log($('a[href$="' + item_name + '"]:first').attr('href'));
-      console.log('a[href*="' + item_name + '"]');
-      console.log(item_name);
     }
     
     
@@ -312,7 +304,7 @@ if (item_id.match('[^c].log')){
 
         AddNodeToSearch(bullet_all_data, item_id) // AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
         eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
-        console.log("PARSING"+item_id)
+        console.log("PARSING "+item_id)
 
         if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
         if(typeof option === "undefined") {
@@ -323,10 +315,14 @@ if (item_id.match('[^c].log')){
             timediff = bullet_parsed_data
 //need to rewrite the bit below (and maybe FitTime to aligh with it)
             correcttime = fixTime (timediff)
-            var gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
-            if (reportus){gmt_string=$("b:contains('Creation Time')").parent().next().text()}
-            console.log(gmt_string)
-            var gmt_regex = reportus ? /\(\"([\d\-T\:]*)\"\)/ : /\(\"([\d\-T\:]*)\"\)/
+
+            let timeElementPath = reportus ? "b:contains('Creation Time')" : "body > div:nth-child(2) > table.reportList > tbody > tr:nth-child(3) > td:nth-child(3)"
+            let gmtElement = reportus ? $(timeElementPath).parent().next() : $(timeElementPath)
+          
+
+            var gmt_string = reportus ? gmtElement.text() : $(".reportList:first tbody:first tr:nth-child(3) script").text()
+
+            var gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
             var gmt_substr =  gmt_string.match(gmt_regex)[1];
             var gmt_time = Date.parse(gmt_substr);
             //console.log(gmt_time)
@@ -337,7 +333,7 @@ if (item_id.match('[^c].log')){
             //console.log(timediff)
             correct_time1.setUTCSeconds(time_seconds+10800)
             gmt_time = correct_time1.toString().substring(4,24)
-        $( ".reportList:first tbody:first tr:nth-child(3) :nth-child(3)" ).html("Customer: "+correcttime+"</br> Moscow:&nbsp;&nbsp;&thinsp;&thinsp;"+gmt_time)
+            $(gmtElement).html("Customer: "+correcttime+"</br> Moscow:&nbsp;&nbsp;&thinsp;&thinsp;"+gmt_time)
 
         }
 
@@ -391,7 +387,7 @@ ObjByString = function(o, s) {
 }
 
 function parseCurrentVm(item_all_data) {
-  console.log(item_all_data)
+
     xmlDoc = $.parseXML( item_all_data );
     //$xml = $( xmlDoc );
     var jsonObj = x2js.xml2json(xmlDoc);
@@ -403,7 +399,6 @@ function parseCurrentVm(item_all_data) {
 
     let vmObj = jsonObj.CurrentVm.ParallelsVirtualMachine
 
-    console.log(vmObj)
 
     var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode', 'Expanding':'DiskType'}
     var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
@@ -609,7 +604,7 @@ function parseCurrentVm(item_all_data) {
 
         all_specs = all_specs + spec}
 
-        console.log(all_specs)
+
 
         return all_specs;
 
@@ -622,7 +617,7 @@ function parseNetConfig(item_all_data) {
   var jsonObj = x2js.xml2json(xmlDoc);
   theBigReportObject['PD']['NetConfig'] = jsonObj
 
-  console.log(JSON.stringify(jsonObj))
+
 
   netCfgObj = jsonObj.NetConfig.ParallelsNetworkConfig
 
@@ -993,7 +988,7 @@ function parseGuestOs(item_all_data) {
 }
 
 function parseGuestCommands(item_all_data) {
-  console.log(item_all_data)
+  //console.log(item_all_data)
   if(item_all_data.length<100){return "Nothing"} //instead of matching empty guest commands, just ignoring when it's very small
 
   var guest_commands_results = []
@@ -1263,7 +1258,6 @@ function fixTime(timediff, time = '') {
     let gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
     if (reportus) gmt_string = $("b:contains('Creation Time')").parent().next().text()
     
-    console.log(gmt_string)
     var gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
     var gmt_substr = gmt_string.match(gmt_regex)[1];
   ///if time is not defined 
@@ -1689,7 +1683,6 @@ var report_id = current_url.match(/\d{7,9}/);
 let index
 
 function doReportOverview() {
-  
   upper_menu();
   screenshots();
   computerModel();
@@ -1720,6 +1713,19 @@ function doReportOverview() {
 
 window.addEventListener("load", function(event) {
   let curr_url = window.location.href
+
+
+  if ($('Title').text().match('Waiting')){
+    let id = curr_url.match(/ReportId=(\d{9})/)[1]
+   $("#form1 > div:nth-child(4) > big > big > b").append('</br></br><div><a href=http://reportus.prls.net/webapp/reports/'+id+'>OPEN AT REPORTUS</a></div>')
+
+    return
+   }
+ 
+
+
+
+  
   if (curr_url.match(/Report.aspx\?ReportId=/)){
    reportus = false
   }else if (curr_url.match(/webapp\/reports/)){
