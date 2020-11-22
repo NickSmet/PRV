@@ -975,4 +975,3 @@ var x = {
 
 vmObj = x.CurrentVm.ParallelsVirtualMachine.Hardware.Memory.RAM
 
-ddd = vmObj.Hardware.Memory.

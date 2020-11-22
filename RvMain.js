@@ -5,6 +5,29 @@ let reportus
 let reportsPrms = {'appendTo':'.reportList','nodeProperty':'href'}
 let reportusPrms = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
 let params
+let bigVmObj 
+
+
+function getXmlReport(requestLink){
+
+  $.get(requestLink, function ldd(data) {
+    
+    //$xml = $( xmlDoc );
+    
+    bigVmObj = strToXmlToJson(data)
+
+    doReportOverview()
+
+})
+
+}
+
+function strToXmlToJson(data){
+  if(!data){return}
+  xmlDoc = $.parseXML( data );
+  jsonObj = x2js.xml2json(xmlDoc);
+  return jsonObj
+}
 
 
 //Constrution of menu with bullets and log links
@@ -255,6 +278,41 @@ nothing yet</div>'
 }
 
 function BulletData(item_id, option) {
+  let nodesFromXml = {
+    'CurrentVm':bigVmObj.ParallelsProblemReport.CurrentVm,
+    'LoadedDrivers':bigVmObj.ParallelsProblemReport.LoadedDrivers,
+    'AllProcesses':bigVmObj.ParallelsProblemReport.AllProcesses,
+  'GuestCommands':bigVmObj.ParallelsProblemReport.GuestCommands,
+  'GuestOs':bigVmObj.ParallelsProblemReport.GuestOs,
+  'MountInfo':bigVmObj.ParallelsProblemReport.MountInfo,
+  'HostInfo':bigVmObj.ParallelsProblemReport.HostInfo,
+  'ClientProxyInfo':bigVmObj.ParallelsProblemReport.ClientProxyInfo,
+  'AdvancedVmInfo':bigVmObj.ParallelsProblemReport.AdvancedVmInfo,
+  'MoreHostInfo':bigVmObj.ParallelsProblemReport.MoreHostInfo,
+  'VmDirectory':bigVmObj.ParallelsProblemReport.VmDirectory,
+  'NetConfig':bigVmObj.ParallelsProblemReport.NetConfig,
+}
+
+let haveJsonFormat = ['GuestCommands','AdvancedVmInfo']
+
+  if (item_id in nodesFromXml){
+    
+    console.log("Processing "+item_id+" the new way.");
+
+    bullet_all_data = nodesFromXml[item_id]
+    console.log(bullet_all_data);
+    if(~haveJsonFormat.indexOf(item_id)) {AddNodeToSearch(JSON.stringify(bullet_all_data.json2xml), item_id)}else{AddNodeToSearch(bullet_all_data, item_id)}
+    
+    eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
+    if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
+    $('#' + item_id.replaceAll('\.','\\\.')).html(bullet_parsed_data);
+    return
+  }
+
+
+
+
+
   if (tries[item_id]){tries[item_id]--}else{tries[item_id]=tries['tries']}
     var bullet_parsed_data = 'nothing yet';
 
@@ -386,18 +444,18 @@ ObjByString = function(o, s) {
   return o;
 }
 
-function parseCurrentVm(item_all_data) {
+function parseCurrentVm(CurrentVmData) {
 
-    xmlDoc = $.parseXML( item_all_data );
-    //$xml = $( xmlDoc );
-    var jsonObj = x2js.xml2json(xmlDoc);
-    theBigReportObject['vm'] = jsonObj
+    // xmlDoc = $.parseXML( item_all_data );
+    // //$xml = $( xmlDoc );
+    // var jsonObj = x2js.xml2json(xmlDoc);
+    // theBigReportObject['vm'] = jsonObj
 
     //$xml = $(x2js.json2xml(theBigReportObject['vm']['CurrentVm']))
 
     //var hdds_regex = /\<Hdd[^\>]*\>[^$]*<\/CommandName>/g
 
-    let vmObj = jsonObj.CurrentVm.ParallelsVirtualMachine
+    let vmObj = strToXmlToJson(CurrentVmData).ParallelsVirtualMachine
 
 
     var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode', 'Expanding':'DiskType'}
@@ -534,7 +592,7 @@ function parseCurrentVm(item_all_data) {
     {markBullet("CurrentVm","Nested")}
 
     //Identifying if headless and marking bullet accordingly
-    if (currentVmSpecs['AutoStart']==1 || currentVmSpecs['AutoStart']==5 || currentVmSpecs['AutoStart']==3)
+    if (currentVmSpecs['AutoStart']==5 || currentVmSpecs['AutoStart']==1 || currentVmSpecs['OnVmWindowClose']==5)
     {markBullet("CurrentVm","headless")} 
     else
     {//markBullet("CurrentVm",'not headless')
@@ -863,10 +921,11 @@ function parseLoadedDrivers(item_all_data) {
  
 
     function GetDriverList(bad_kexts){
-    var non_apple_regex = /^((?!com.apple|LoadedDrivers|Linked Against|com.parallels).)*$/gm;//filter out non apple/non parallels kexts+extra lines
+    var non_apple_regex = /^((?!com.apple|LoadedDrivers|Linked Against|com.parallels).)+$/gm;//filter out non apple/non parallels kexts+extra lines
     var prl_arr = item_all_data.match(/com.parallels/gm)
 
     var non_apple_arr = item_all_data.match(non_apple_regex);
+    
     if (non_apple_arr == null && prl_arr != null) {
         $('#LoadedDrivers').text("Only apple+prl");
         markBullet('LoadedDrivers','all good')
@@ -887,6 +946,7 @@ function parseLoadedDrivers(item_all_data) {
 //Don't remember why, but seems to work.
     for (let i = 0; i < non_apple_arr.length; i++) {
         kext = non_apple_arr[i].match(drv_name_regex) || '-----'
+        console.log({kext});
         non_apple_arr[i] = kext
         if (bad_kexts.indexOf(kext[0].trim()) > -1){
           hasBadKexts = true
@@ -988,7 +1048,19 @@ function parseGuestOs(item_all_data) {
 }
 
 function parseGuestCommands(item_all_data) {
-  //console.log(item_all_data)
+  console.log(item_all_data);
+
+  guestCommandsObj = {}
+
+  for (const [key, value] of Object.entries(item_all_data['GuestCommand'])) {
+
+    let command = value['CommandName']
+
+    let commandValue = value['CommandResult']
+    guestCommandsObj[command]=commandValue
+  }
+  
+  console.log(guestCommandsObj)
   if(item_all_data.length<100){return "Nothing"} //instead of matching empty guest commands, just ignoring when it's very small
 
   var guest_commands_results = []
@@ -1004,9 +1076,9 @@ function parseGuestCommands(item_all_data) {
         return command_result}
     }
 
-  var net_use="net use"
-  var ipconfig = "ipconfig /all"
-  var cpu_usage = "prl_cpuusage --sort-cpu-desc --time 4000"
+  var net_use=guestCommandsObj["net use"]
+  var ipconfig = guestCommandsObj["ipconfig /all"]
+  var cpu_usage = guestCommandsObj["prl_cpuusage --sort-cpu-desc --time 4000"]
 
   function parseNetuse(command_result) {
     if(!command_result){return}
@@ -1061,7 +1133,7 @@ function parseGuestCommands(item_all_data) {
   function parseCpuUsage(command_result) {
     //console.log(command_result)
 
-    var cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-]+\.exe/g
+    var cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-\{\} \.\_]+\.exe/g
     var cpu_usage = command_result.match(cpu_usage_regex) //get cpu usage % and process locations
     if (cpu_usage!== null) {
     cpu_usage = cpu_usage.slice(0,5) //get first 3 processes
@@ -1073,9 +1145,9 @@ function parseGuestCommands(item_all_data) {
 
   }
 
-  var net_use_results = parseNetuse(ExtractCommandOutput(net_use))
-  var ipconfig_results = parseIpconfig(ExtractCommandOutput(ipconfig))
-  var cpu_usage_results = parseCpuUsage(ExtractCommandOutput(cpu_usage))
+  var net_use_results = parseNetuse(net_use)
+  var ipconfig_results = parseIpconfig(ipconfig)
+  var cpu_usage_results = parseCpuUsage(cpu_usage)
 
   guest_commands_results.push(ipconfig_results, net_use_results, cpu_usage_results)
 
@@ -1517,8 +1589,9 @@ $("#searchField").on('keyup', function (e) {
  }
 
  function AddNodeToSearch(nodeAllData, nodeName){
-   let excludeFromSearch = ['TimeZone']
+   let excludeFromSearch = ['TimeZone','GuestCommands']
    if(excludeFromSearch.includes(nodeName)){return}
+   if(nodeContents[nodeName]){return}
   $("#nodeselector").append($('<option value="'+nodeName+'">'+nodeName+'</option>'))
   let nodelines=nodeAllData.split("\n")
   //if((typeof nodeAllData)!="string"){return}
@@ -1683,19 +1756,17 @@ var report_id = current_url.match(/\d{7,9}/);
 let index
 
 function doReportOverview() {
-  upper_menu();
-  screenshots();
   computerModel();
   signatureBugs();
-  setupSearch()
-  BulletData('TimeZone','time');
+  BulletData('TimeZone','time');//should fix it later to get data from the bigJson
  
       //$("#form1").replaceWith("<div>" + $("#form1").html() + "</div>"); //it's a form that messes up my forms (I don't understand why it's needed. Nothing breaks when replacing it with div)
     
       $("#form1").replaceWith(function(){
         return $("<div />").append($(this).contents());
     });
-      for (var item in process_immediately){
+      
+    for (var item in process_immediately){
             BulletData(process_immediately[item])
         
       }
@@ -1713,10 +1784,10 @@ function doReportOverview() {
 
 window.addEventListener("load", function(event) {
   let curr_url = window.location.href
+  let id = curr_url.match(/(\d{9})/)[1]
 
 
   if ($('Title').text().match('Waiting')){
-    let id = curr_url.match(/ReportId=(\d{9})/)[1]
    $("#form1 > div:nth-child(4) > big > big > b").append('</br></br><div><a href=http://reportus.prls.net/webapp/reports/'+id+'>OPEN AT REPORTUS</a></div>')
 
     return
@@ -1731,8 +1802,16 @@ window.addEventListener("load", function(event) {
   }else if (curr_url.match(/webapp\/reports/)){
   reportus = true
   }
-  if(!reportus){params = reportsPrms}else if(reportus){params = reportusPrms}
-  doReportOverview()
+  params = reportus ? reportusPrms : reportsPrms
+
+  let xmlUrl =  reportus ? 'http://reportus.prls.net/webapp/reports/'+id+'/report_xml/download?filepath=Report.xml' : 'https://reports.prls.net/Reports/Xml.aspx?ReportId='+id
+
+  upper_menu();
+  screenshots();
+  setupSearch()
+
+  getXmlReport(xmlUrl)
+  
 });
 
 //note to self -- start hosting those somewhere (github even?)
