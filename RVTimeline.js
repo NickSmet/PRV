@@ -467,7 +467,7 @@ return result
     'vm.log':{'Pause/Resume':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}},
     'parallels-system.log':{'Prl_Errors':{}},
   }
-
+//master
   const all_prl_syslog_groups = {'VM_Errors':{}, 'System_Errors':{}, 'PRL_Errors':{},"PD":{}}
 //-
   const all_vm_groups = {
