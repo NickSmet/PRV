@@ -1850,6 +1850,6 @@ const icons = {
 'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-128.png',
 'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png',
 'Boot Camp':'https://user-images.githubusercontent.com/10322311/96314275-97616700-1016-11eb-9990-8b2e92d49052.png',
-'root owner':'https://www.freeiconspng.com/thumbs/stop-icon/stop-icon-21.png',
+'root owner':'https://user-images.githubusercontent.com/10322311/100492918-868e3000-3142-11eb-9ee6-44826cd637c7.png',
 'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png',
 'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png'}
