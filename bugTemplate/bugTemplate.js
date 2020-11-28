@@ -12,8 +12,9 @@ function bgtSubmit(e){
  e.preventDefault();}
 
 function SetUpBgt(){
+ console.log("SETTING UP BUG"); 
 var bgt_html = '<div class="bug-wrapper">\
-<form action="javascript:void(0)"; class = "bug-list"; id="form"; method="get">\
+<form action="javascript:void(0)"; class = "bug-list"; id="Bugform"; method="get">\
 <label>Bug Template</label><br>\
 <textarea type="text" rows="30" cols="50" id="bgt" name="bgt"></textarea ><br>\
 <button class="copyBGT" type="button">Copy</button>\
@@ -24,10 +25,12 @@ var bgt_html = '<div class="bug-wrapper">\
 </div>'
 
 
+
 $("body").append($(bgt_html))
 
+
 let reporturl = window.location.href.match(/(http.*\d{9})/)[1]
-let guestOS =  $("#form1 > table.reportList > tbody > tr:nth-child(19) > td:nth-child(2)").text().replace(/Windows:|Linux:|: OS XФ/,'')
+let guestOS =  $("#form1 > table.reportList > tbody > tr:nth-child(19) > td:nth-child(2)").text().replace(/Windows: |Linux: |: OS X /,'')
 let hostOS = $("#form1 > table.reportList > tbody > tr:nth-child(13) > td:nth-child(2)").text()
 
 var bugTemplate = '*Description of problem:*\n\

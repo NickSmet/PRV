@@ -1,11 +1,14 @@
-//Костыль, чтобы работало на reportus
+
 
 var x2js = new X2JS();
+let bigVmObj 
+let params
+
+
+//Костыльные переменные, чтобы работало на reportus (и там еще по ходу немного кода, что)
 let reportus
 let reportsPrms = {'appendTo':'.reportList','nodeProperty':'href'}
 let reportusPrms = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
-let params
-let bigVmObj 
 
 
 function getXmlReport(requestLink){
@@ -15,6 +18,9 @@ function getXmlReport(requestLink){
     //$xml = $( xmlDoc );
     
     bigVmObj = strToXmlToJson(data)
+    
+
+    // console.log(data);
 
     doReportOverview()
 
@@ -287,23 +293,25 @@ function BulletData(item_id, option) {
   'MountInfo':bigVmObj.ParallelsProblemReport.MountInfo,
   'HostInfo':bigVmObj.ParallelsProblemReport.HostInfo,
   'ClientProxyInfo':bigVmObj.ParallelsProblemReport.ClientProxyInfo,
-  'AdvancedVmInfo':bigVmObj.ParallelsProblemReport.AdvancedVmInfo,
   'MoreHostInfo':bigVmObj.ParallelsProblemReport.MoreHostInfo,
   'VmDirectory':bigVmObj.ParallelsProblemReport.VmDirectory,
-  'NetConfig':bigVmObj.ParallelsProblemReport.NetConfig,
 }
 
-let haveJsonFormat = ['GuestCommands','AdvancedVmInfo']
+let haveJsonFormat = ['GuestCommands']
 
   if (item_id in nodesFromXml){
     
     console.log("Processing "+item_id+" the new way.");
 
     bullet_all_data = nodesFromXml[item_id]
-    console.log(bullet_all_data);
-    if(~haveJsonFormat.indexOf(item_id)) {AddNodeToSearch(JSON.stringify(bullet_all_data.json2xml), item_id)}else{AddNodeToSearch(bullet_all_data, item_id)}
+
+    console.log(typeof bullet_all_data);
+
+    if(nodesFromXml[item_id]) {
+      AddNodeToSearch(bullet_all_data, item_id)
+      eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
+    }
     
-    eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
     if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
     $('#' + item_id.replaceAll('\.','\\\.')).html(bullet_parsed_data);
     return
@@ -345,6 +353,8 @@ if (item_id.match('[^c].log')){
           });
     
     $.get(request_link, function ldd(data) {
+      
+      
         var bullet_all_data
         if (panic==true){
           data=JSON.parse(data)
@@ -428,6 +438,7 @@ item_all_data = item_all_data.replaceAll(/(Kernel Extensions in backtrace)/g, "<
 
 return item_all_data
 }
+
 
 ObjByString = function(o, s) {
   s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
@@ -1589,11 +1600,16 @@ $("#searchField").on('keyup', function (e) {
  }
 
  function AddNodeToSearch(nodeAllData, nodeName){
-   let excludeFromSearch = ['TimeZone','GuestCommands']
+   let excludeFromSearch = ['TimeZone']
    if(excludeFromSearch.includes(nodeName)){return}
    if(nodeContents[nodeName]){return}
-  $("#nodeselector").append($('<option value="'+nodeName+'">'+nodeName+'</option>'))
+    $("#nodeselector").append($('<option value="'+nodeName+'">'+nodeName+'</option>'))
+
+  
+  if(typeof nodeAllData == "object"){nodeAllData=JSON.stringify(nodeAllData,null,'\t').replace('\\\r\\\n','\n')};
   let nodelines=nodeAllData.split("\n")
+ 
+  
   //if((typeof nodeAllData)!="string"){return}
   let node = {'lines':nodelines,
     'curr_index':0,
@@ -1775,15 +1791,19 @@ function doReportOverview() {
         return old=='➤' ?  '▼' : '➤';//took it here: https://stackoverflow.com/questions/16224636/twitter-bootstrap-collapse-change-display-of-toggle-button
     })})
   
-      $(".btn").one("click", (function() {
-          var item_id = this.id.replace("btn_", "");
-          //console.log(item_id)
-          if(process_immediately.indexOf(item_id) == -1) {BulletData(item_id)} 
-      }));
+    //used to be necessary when some items were loaded manually
+      // $(".btn").one("click", (function() {
+      //     var item_id = this.id.replace("btn_", "");
+      //     //console.log(item_id)
+      //     if(process_immediately.indexOf(item_id) == -1) {BulletData(item_id)} 
+      // }));
   }
 
 window.addEventListener("load", function(event) {
   let curr_url = window.location.href
+
+  if(!curr_url.match(/Report.aspx\?ReportId=|webapp\/reports/)){return}
+
   let id = curr_url.match(/(\d{9})/)[1]
 
 
