@@ -33,7 +33,7 @@ function hideKnowHow(x) {
 }
 
 function FeedbackToNormal(){
- $(".help-button").html('<img src="http://icon-library.com/images/feedback-icon-png/feedback-icon-png-20.jpg" style= "display: linline !important; height: 4em;">')
+ $(".help-button").html('<img src="http://icon-library.com/images/feedback-icon-png/feedback-icon-png-20.jpg" style= "display: linline !important; height: 4em;opacity: 0.5">')
 }
 
 function doSubmit(e){
