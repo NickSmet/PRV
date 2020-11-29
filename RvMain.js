@@ -38,6 +38,8 @@ function strToXmlToJson(data){
 
 //Constrution of menu with bullets and log links
 function upper_menu() {
+
+  $('.headerMain').eq(1).append($("<a href='http://reportus.prls.net/webapp/reports/"+report_id+"'>Open on Reportus</a>"))
   
   let appendto = params.appendTo
 //Making the main informationpanel occupy half of the screen
