@@ -1062,6 +1062,7 @@ function parseGuestOs(item_all_data) {
 
 function parseGuestCommands(item_all_data) {
   console.log(item_all_data);
+  if(!item_all_data['GuestCommand']){return}
 
   guestCommandsObj = {}
 
