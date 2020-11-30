@@ -1074,7 +1074,7 @@ function parseGuestCommands(item_all_data) {
     guestCommandsObj[command]=commandValue
   }
   
-  console.log(guestCommandsObj)
+  
   if(item_all_data.length<100){return "Nothing"} //instead of matching empty guest commands, just ignoring when it's very small
 
   var guest_commands_results = []
@@ -1090,12 +1090,12 @@ function parseGuestCommands(item_all_data) {
         return command_result}
     }
 
-  var net_use=guestCommandsObj["net use"]
-  var ipconfig = guestCommandsObj["ipconfig /all"]
-  var cpu_usage = guestCommandsObj["prl_cpuusage --sort-cpu-desc --time 4000"]
+  var net_use=guestCommandsObj["net use"] || ''
+  var ipconfig = guestCommandsObj["ipconfig /all"] || ''
+  var cpu_usage = guestCommandsObj["prl_cpuusage --sort-cpu-desc --time 4000"] || ''
 
   function parseNetuse(command_result) {
-    if(!command_result){return}
+
    var net_volumes_regex = /[A-Z]\: +\\\\Mac\\\w+/g
    var net_volumes = command_result.match(net_volumes_regex)
    if(net_volumes!== null){
@@ -1106,6 +1106,7 @@ function parseGuestCommands(item_all_data) {
 
   }
   function parseIpconfig(command_result) {
+
     var adapters_regex = /\n[ \w][^\n\:]*:\n\n( +[^\n]*\n){1,}/gi
     var adapters = command_result.match(adapters_regex)
 
