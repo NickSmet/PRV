@@ -71,7 +71,7 @@ else if (curr_url.match(curr_vmLog))
 {
 form_html = '<div class="help-button-wrapper">\
 <form action="javascript:void(0)"; class = "help-list"; id="form"; method="get">\
-<label> vm.log for report #'+curr_url.match(/ReportId=(\d+)/)[1]+'</label><br>\
+<label> Log for report #'+curr_url.match(/ReportId=(\d+)/)[1]+'</label><br>\
 <div class = "left"><input type="radio"; id="knowhow"; name="type"; value="Knowhow"; checked>\
 <label for="knowhow">[KnowHow]</label><br>\
 <input type="radio"; id="BUG"; name="type"; value="BUG">\
