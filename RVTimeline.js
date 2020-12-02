@@ -59,7 +59,7 @@ head.prepend($('<div id="visualization"></div>'))
 $("#visualization").css({
   'box-sizing': 'border-box',
   'width': '95%',
-  'height': '500px',
+  'min-height': '500px',
   //'position': '-webkit-sticky', /* Safari */
   //'position': 'sticky',
   'top': '0'
