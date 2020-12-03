@@ -724,7 +724,7 @@ function parseNetConfig(item_all_data) {
 
       proxies_regex = /\<dictionary\> {[^}]*}([^}]*)}/gm
 
-      var proxies = item_all_data.match(proxies_regex)[0]
+      let proxies = item_all_data.match(proxies_regex) ? item_all_data.match(proxies_regex)[0] : ''
 
       if (proxies.match(/HTTPEnable : 1/)){markBullet("ClientProxyInfo","bad")}else{markBullet("ClientProxyInfo",'all good')}
     
