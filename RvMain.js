@@ -1460,34 +1460,39 @@ screens_el.find("a").each(function() {
 
 /** @description  Appends Bug IDs to found signatures (if a signature has a bug)
  */
-function signatureBugs(){
+function signatureBugs () {
+  function setBugId (signatureObject, bugJiraId) {
+    $(`</br><span>Bug: </span><a href="https://jira.prls.net/browse/${bugJiraId}">${bugJiraId}</a></br>`).insertAfter(signatureObject)
+  }
 
-  function GetBugId(signatureObject){
-    var loading_bug_message = $('</br><span id="loadingBug">Loading bug info...</span></br>')
-    loading_bug_message.insertAfter(signatureObject)
-    $.get(signatureObject.href, function (data) {
+  let signatures = $('a[href*="Signature"]')
 
-      var bug = ($('div.headerMain > h2:nth-child(6) > span > a', data)).clone()
-      
+  signatures.each(function () {
+    $(this).appendTo('.container')
 
-      if (bug.length!=0){
-        bug.append("</br>")
-        bug.insertAfter(signatureObject)
-        $('</br><span>Bug: </span>').insertAfter(signatureObject)}
-      else {
-        $('<a>No bug yet </br></a>').insertAfter(signatureObject)
-        $('</br><span>Bug: </span>').insertAfter(signatureObject)
-      }
-      loading_bug_message.remove()
-      
+    let signatureObject = this
+    let signatureName = this.text
+    let bugJiraId = GM_getValue(signatureName)
+
+    if (!bugJiraId || bugJiraId == 'No bug yet ') {
+      let loadingMessage = $('</br><span id="loadingBug">Loading bug info...</span></br>')
+
+      loadingMessage.insertAfter(this)
+
+      $.get(signatureObject.href, function (data) {
+        bugJiraId = $('div.headerMain > h2:nth-child(6) > span > a', data).text()
+        
+        if (bugJiraId.length == 0) {
+          bugJiraId = 'No bug yet '
+        }
+        GM_setValue(signatureName, bugJiraId)
+        setBugId(signatureObject, bugJiraId)
+        loadingMessage.remove()
+      })
+    } else {
+      setBugId(signatureObject, bugJiraId)
+    }
   })
-}
-
-$('a[href*="Signature"]').each(function() {
-  $(this).appendTo(".container")
-  GetBugId(this)
-  })
-
 }
 
 /** @description  Adds icon before a bullet that signifies that contend has been checked and evaluated, 
