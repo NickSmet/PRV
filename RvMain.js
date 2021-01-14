@@ -1,7 +1,7 @@
 
 
 var x2js = new X2JS();
-let bigVmObj 
+let bigReportObj 
 let params
 
 
@@ -26,7 +26,7 @@ function getXmlReport(requestLink){
     
     //$xml = $( xmlDoc );
     
-    bigVmObj = strToXmlToJson(data)
+    bigReportObj = strToXmlToJson(data)
     
 
     // console.log(data);
@@ -296,16 +296,16 @@ nothing yet</div>'
 
 function BulletData(item_id, option) {
   let nodesFromXml = {
-    'CurrentVm':bigVmObj.ParallelsProblemReport.CurrentVm,
-    'LoadedDrivers':bigVmObj.ParallelsProblemReport.LoadedDrivers,
-    'AllProcesses':bigVmObj.ParallelsProblemReport.AllProcesses,
-  'GuestCommands':bigVmObj.ParallelsProblemReport.GuestCommands,
-  'GuestOs':bigVmObj.ParallelsProblemReport.GuestOs,
-  'MountInfo':bigVmObj.ParallelsProblemReport.MountInfo,
-  'HostInfo':bigVmObj.ParallelsProblemReport.HostInfo,
-  'ClientProxyInfo':bigVmObj.ParallelsProblemReport.ClientProxyInfo,
-  'MoreHostInfo':bigVmObj.ParallelsProblemReport.MoreHostInfo,
-  'VmDirectory':bigVmObj.ParallelsProblemReport.VmDirectory,
+    'CurrentVm':bigReportObj.ParallelsProblemReport.CurrentVm,
+    'LoadedDrivers':bigReportObj.ParallelsProblemReport.LoadedDrivers,
+    'AllProcesses':bigReportObj.ParallelsProblemReport.AllProcesses,
+  'GuestCommands':bigReportObj.ParallelsProblemReport.GuestCommands,
+  'GuestOs':bigReportObj.ParallelsProblemReport.GuestOs,
+  'MountInfo':bigReportObj.ParallelsProblemReport.MountInfo,
+  'HostInfo':bigReportObj.ParallelsProblemReport.HostInfo,
+  'ClientProxyInfo':bigReportObj.ParallelsProblemReport.ClientProxyInfo,
+  'MoreHostInfo':bigReportObj.ParallelsProblemReport.MoreHostInfo,
+  'VmDirectory':bigReportObj.ParallelsProblemReport.VmDirectory,
 }
 
 let haveJsonFormat = ['GuestCommands']
@@ -693,14 +693,24 @@ function parseCurrentVm(CurrentVmData) {
 
 function parseNetConfig(item_all_data) {
 
-  xmlDoc = $.parseXML( item_all_data );
+  let xmlDoc = $.parseXML( item_all_data );
   var jsonObj = x2js.xml2json(xmlDoc);
-  theBigReportObject['PD']['NetConfig'] = jsonObj
+ 
+  bigReportObj['ParallelsProblemReport']['NetConfig'] = jsonObj
+
+  let HostInfo = strToXmlToJson(bigReportObj['ParallelsProblemReport']['HostInfo'])
 
 
 
-  netCfgObj = jsonObj.NetConfig.ParallelsNetworkConfig
+  let netCfgObj = jsonObj.NetConfig.ParallelsNetworkConfig
 
+  let kextless = netCfgObj.UseKextless
+
+  let macOS = HostInfo.ParallelsHostInfo.OsVersion.Major
+  console.log(macOS);
+
+
+  console.log(kextless);
   
   networkParams = {
     'Name':'Description',
@@ -711,9 +721,31 @@ function parseNetConfig(item_all_data) {
     'IPv6 DHCP Ehabled':'HostOnlyNetwork.DHCPv6Server.Enabled',
     'NetworkType':'NetworkType'
   }
-  var networkFilter = {'NetworkType':0}//fix filter in main function
-  var network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams,{}, networkFilter)
-  //console.log(network)
+  let networkFilter = {'NetworkType':0}//fix filter in main function
+  let network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams,{}, networkFilter)
+  
+  if (macOS<11){return network}
+
+  network = "<u>Kextless</u>: "+kextless+"\n\n"+network
+
+  let kextlessMark
+ 
+
+  switch (kextless) {//NEED TO TAKE INTO ACCOUNT MACOS
+    case '1':
+    case '-1':
+    case undefined:
+      kextlessMark="kextless"
+      break
+    case '0':
+      kextlessMark="kext"
+      break
+    default:
+      kextlessMark='warning'
+    
+  }
+
+  markBullet("NetConfig", kextlessMark)
 
   //var networkBullet = CreateBullet('Networks', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
 
@@ -1481,7 +1513,7 @@ function signatureBugs () {
 
       $.get(signatureObject.href, function (data) {
         bugJiraId = $('div.headerMain > h2:nth-child(6) > span > a', data).text()
-        
+
         if (bugJiraId.length == 0) {
           bugJiraId = 'No bug yet '
         }
@@ -1890,4 +1922,6 @@ const icons = {
 'Boot Camp':'https://user-images.githubusercontent.com/10322311/96314275-97616700-1016-11eb-9990-8b2e92d49052.png',
 'root owner':'https://user-images.githubusercontent.com/10322311/100492918-868e3000-3142-11eb-9ee6-44826cd637c7.png',
 'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png',
-'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png'}
+'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png',
+'kext':'https://cdn2.iconfinder.com/data/icons/gaming-color-icons/104/17-gaming-puzzle-piece-lego-128.png',
+'kextless':'https://cdn3.iconfinder.com/data/icons/internet-2-10/48/54-128.png'}
