@@ -1,12 +1,20 @@
 // ==UserScript==
 // @name     Parallels ReportViewer 
-// @version            0.9.9.3
+// @version            1.0.1.0
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://gist.github.com/NickSmet/e64f7f26520be1402f3a624071419ad7/raw/reportViewer.user.js
 
+// @include     http://reportus.prls.net/webapp/reports/*
+
+// @include     https://reports.prls.net/Reports/Report.aspx?ReportId=*
+// @include      https://reports.parallels.com/Reports/Report.aspx?ReportId=*
+
 // @include      http://reports.prls.net/Reports/Report.aspx?ReportId=*
 // @include      http://reports.parallels.com/Reports/Report.aspx?ReportId=*
+
+// @include      https://reports.prls.net/Reports/Log.aspx?ReportId=*&LogName=*
+// @include      https://reports.parallels.com/Reports/Log.aspx?ReportId=*&LogName=*
 
 // @include      http://reports.prls.net/Reports/Log.aspx?ReportId=*&LogName=*
 // @include      http://reports.parallels.com/Reports/Log.aspx?ReportId=*&LogName=*
@@ -20,21 +28,25 @@
 
 // @require    https://www.jsviews.com/download/jsrender.js?2
 
-// @require      https://visjs.github.io/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js?6
-// @resource     timelineCSS https://visjs.github.io/vis-timeline/styles/vis-timeline-graph2d.min.css?8
+// @require    https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js
 
-// @require    https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/RVTimeline.js?9
+// @require      https://cdn.rawgit.com/abdmob/x2js/master/xml2json.js
 
-// @require    https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/feedback/feedback.js?4
-// @resource   feedbackCSS  https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/feedback/feedback.css?5
+// @require      https://visjs.github.io/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js?9
+// @resource     timelineCSS https://visjs.github.io/vis-timeline/styles/vis-timeline-graph2d.min.css?9
 
-// @require    https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/RvMain.js?5
+// @require    https://raw.githubusercontent.com/NickSmet/PRV/master/RvMain.js?11
 
-// @resource   reportLightboxCSS https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/lightbox.css
+// @require    https://raw.githubusercontent.com/NickSmet/PRV/master/feedback/feedback.js
+// @resource   feedbackCSS  https://raw.githubusercontent.com/NickSmet/PRV/master/feedback/feedback.css?9
+
+// @require    https://raw.githubusercontent.com/NickSmet/PRV/master/RVTimeline.js
+
+// @resource   reportLightboxCSS https://raw.githubusercontent.com/NickSmet/PRV/master/lightbox.css
 
 
-// @require    https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/bugTemplate/bugTemplate.js?4
-// @resource   bgtCSS  https://cdn.jsdelivr.net/gh/NickSmet/PRV@master/bugTemplate/bugTemplate.css?5
+// @require    https://raw.githubusercontent.com/NickSmet/PRV/master/bugTemplate/bugTemplate.js?5
+// @resource   bgtCSS  https://raw.githubusercontent.com/NickSmet/PRV/master/bugTemplate/bugTemplate.css?9
 
 // @run-at       document-end
 
@@ -51,11 +63,12 @@
 GM_addStyle(GM_getResourceText('feedbackCSS'));
 GM_addStyle(GM_getResourceText('timelineCSS'));
 GM_addStyle(GM_getResourceText('RvMainCSS'));
+GM_addStyle(GM_getResourceText('bgtCSS'));
 
-if (window.location.href.match(/Report.aspx\?ReportId=/)){
+if (window.location.href.match(/(Report.aspx\?ReportId=|webapp\/reports\/\d)/)){
     GM_addStyle(GM_getResourceText('reportLightboxCSS'));
     GM_addStyle(GM_getResourceText('bootstrapCSS'));
-    GM_addStyle(GM_getResourceText('bgtCSS'));}
+}
 
 
 
