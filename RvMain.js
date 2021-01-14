@@ -1105,7 +1105,7 @@ function parseGuestOs(item_all_data) {
 }
 
 function parseGuestCommands(item_all_data) {
-  console.log(item_all_data);
+  
   if(!item_all_data['GuestCommand']){return}
 
   guestCommandsObj = {}
@@ -1117,7 +1117,6 @@ function parseGuestCommands(item_all_data) {
     let commandValue = value['CommandResult']
     guestCommandsObj[command]=commandValue
   }
-  
   
   if(item_all_data.length<100){return "Nothing"} //instead of matching empty guest commands, just ignoring when it's very small
 
@@ -1135,8 +1134,10 @@ function parseGuestCommands(item_all_data) {
     }
 
   var net_use=guestCommandsObj["net use"] || ''
-  var ipconfig = guestCommandsObj["ipconfig /all"] || ''
+  var ipconfig = guestCommandsObj["ipconfig \/all"] || ''
   var cpu_usage = guestCommandsObj["prl_cpuusage --sort-cpu-desc --time 4000"] || ''
+
+
 
   function parseNetuse(command_result) {
 
@@ -1151,8 +1152,9 @@ function parseGuestCommands(item_all_data) {
   }
   function parseIpconfig(command_result) {
 
-    var adapters_regex = /\n[ \w][^\n\:]*:\n\n( +[^\n]*\n){1,}/gi
-    var adapters = command_result.match(adapters_regex)
+    let adapters_regex = /\n[ \w][^\n\:]*\:[\r\n]+( +[^\n]*\n){1,}/gi
+    let adapters = command_result.match(adapters_regex)
+    console.log(adapters);
 
     if (adapters!== null){
 
@@ -1293,8 +1295,6 @@ function parseAppConfig(item_all_data){
 let appConfigContents = ''
 
 let AppConfigJson = strToXmlToJson(item_all_data).AppConfig.ParallelsPreferences
-
-console.log(AppConfigJson);
 
 let verboseLoggingEnabled = AppConfigJson.ServerSettings.CommonPreferences.Debug.VerboseLogEnabled
 
