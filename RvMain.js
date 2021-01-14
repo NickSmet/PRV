@@ -788,15 +788,17 @@ function parseAdvancedVmInfo(item_all_data) {
   markBullet("AdvancedVmInfo", "Custom", '<a>'+number_of_snapshots+'* </a>')
     }
 
-  //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's off.
+  //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
   regex1 = /\<\/AdvancedVmInfo\>\n\<\/AdvancedVmInfo\>/gm,
   regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
   regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
+  regex4 = /\<AdvancedVmInfo\>\n\<AdvancedVmInfo[^>]*\>/gm,
 
   //regex3 = /<Parallels_disk_image[^>]*>/
   item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
   item_all_data = item_all_data.replace(regex2, "")
   item_all_data = item_all_data.replace(regex3, "")
+  item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
   //item_all_data = item_all_data.replace(regex3,"")
 
   savedStatesParams = {
