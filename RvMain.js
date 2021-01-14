@@ -1302,7 +1302,7 @@ if (verboseLoggingEnabled==1){markBullet('AppConfig','verbose logging')}
 
 appConfigContents += bulletSubItem('Verbose logging', verboseLoggingEnabled)
 
-appConfigContents += bulletSubItem('VM Home', AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser.UserWorkspace.UserHomeFolder)
+//appConfigContents += bulletSubItem('VM Home', AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser.UserWorkspace.UserHomeFolder)
 
 return appConfigContents
 }
