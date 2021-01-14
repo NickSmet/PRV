@@ -60,6 +60,8 @@
 
 // ==/UserScript==
 
+$('<div><a style = "font-family:Arial; margin-left: 1em;" href="https://github.com/NickSmet/PRV/raw/master/RvDeploy.user.js">↻ Check for updates</a></div>').insertBefore($(".headerMain:eq(1)"))
+
 GM_addStyle(GM_getResourceText('feedbackCSS'));
 GM_addStyle(GM_getResourceText('timelineCSS'));
 GM_addStyle(GM_getResourceText('RvMainCSS'));
