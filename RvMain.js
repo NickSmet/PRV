@@ -419,6 +419,10 @@ if (item_id.match('[^c].log')){
 
     })}
 
+function bulletSubItem(parameter, paramValue){
+return '<u>'+parameter+'</u>: '+ paramValue+'\n'
+}
+
 function parsepanicLog(item_all_data){
 let panicDateRegex = /^.*panic-full-(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-(?<hour>\d{2})(?<min>\d{2})(?<sec>\d{2}).*/u
 let panicDateRegex2 = /\/Library\/Logs\/DiagnosticReports\/Kernel.(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-(?<hour>\d{2})(?<min>\d{2})(?<sec>\d{2}).*/u
@@ -707,10 +711,7 @@ function parseNetConfig(item_all_data) {
   let kextless = netCfgObj.UseKextless
 
   let macOS = HostInfo.ParallelsHostInfo.OsVersion.Major
-  console.log(macOS);
 
-
-  console.log(kextless);
   
   networkParams = {
     'Name':'Description',
@@ -1285,6 +1286,25 @@ function parseLicenseData(item_all_data){
 
 }
 
+function parseAppConfig(item_all_data){
+
+let appConfigContents = ''
+
+let AppConfigJson = strToXmlToJson(item_all_data).AppConfig.ParallelsPreferences
+
+console.log(AppConfigJson);
+
+let verboseLoggingEnabled = AppConfigJson.ServerSettings.CommonPreferences.Debug.VerboseLogEnabled
+
+if (verboseLoggingEnabled==1){markBullet('AppConfig','verbose logging')}
+
+appConfigContents += bulletSubItem('Verbose logging', verboseLoggingEnabled)
+
+appConfigContents += bulletSubItem('VM Home', AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser.UserWorkspace.UserHomeFolder)
+
+return appConfigContents
+}
+
 
 //Extra functions
 
@@ -1785,13 +1805,13 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
 
 
 //all report items for which bullets will be constructed in the bullet container
-const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData'];
+const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData'];
 //report log links that will be cloned to the bullet container
 const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log", 'install.log','tools.log', 'panic.log'];
 //pinned_items that will have a collapsible with parsed info
-const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','LicenseData','panic.log'];
+const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData','panic.log'];
 
-const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig','install.log','panic.log']
+const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig', 'AppConfig','install.log','panic.log']
 
 var nodeContents = {}//it't almost raw data. Mostly for the search function.
 
@@ -1924,4 +1944,5 @@ const icons = {
 'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png',
 'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png',
 'kext':'https://cdn2.iconfinder.com/data/icons/gaming-color-icons/104/17-gaming-puzzle-piece-lego-128.png',
-'kextless':'https://cdn3.iconfinder.com/data/icons/internet-2-10/48/54-128.png'}
+'kextless':'https://cdn3.iconfinder.com/data/icons/internet-2-10/48/54-128.png',
+'verbose logging':'https://cdn3.iconfinder.com/data/icons/information-notification-black/3/17-128.png'}
