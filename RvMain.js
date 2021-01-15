@@ -767,52 +767,94 @@ function parseNetConfig(item_all_data) {
 }
 
 function parseAdvancedVmInfo(item_all_data) {
-  
-  if (item_all_data.match(/writeattr/)){
-    markBullet('AdvancedVmInfo','ACL')
-  }
-
-  if (item_all_data.match(/ root /)){
-    markBullet('AdvancedVmInfo','root owner')
-  }
-
-  var number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length/2-1 : 0;
-  
-  
-  if(number_of_snapshots<1){
-    markBullet("AdvancedVmInfo", "no_snapshots")
-    return ("No snapshots")
-  } else 
-    {
-  markBullet("AdvancedVmInfo", "snapshots")
-  markBullet("AdvancedVmInfo", "Custom", '<a>'+number_of_snapshots+'* </a>')
-    }
 
   //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
   regex1 = /\<\/AdvancedVmInfo\>\n\<\/AdvancedVmInfo\>/gm,
-  regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
+    regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
   regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
   regex4 = /\<AdvancedVmInfo\>\n\<AdvancedVmInfo[^>]*\>/gm,
 
-  //regex3 = /<Parallels_disk_image[^>]*>/
-  item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
+    item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
   item_all_data = item_all_data.replace(regex2, "")
   item_all_data = item_all_data.replace(regex3, "")
   item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
   //item_all_data = item_all_data.replace(regex3,"")
 
-  savedStatesParams = {
-    'Name':'Name',
-    'Created on':'DateTime'
+  let AdvancedVmInfoContents = ''
+
+  if (item_all_data.match(/writeattr/)) {
+    markBullet('AdvancedVmInfo', 'ACL')
   }
-  var savedStates = parseXMLItem(item_all_data, "SavedStateItem", savedStatesParams)
-  var savedStatesBullet = CreateBullet('Snapshots', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
-  
-  
+
+  if (item_all_data.match(/ root /)) {
+    markBullet('AdvancedVmInfo', 'root owner')
+  }
+
+  var number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length / 2 - 1 : 0;
+
+
+  if (number_of_snapshots < 1) {
+    markBullet("AdvancedVmInfo", "no_snapshots")
+    AdvancedVmInfoContents += "No snapshots\n"
+  } else {
+    markBullet("AdvancedVmInfo", "snapshots")
+    markBullet("AdvancedVmInfo", "Custom", '<a>' + number_of_snapshots + '* </a>')
+    snapshotList = {
+      'Name': 'Name',
+      'Created on': 'DateTime'
+    }
+    var snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
+    var snapshotBullet = CreateBullet('Snapshots', 'Custom', snapshots, 'https://image.flaticon.com/icons/svg/387/387157.svg')
+    AdvancedVmInfoContents += snapshotBullet
+  }
 
 
 
-      return savedStatesBullet;
+  let lsFileRegex = /(?<permissions>[\w-]{10}).? +(?<hardLinks>\d+) +(?<ownerName>\w+) +(?<owneGroup>\w+) +(?<size>\d+) +(?<modified>\w{3} +\d{1,2} +(\d\d\:){2}\d\d +\d{4}) +(?<fileName>[\{\}\-\w\.]+$)/g
+  let lsFolderRegex = /\/[\w ]+\.pvm\/(?<inPvmLocation>[^:]*):/
+
+  let bundleContents = ''
+
+  let bundleLines = item_all_data.split('\n')
+
+  for (let index = 0; index < bundleLines.length; index++) {
+    const line = bundleLines[index];
+    console.log(line);
+
+    let folderProperties = lsFolderRegex.exec(line)?.groups
+    let filesProperties = lsFileRegex.exec(line)?.groups
+
+
+    if (line.match(lsFileRegex) && filesProperties.fileName != "." && filesProperties.fileName != "..") {
+      bundleContents += `${humanFileSize(filesProperties.size)} <b>${filesProperties.fileName}</b> <span style="color: #999999;">${filesProperties.permissions} ${filesProperties.ownerName} ${filesProperties.modified}</span>\n `
+    } else
+      if (folderProperties) {
+        folderLocation = folderProperties.inPvmLocation
+        console.log(folderLocation);
+
+        //makind output look more like a folder structure
+        if(folderLocation.match(/\//g)){
+          folderLocationArr=folderLocation.split("\/")
+          folderLocation=''
+          for (let index = 0; index < folderLocationArr.length; index++) {
+            const folder = folderLocationArr[index];
+            folderLocation+="\n"+" ".repeat(index*5)+"└──"+folder
+          }
+        // for (let index = 0; index < folderLocation.match(/\//g).length; index++) {
+
+
+        //   folderLocation.replace(RegExp("(" + "\/" + ")"), x => x.replace(RegExp("\/" + "$"), "\n"+index*" "+"└──"));
+        //   //folderLocation.replace(RegExp("\/{" + index + "}","g"),  "\n"+index*" "+"└──")
+        // }
+      }
+        bundleContents += `\n<b>${folderLocation}</b>:</span>\n`
+      }
+
+  }
+  var bundleBullet = CreateBullet('PVM Bundle', 'Custom', bundleContents, 'https://fileinfo.com/img/icons/files/128/pvm-3807.png')
+  AdvancedVmInfoContents += bundleBullet
+
+  return AdvancedVmInfoContents;
 
 
 }
@@ -1947,4 +1989,5 @@ const icons = {
 'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png',
 'kext':'https://cdn2.iconfinder.com/data/icons/gaming-color-icons/104/17-gaming-puzzle-piece-lego-128.png',
 'kextless':'https://cdn3.iconfinder.com/data/icons/internet-2-10/48/54-128.png',
-'verbose logging':'https://cdn3.iconfinder.com/data/icons/information-notification-black/3/17-128.png'}
+'verbose logging':'https://cdn3.iconfinder.com/data/icons/information-notification-black/3/17-128.png',
+'pvm':'https://fileinfo.com/img/icons/files/128/pvm-3807.png'}
