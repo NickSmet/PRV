@@ -810,7 +810,7 @@ function parseAdvancedVmInfo(item_all_data) {
 
 
 
-  let lsFileRegex = /(?<permissions>[\w-]{10}).? +(?<hardLinks>\d+) +(?<ownerName>\w+) +(?<owneGroup>\w+) +(?<size>\d+) +(?<modified>\w{3} +\d{1,2} +(\d\d\:){2}\d\d +\d{4}) +(?<fileName>[\{\}\-\w\.]+$)/g
+  let lsFileRegex = /(?<permissions>[\w-]{10}).? +(?<hardLinks>\d+) +(?<ownerName>\w+) +(?<owneGroup>\w+) +(?<size>\d+) +(?<modified>\w{3} +\d{1,2} +(\d\d\:){2}\d\d +\d{4}) +(?<fileName>[\(\)\_ \{\}\-\w\.]+$)/g
   let lsFolderRegex = /\/[\w ]+\.pvm\/(?<inPvmLocation>[^:]*):/
 
   let bundleContents = ''
