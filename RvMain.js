@@ -1193,7 +1193,7 @@ function parseGuestCommands(item_all_data) {
 
   }
   function parseIpconfig(command_result) {
-
+    //lots of weird regexes to make it parse regardless of the language.
     let adapters_regex = /\n[ \w][^\n\:]*\:[\r\n]+( +[^\n]*\n){1,}/gi
     let adapters = command_result.match(adapters_regex)
     console.log(adapters);
