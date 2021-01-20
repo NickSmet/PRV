@@ -75,7 +75,7 @@ $("#restore").click(function(){
   });
 });
 
-  for (var key in curr_groups) {
+  for (let key in curr_groups) {
     var curr_id = global_id
     global_id++
     var nested = buildRange(global_id,global_id+Object.keys(curr_groups[key]).length)
@@ -93,17 +93,20 @@ $("#restore").click(function(){
     
     function getLineDate(line) {
   
-    var line_date_string = line.match(line_message_regex)[1]
+    let line_date_string = line.match(line_message_regex)[1]
     //console.log(line_date_str)
-    var datetime_string = "2020-" + line_date_string /*there is not year in log, so setting to
+    let currentYear = new Date().getFullYear();
+      console.log(currentYear);
+    let datetime_string = currentYear+"-" + line_date_string /*there is not year in log, so setting to
     current year by default and process_log_date adjusts it to previous year where needed */
-    var line_date = Date.parse(datetime_string)
+    let line_date = Date.parse(datetime_string)
       
-      var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
-      d.setUTCSeconds(line_date / 1000);
-      if (d > new Date()+24*3600*1000) { d.setFullYear(d.getFullYear() - 1); }
+      let lineDate = new Date(0); // The 0 there is the key, which sets the date to the epoch
+      lineDate.setUTCSeconds(line_date / 1000);
+
+      if (lineDate > new Date(new Date()+24*3600*1000)) { lineDate.setFullYear(lineDate.getFullYear() - 1); }
  
-      return d
+      return lineDate
   }
   
   function processLines(data, days) {
