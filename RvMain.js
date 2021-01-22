@@ -178,6 +178,7 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
    let id = parameters[property]
    let hName = property
    let value = ObjByString(itemObject,id)
+
      
    if (id in filter){
      if(value==filter[id]){return}
@@ -501,6 +502,10 @@ function parseCurrentVm(CurrentVmData) {
     var VMNETWORKs_data = parseJsonItem ( vmObj['Hardware']['NetworkAdapter'], ParamVMNETWORKs, AdjustsVMNETWORKs)
     var VMNETWORKs = CreateBullet('Networks','Custom', VMNETWORKs_data, iconVMNETWORKs)
 
+    
+    if(VMNETWORKs.match('Shared')){markBullet('CurrentVm','shared')}
+    if(VMNETWORKs.match('Bridged')){markBullet('CurrentVm','bridged')}
+
     var ParamVMUSBs = {'Name':'SystemName', 'Last connected':'Timestamp'}
     var AdjustsVMUSBs = {'Last connected':'time'}
     var iconVMUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
@@ -686,6 +691,7 @@ function parseCurrentVm(CurrentVmData) {
       spec = '<u>'+specName+'</u>' + ': ' + specValue + '\n';
      }
 
+     
         all_specs = all_specs + spec}
 
 
@@ -1990,4 +1996,6 @@ const icons = {
 'kext':'https://cdn2.iconfinder.com/data/icons/gaming-color-icons/104/17-gaming-puzzle-piece-lego-128.png',
 'kextless':'https://cdn3.iconfinder.com/data/icons/internet-2-10/48/54-128.png',
 'verbose logging':'https://cdn3.iconfinder.com/data/icons/information-notification-black/3/17-128.png',
-'pvm':'https://fileinfo.com/img/icons/files/128/pvm-3807.png'}
+'pvm':'https://fileinfo.com/img/icons/files/128/pvm-3807.png',
+'shared':'https://cdn2.iconfinder.com/data/icons/handcraft-1px/16/lan-connection-128.png',
+'bridged':'https://cdn3.iconfinder.com/data/icons/flat-design-hardware-network-set-2/24/ethernet-plug-64.png'}
