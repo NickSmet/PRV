@@ -825,13 +825,12 @@ function parseAdvancedVmInfo(item_all_data) {
 
   for (let index = 0; index < bundleLines.length; index++) {
     const line = bundleLines[index];
-    console.log(line);
-
     let folderProperties = lsFolderRegex.exec(line)?.groups
     let filesProperties = lsFileRegex.exec(line)?.groups
 
 
     if (line.match(lsFileRegex) && filesProperties.fileName != "." && filesProperties.fileName != "..") {
+      if(filesProperties.ownerName=='root') {filesProperties.ownerName= `<b><font color="red">${filesProperties.ownerName}</font></b>`}
       bundleContents += `${humanFileSize(filesProperties.size)} <b>${filesProperties.fileName}</b> <span style="color: #999999;">${filesProperties.permissions} ${filesProperties.ownerName} ${filesProperties.modified}</span>\n `
     } else
       if (folderProperties) {
