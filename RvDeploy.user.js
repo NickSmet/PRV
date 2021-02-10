@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels ReportViewer 
-// @version            1.0.1.5
+// @version            1.0.2.0
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/RvDeploy.user.js
@@ -35,7 +35,7 @@
 // @require      https://visjs.github.io/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js?9
 // @resource     timelineCSS https://visjs.github.io/vis-timeline/styles/vis-timeline-graph2d.min.css?9
 
-// @require    https://raw.githubusercontent.com/NickSmet/PRV/master/RvMain.js?13
+// @require    https://raw.githubusercontent.com/NickSmet/PRV/master/RvMain.js?14
 
 // @require    https://raw.githubusercontent.com/NickSmet/PRV/master/feedback/feedback.js
 // @resource   feedbackCSS  https://raw.githubusercontent.com/NickSmet/PRV/master/feedback/feedback.css?9
