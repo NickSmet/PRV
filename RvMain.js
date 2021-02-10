@@ -648,7 +648,7 @@ function parseCurrentVm(CurrentVmData) {
     }
 
 
-    if (currentVmSpecs['TPM']==1){
+    if (currentVmSpecs['TPM']!=0){
       markBullet("CurrentVm",icons.TPM)
     }
 
