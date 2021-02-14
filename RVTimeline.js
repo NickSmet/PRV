@@ -96,7 +96,6 @@ $("#restore").click(function(){
     let line_date_string = line.match(line_message_regex)[1]
     //console.log(line_date_str)
     let currentYear = new Date().getFullYear();
-      console.log(currentYear);
     let datetime_string = currentYear+"-" + line_date_string /*there is not year in log, so setting to
     current year by default and process_log_date adjusts it to previous year where needed */
     let line_date = Date.parse(datetime_string)
@@ -112,7 +111,6 @@ $("#restore").click(function(){
   function processLines(data, days) {
       var last_line_date = "undefined"
       var period = 60 * 60 * 1000 * 24 * days; /* in ms */
-      console.log(days)
   
       var lines = data.split("\n").reverse()
   
@@ -239,7 +237,6 @@ $("#restore").click(function(){
   global_id = 1
 
   function setupVars(page){
-    console.log(page)
     switch (page) {
       case 'parallels-system.log':
         curr_groups = all_prl_syslog_groups
@@ -359,7 +356,7 @@ $("#restore").click(function(){
     switch (item) { 
       case 'crash'://need a rule that works in case there are some more lines after 'VM process exiting with code 0'
       if(!prev_line){return}
-      if (!prev_line.match(/VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
+      if (!prev_line.match(/Encryption plugin|VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
       {return result}else{return false
       }
 

@@ -5,7 +5,7 @@ let bigReportObj
 let params
 
 
-//Костыльные переменные, чтобы работало на reportus (и там еще по ходу немного кода, что)
+//Костыльные переменные, чтобы работало на reportus (и там еще немного кода внутри функций)
 let reportus
 let reportsPrms = {'appendTo':'.reportList','nodeProperty':'href'}
 let reportusPrms = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
@@ -42,6 +42,79 @@ function strToXmlToJson(data){
   xmlDoc = $.parseXML( data );
   jsonObj = x2js.xml2json(xmlDoc);
   return jsonObj
+}
+
+
+function parseLsLr(raw){
+  let lsFileRegex = /(?<permissions>[\w-]{10}).? +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>\w+) +(?<type>[\w-]+)? +(?<size>\d+) +(?<modified>\w{3} +\d{1,2} +(\d\d\:){2}\d\d +\d{4}) +(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
+  let lsFolderRegex = /(\/[\w ]+\.pvm)?\/(?<location>[^:\n]*):$/gm //the .pvm part is for cases when showing list of files inside .pvm
+
+  let bundleContents = ''
+
+  let bundleLines = raw.split('\n')
+
+  for (let index = 0; index < bundleLines.length; index++) {
+    const line = bundleLines[index];
+    let folderProperties = lsFolderRegex.exec(line)?.groups
+    let filesProperties = lsFileRegex.exec(line)?.groups
+
+
+    if (line.match(lsFileRegex) && filesProperties.fileName != "." && filesProperties.fileName != "..") {
+      if(filesProperties.ownerName=='root') {filesProperties.ownerName= `<b><font color="red">${filesProperties.ownerName}</font></b>`}
+      bundleContents += `${humanFileSize(filesProperties.size)} <b>${filesProperties.fileName}</b> <span style="color: #999999;">${filesProperties.permissions} ${filesProperties.ownerName} ${filesProperties.modified}</span>\n `
+    } else
+      if (folderProperties) {
+        folderLocation = folderProperties.location
+        console.log(folderLocation);
+
+        //makind output look more like a folder structure
+        if(folderLocation.match(/\//g)){
+          folderLocationArr=folderLocation.split("\/")
+          folderLocation=''
+          for (let index = 0; index < folderLocationArr.length; index++) {
+            const folder = folderLocationArr[index];
+            folderLocation+="\n"+" ".repeat(index*5)+"└──"+folder
+          }
+        // for (let index = 0; index < folderLocation.match(/\//g).length; index++) {
+
+
+        //   folderLocation.replace(RegExp("(" + "\/" + ")"), x => x.replace(RegExp("\/" + "$"), "\n"+index*" "+"└──"));
+        //   //folderLocation.replace(RegExp("\/{" + index + "}","g"),  "\n"+index*" "+"└──")
+        // }
+      }
+        bundleContents += `\n<b>${folderLocation}</b>:</span>\n`
+      }
+
+  }
+  return bundleContents
+}
+
+//https://stackoverflow.com/questions/26891846/is-there-an-equivalent-of-console-table-in-the-browser
+function objArrayToTable(jsonArray, colorcolumn){
+  var cols = [];
+for (var index in jsonArray) {
+  for (var c in jsonArray[index]) {
+    if (cols.indexOf(c)===-1) cols.push(c);
+  }
+}
+var html = `<table>
+<colgroup>
+<col colid=1>
+<col colid=2>
+<col colid=3>
+</colgroup>
+<tr>`+
+    cols.map(function(c){ return '<th style="border:1px solid #ddd">'+c+'</th>' }).join('')+
+    '</tr>';
+for (var l in jsonArray) {
+  html += '<tr>'+
+      cols.map(function(c){ return '<td style="border:1px solid #ddd">'+(jsonArray[l][c]||'')+'</td>' }).join('')+
+      '</tr>';
+}
+html += '</table>';
+
+html=html.replace(''+colorcolumn,`${colorcolumn} style="background-color:#ff9b9b"`)
+return html
 }
 
 
@@ -110,10 +183,10 @@ function ConstructBullets (elements_array, elements_type, append_to) {
  * the parameter to be named, and value -- its element's name in the XML structure.
  * @param {Object} adjustments Object like {"Size":"bytes"} for parameters that need to be adjusted. 
  * (like time for TimZone or bytes to Kb/Mb for readability). Refer to AdjustSpec function for usage 
- * @param {Object} filter Object like {"NetworkType":"0"}. Bullet elements consistent with these
+ * @param {Object} exclude Object like {"NetworkType":"0"}. Bullet elements consistent with these
  * criteria will be skipped.  
  */
-function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
+function parseXMLItem( data, element, parameters, adjustments={}, exclude={}){
   //console.log(data)
   data = data.replace(/\<\-\>/g,"")
   data = data.replace(/<\?xml[^>]*>/g,"")
@@ -130,11 +203,11 @@ function parseXMLItem( data, element, parameters, adjustments={}, filter={}){
   //console.log (element)
   element.each(function () {
     //console.log($(this))
-    for (var key in filter){
-      //console.log(filter[i])
+    for (var key in exclude){
+      //console.log(exclude[i])
       //console.log(key+value+$(this).find(key).first().text())
       var value_here = $(this).find(key).first().text()
-      if (filter[key] == value_here || value_here.match(filter[key].toString())){return true}
+      if (exclude[key] == value_here || value_here.match(exclude[key].toString())){return true}
     }
     
     var subBulletItem = ''
@@ -159,15 +232,21 @@ return subBullet}
  * @param {object} itemObject Data that needs to be parsed into a subBullet
  * @param {object} parameters Obj defining what data to pull from object and how to name it; format {human_name:key_in_data_object} (e.g. 'Actual Size':'SizeOnDisk')
  * @param {object} adjustments  Obj like {"Size":"bytes"} for parameters that need to be adjusted. (like time for TimZone or bytes to Kb/Mb for readability). Refer to AdjustSpec function for usage 
- * @param {object} filter Obj defining what values that should be passed to "adjustSpec" function, e.g. passing items to ignore based on some key-value pair in them; format {key_in_data_object:value} (e.g. {'NetworkType':0} will in netw adapters will cause it to skip all adapters that have NetworkType 0)
+ * @param {object} exclude Obj defining what values that should be passed to "adjustSpec" function, e.g. passing items to ignore based on some key-value pair in them; format {key_in_data_object:value} (e.g. {'NetworkType':0} will in netw adapters will cause it to skip all adapters that have NetworkType 0)
  */
-function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
+function parseJsonItem(itemObject, parameters={}, adjustments={}, exclude={}){
   if(!itemObject){return}
   let subBullet = ''
  
   //it's either "CdRom:{Enabled:0,Connected:1...}" or CdRom:{0:{Enabled:0,Connected:1...},1:{Enabled:0,Connected:1...}}
  if(itemObject[0]){
+  loopItems:
    for (const item in itemObject) {
+  loopSubItems:
+    for (const property in exclude) {
+      if(itemObject[item][property]==exclude[property]){continue loopItems}
+    }
+    
      let subItem = CreateSubItem(itemObject[item])
      subBullet = subItem ? subBullet+CreateSubItem(itemObject[item])+'\n' : subBullet ;}}else{
      subBullet=CreateSubItem(itemObject)+'\n'
@@ -178,11 +257,6 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, filter={}){
    let id = parameters[property]
    let hName = property
    let value = ObjByString(itemObject,id)
-
-     
-   if (id in filter){
-     if(value==filter[id]){return}
-   }
      
    if (hName in adjustments){value = adjustSpec(value, adjustments[hName])}
      subItem +='<u>'+hName+'</u>: '+ value+'\n'
@@ -493,6 +567,16 @@ function parseCurrentVm(CurrentVmData) {
     //var VMHDDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMHDDs,AdjustsVMHDDs)
 
     var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
+
+    var ParamVMCDs = {'Location':'SystemName','Interface':'InterfaceType'}
+    var AdjustsVMCDs = {'Interface':'hddtype'}
+    var iconVMCDs = icons.cd
+    var CdExclude = {'Connected':'0'}
+
+    var VMCDs_data = parseJsonItem (vmObj.Hardware.CdRom, ParamVMCDs,AdjustsVMCDs,CdExclude)
+    //var VMCDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMCDs,AdjustsVMCDs)
+
+    var VMCDs = CreateBullet('CDs','Custom', VMCDs_data, iconVMCDs)
     
     var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit.Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
     var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
@@ -541,6 +625,7 @@ function parseCurrentVm(CurrentVmData) {
       //'Networks': $xml.find('NetworkAdapter > EmulatedType').text(),
       'Subbullet3': VMNETWORKs,
       'Subbullet2':VMHDDs,
+      'Subbullet4':VMCDs,
       
       'Hypervisor': vmObj.Settings.Runtime.HypervisorType,
       'Adaptive Hypervisor': vmObj.Settings.Runtime.EnableAdaptiveHypervisor,
@@ -595,7 +680,7 @@ function parseCurrentVm(CurrentVmData) {
     
     var vmram = currentVmSpecs['Ram']
 
-    if (vmram>hostram/2){
+    if (vmram>hostram/2&&hostram-vmram<6144){
       currentVmSpecs['Ram']+='<b style="color:red">!!!!! Too Much</b>',
       markBullet("CurrentVm",'bad')
     }
@@ -648,7 +733,7 @@ function parseCurrentVm(CurrentVmData) {
     }
 
 
-    if (currentVmSpecs['TPM']!=0){
+    if (currentVmSpecs['TPM']!=0&&currentVmSpecs['TPM']){
       markBullet("CurrentVm",icons.TPM)
     }
 
@@ -725,11 +810,10 @@ function parseNetConfig(item_all_data) {
     'Net Mask':'HostOnlyNetwork.IPNetMask',
     'Host IP':'HostOnlyNetwork.HostIPAddress',
     'DHCP Enabled':'HostOnlyNetwork.DHCPServer.Enabled',
-    'IPv6 DHCP Ehabled':'HostOnlyNetwork.DHCPv6Server.Enabled',
-    'NetworkType':'NetworkType'
+    'IPv6 DHCP Ehabled':'HostOnlyNetwork.DHCPv6Server.Enabled'
   }
-  let networkFilter = {'NetworkType':0}//fix filter in main function
-  let network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams,{}, networkFilter)
+  let networkExclude = {'NetworkType':0}
+  let network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams,{}, networkExclude)
   
   if (macOS<11){return network}
 
@@ -815,48 +899,9 @@ function parseAdvancedVmInfo(item_all_data) {
   }
 
 
-
-  let lsFileRegex = /(?<permissions>[\w-]{10}).? +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>\w+) +(?<size>\d+) +(?<modified>\w{3} +\d{1,2} +(\d\d\:){2}\d\d +\d{4}) +(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
-  let lsFolderRegex = /\/[\w ]+\.pvm\/(?<inPvmLocation>[^:]*):/
-
-  let bundleContents = ''
-
-  let bundleLines = item_all_data.split('\n')
-
-  for (let index = 0; index < bundleLines.length; index++) {
-    const line = bundleLines[index];
-    let folderProperties = lsFolderRegex.exec(line)?.groups
-    let filesProperties = lsFileRegex.exec(line)?.groups
-
-
-    if (line.match(lsFileRegex) && filesProperties.fileName != "." && filesProperties.fileName != "..") {
-      if(filesProperties.ownerName=='root') {filesProperties.ownerName= `<b><font color="red">${filesProperties.ownerName}</font></b>`}
-      bundleContents += `${humanFileSize(filesProperties.size)} <b>${filesProperties.fileName}</b> <span style="color: #999999;">${filesProperties.permissions} ${filesProperties.ownerName} ${filesProperties.modified}</span>\n `
-    } else
-      if (folderProperties) {
-        folderLocation = folderProperties.inPvmLocation
-        console.log(folderLocation);
-
-        //makind output look more like a folder structure
-        if(folderLocation.match(/\//g)){
-          folderLocationArr=folderLocation.split("\/")
-          folderLocation=''
-          for (let index = 0; index < folderLocationArr.length; index++) {
-            const folder = folderLocationArr[index];
-            folderLocation+="\n"+" ".repeat(index*5)+"└──"+folder
-          }
-        // for (let index = 0; index < folderLocation.match(/\//g).length; index++) {
-
-
-        //   folderLocation.replace(RegExp("(" + "\/" + ")"), x => x.replace(RegExp("\/" + "$"), "\n"+index*" "+"└──"));
-        //   //folderLocation.replace(RegExp("\/{" + index + "}","g"),  "\n"+index*" "+"└──")
-        // }
-      }
-        bundleContents += `\n<b>${folderLocation}</b>:</span>\n`
-      }
-
-  }
-  var bundleBullet = CreateBullet('PVM Bundle', 'Custom', bundleContents, 'https://fileinfo.com/img/icons/files/128/pvm-3807.png')
+  bundleData = parseLsLr(item_all_data)
+  
+  let bundleBullet = CreateBullet('PVM Bundle', 'Custom', bundleData, 'https://fileinfo.com/img/icons/files/128/pvm-3807.png')
   AdvancedVmInfoContents += bundleBullet
 
   return AdvancedVmInfoContents;
@@ -1080,35 +1125,72 @@ function parseLoadedDrivers(item_all_data) {
 function parseAllProcesses(item_all_data) {
     var bsdtar_regex = /toolbox_report\.xml\.tar\.gz/
     var bdstar_marker = "<u><b>bdstar</b></u>"
-    var apps_regex = /\s\/Applications\/((?!Parallels Desktop.app|\/).)*\//gm;/*the \s at the beginning is important, 
-    because we're eliminating apps inside of Apps (mainly Toolbox apps). Maybe should just create an exclusion list. 
-    */
-    var app_regex = /\/Applications\/([^\/]+)\//;
-    var apps = item_all_data.match(apps_regex);
     if (item_all_data.match(bsdtar_regex)){
       markBullet('AllProcesses','bad')
       markBullet('AllProcesses','Custom',bdstar_marker)
-      
-    }
-    if (!apps){
-      return "Looks like no apps running (better check)."
-    } 
-
-  	var apps_all = []
-    var i
-  	for (i = 0; i < apps.length; i++) {
-      var app = apps[i].match(app_regex)[1]
-       if (apps_all.indexOf(app) == -1){
-    apps_all.push(app)
     }
 
+    function runningApps(){
+
+      var runningAppsRegex = /\s\/Applications\/((?!Parallels Desktop.app|\/).)*\//gm;/*the \s at the beginning is important, 
+      because we're eliminating apps inside of Apps (mainly Toolbox apps). Maybe should just create an exclusion list. 
+      */
+      var appRegex = /\/Applications\/([^\/]+)\//;
+      var runningAppsList = item_all_data.match(runningAppsRegex);
+  
+      if (!runningAppsList){
+        return "Looks like no apps running (better check)."
+      } 
+  
+      var runningApps = []
+      var i
+      for (i = 0; i < runningAppsList.length; i++) {
+        var app = runningAppsList[i].match(appRegex)[1]
+         if (runningApps.indexOf(app) == -1){
+          runningApps.push(app)
+      }
+  
+  
+      }
+      runningApps = runningApps.join('\r\n');
+    //console.log (apps_all);
+  
+    return runningApps
 
     }
- 	var apps_export = apps_all.join('\r\n');
-  //console.log (apps_all);
 
-  return apps_export
+    function parsePsAux(){
+      let processRegex = /^(?<user>[^ ]+) +(?<pid>[\d.]+) +(?<cpu>[\d.]+) +(?<mem>[\d.]+) +(?<vsz>[\d]+) +(?<rss>[\d]+) +(?<tt>[\w\?]+) +(?<stat>[\w]+) +(?<started>[\d\:\.\w]+) +(?<timeRunning>[\d\:\.]+) +\/(?<name>[^\n]*)$/gm
+    
+      let processesArray = item_all_data.split('\n')
 
+      let processObjArray = []
+    
+      for (let index = 0; index < processesArray.length; index++) {
+        let line = processesArray[index]
+        if(!line.match(processRegex)){continue}
+
+        let processProperties = processRegex.exec(line)?.groups
+        processObjArray.push({'user':processProperties.user,'CPU(%)':parseFloat(processProperties.cpu),'Mem(%)':parseFloat(processProperties.mem),'name':processProperties.name})
+      }
+
+      let top5cpu = objArrayToTable(processObjArray.sort((a, b) =>  b['CPU(%)'] - a['CPU(%)']).slice(0, 5),2)
+      let top5mem = objArrayToTable(processObjArray.sort((a, b) =>  b['Mem(%)'] - a['Mem(%)']).slice(0, 5),3)
+
+
+      return `<div style="overflow-x: scroll; max-width: 70em; max-height: 70em;">
+<div style="width: 10000px; ">
+<b>TOP CPU USAGE</b>\n${top5cpu}\n\r<b>TOP MEMORY USAGE</b>\n${top5mem}
+</div>
+</div>`
+
+    }
+
+    let runningAppsSubbullet = CreateBullet('Running Apps','Custom',runningApps(),icons.apps)
+
+    let topProcessesSubbullet = CreateBullet('Top Processes','Custom',parsePsAux(),icons.hotcpu)
+    
+    return topProcessesSubbullet+runningAppsSubbullet
 }
 
 function parseMountInfo(item_all_data) {
@@ -1354,6 +1436,36 @@ appConfigContents += bulletSubItem('Verbose logging', verboseLoggingEnabled)
 return appConfigContents
 }
 
+function parseInstalledSoftware(item_all_data){
+item_all_data = item_all_data.replaceAll(/\<\/?InstalledSoftware\>/g,'')
+
+let uniqueAppList
+let appRegex = /\/Applications\/(?<appName>[^.]*\.app)[^:]*\: (?<version>[\d. ()]*)/g
+
+let formattedAppList = item_all_data.replaceAll(appRegex,'$<appName>: $<version>').split("\n");
+
+uniqueAppList = Array.from(new Set(formattedAppList)).sort().join('\r\n')
+
+return uniqueAppList
+}
+
+function parseLaunchdInfo(item_all_data){
+  markBullet('LaunchdInfo','service')
+  return parseLsLr(item_all_data)
+  }
+
+function parseAutoStatisticInfo(item_all_data){
+  markBullet('AutoStatisticInfo','install')
+
+  let installationHistory = 'PD Installations:\n'
+
+  $(item_all_data).find('PDInstallationHistory').each(function(){
+    installationHistory+=`<u>${$(this).find("installedversionname").text()}</u>  ${$(this).find("installedversiondate").text()}\n`
+  })
+
+  return installationHistory
+
+}
 
 //Extra functions
 
@@ -1854,13 +1966,13 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
 
 
 //all report items for which bullets will be constructed in the bullet container
-const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData'];
+const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData','InstalledSoftware', 'LaunchdInfo','AutoStatisticInfo'];
 //report log links that will be cloned to the bullet container
 const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log", 'install.log','tools.log', 'panic.log'];
 //pinned_items that will have a collapsible with parsed info
-const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData','panic.log'];
+const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData','InstalledSoftware','AutoStatisticInfo', 'LaunchdInfo','panic.log'];
 
-const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig', 'AppConfig','install.log','panic.log']
+const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo', 'InstalledSoftware', 'LaunchdInfo','AutoStatisticInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig', 'AppConfig','install.log','panic.log']
 
 var nodeContents = {}//it't almost raw data. Mostly for the search function.
 
@@ -1901,7 +2013,7 @@ function doReportOverview() {
         return $("<div />").append($(this).contents());
     });
       
-    for (var item in process_immediately){
+    for (let item in process_immediately){
             BulletData(process_immediately[item])
         
       }
@@ -1981,6 +2093,7 @@ const icons = {
 'fullscreen':'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-128.png',
 'noTimeSync':'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-128.png',
 'hdds':"https://image.flaticon.com/icons/svg/1689/1689016.svg",
+'cd':'https://image.flaticon.com/icons/png/128/2606/2606574.png',
 'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg',
 'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-128.png',
 'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
@@ -1997,4 +2110,8 @@ const icons = {
 'verbose logging':'https://cdn3.iconfinder.com/data/icons/information-notification-black/3/17-128.png',
 'pvm':'https://fileinfo.com/img/icons/files/128/pvm-3807.png',
 'shared':'https://cdn2.iconfinder.com/data/icons/handcraft-1px/16/lan-connection-128.png',
-'bridged':'https://cdn3.iconfinder.com/data/icons/flat-design-hardware-network-set-2/24/ethernet-plug-64.png'}
+'bridged':'https://cdn3.iconfinder.com/data/icons/flat-design-hardware-network-set-2/24/ethernet-plug-64.png',
+'install':'https://static.thenounproject.com/png/2756717-200.png',
+'service':'https://i.pinimg.com/originals/71/d1/77/71d177d628bca6aff2813176cba0c18f.png',
+'apps':'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/e1a9f090-dd30-478b-9467-430ac1adc9fa/d5ul4ou-4c791402-8c6e-4c5a-aff9-e59d64863e1b.png',
+'hotcpu':'https://cdn4.iconfinder.com/data/icons/it-components-2/24/microchip_processor_chip_cpu_hot_burn-128.png'}
