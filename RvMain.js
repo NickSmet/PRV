@@ -1437,6 +1437,7 @@ return appConfigContents
 }
 
 function parseInstalledSoftware(item_all_data){
+markBullet('InstalledSoftware','installedApps')
 item_all_data = item_all_data.replaceAll(/\<\/?InstalledSoftware\>/g,'')
 
 let uniqueAppList
@@ -2113,5 +2114,6 @@ const icons = {
 'bridged':'https://cdn3.iconfinder.com/data/icons/flat-design-hardware-network-set-2/24/ethernet-plug-64.png',
 'install':'https://static.thenounproject.com/png/2756717-200.png',
 'service':'https://i.pinimg.com/originals/71/d1/77/71d177d628bca6aff2813176cba0c18f.png',
-'apps':'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/e1a9f090-dd30-478b-9467-430ac1adc9fa/d5ul4ou-4c791402-8c6e-4c5a-aff9-e59d64863e1b.png',
+'apps':'https://cdn2.iconfinder.com/data/icons/engineering-butterscotch-vol-1/512/Applications-128.png',
+'installedApps':'https://icons.iconarchive.com/icons/mcdo-design/smooth-leopard/256/Applications-Folder-Blue-icon.png',
 'hotcpu':'https://cdn4.iconfinder.com/data/icons/it-components-2/24/microchip_processor_chip_cpu_hot_burn-128.png'}
