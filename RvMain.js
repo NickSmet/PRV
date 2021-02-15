@@ -1496,8 +1496,11 @@ function loadMacSpecs(mac_url, mac_cpu, macElement, macID) {
 
 
     macElement.append(macSpecs)
-    GM_setValue(macID, macSpecs)
+    if(storage){
+      GM_setValue(macID, macSpecs)
     console.log(macID, " added!")
+    }
+    
     
 }
 
