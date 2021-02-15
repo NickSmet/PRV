@@ -186,7 +186,7 @@ function ConstructBullets (elements_array, elements_type, append_to) {
  * @param {Object} exclude Object like {"NetworkType":"0"}. Bullet elements consistent with these
  * criteria will be skipped.  
  */
-function parseXMLItem( data, element, parameters, adjustments={}, exclude={}){
+function parseXMLItem( data, elementName, parameters, adjustments={}, exclude={}){
   //console.log(data)
   data = data.replace(/\<\-\>/g,"")
   data = data.replace(/<\?xml[^>]*>/g,"")
@@ -199,7 +199,7 @@ function parseXMLItem( data, element, parameters, adjustments={}, exclude={}){
 
   var subBullet = ''
 
-  var element = $xml.find(element)
+  var element = $xml.find(elementName)
   //console.log (element)
   element.each(function () {
     //console.log($(this))
@@ -211,7 +211,11 @@ function parseXMLItem( data, element, parameters, adjustments={}, exclude={}){
     }
     
     var subBulletItem = ''
+
+
     for (var parameter in parameters){
+      console.log(element);
+      if(elementName=='HardDisk'){
         var paramValue = $.trim($(this).find(parameters[parameter]).first().text())
         if (parameter in adjustments){
             paramValue = adjustSpec(paramValue, adjustments[parameter])
@@ -219,7 +223,19 @@ function parseXMLItem( data, element, parameters, adjustments={}, exclude={}){
         if (paramValue){
         subBulletItem +='<u>'+parameter+'</u>: '+ paramValue+'\n'}
       
+    }else{
+      $(this).find(parameters[parameter]).each(function(){
+        
+        var paramValue = $.trim(($(this).text()))
+        if (parameter in adjustments){
+            paramValue = adjustSpec(paramValue, adjustments[parameter])
+        }
+        if (paramValue){
+        subBulletItem +='<u>'+parameter+'</u>: '+ paramValue+'\n'}
+      })
     }
+  
+  }
     subBullet = subBullet+subBulletItem+'\n';  })
     if (subBullet.trim() == ''){subBullet='Nothing'}
 return subBullet}
@@ -942,7 +958,7 @@ var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
   var Inputs_data = parseXMLItem( item_all_data, element = "HIDDevice", ParamInputs)
   var Printers_data = parseXMLItem( item_all_data, element = "Printer", ParamPrinters)
   var CCIDs_data = parseXMLItem( item_all_data, element = "SmartCardReaders", ParamCCIDs)
-  var camerasData = parseXMLItem( item_all_data, element = "Cameras", paramCameras)
+  var camerasData = parseXMLItem( item_all_data, element = "Camera", paramCameras)
   
 //that's definitely super-repetative; but ok for now
   var specs_definition = {
