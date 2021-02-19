@@ -29,7 +29,7 @@ function getXmlReport(requestLink){
     bigReportObj = strToXmlToJson(data)
     
 
-    // console.log(data);
+    //console.log(data);
 
     doReportOverview()
 
@@ -65,7 +65,7 @@ function parseLsLr(raw){
     } else
       if (folderProperties) {
         folderLocation = folderProperties.location
-        console.log(folderLocation);
+ 
 
         //makind output look more like a folder structure
         if(folderLocation.match(/\//g)){
@@ -214,8 +214,8 @@ function parseXMLItem( data, elementName, parameters, adjustments={}, exclude={}
 
 
     for (var parameter in parameters){
-      console.log(element);
-      if(elementName=='HardDisk'){
+  
+      if(elementName=='HardDisk'||elementName=='SavedStateItem'){//long story
         var paramValue = $.trim($(this).find(parameters[parameter]).first().text())
         if (parameter in adjustments){
             paramValue = adjustSpec(paramValue, adjustments[parameter])
@@ -397,17 +397,25 @@ function BulletData(item_id, option) {
   'ClientProxyInfo':bigReportObj.ParallelsProblemReport.ClientProxyInfo,
   'MoreHostInfo':bigReportObj.ParallelsProblemReport.MoreHostInfo,
   'VmDirectory':bigReportObj.ParallelsProblemReport.VmDirectory,
+  'InstalledSoftware':bigReportObj.ParallelsProblemReport.InstalledSoftware,
+  // 'AdvancedVmInfo':bigReportObj.ParallelsProblemReport.AdvancedVmInfo,
+  'LaunchdInfo':bigReportObj.ParallelsProblemReport.LaunchdInfo,
+  // 'AutoStatisticInfo':bigReportObj.ParallelsProblemReport.AutoStatisticInfo,
+  'AppConfig':bigReportObj.ParallelsProblemReport.AppConfig,
+  'NetConfig':bigReportObj.ParallelsProblemReport.NetConfig,
+  'LicenseData':bigReportObj.ParallelsProblemReport.LicenseData,
+
 }
 
-let haveJsonFormat = ['GuestCommands']
+
+let haveJsonFormat = ['GuestCommands','AutoStatisticInfo']
 
   if (item_id in nodesFromXml){
     
-    console.log("Processing "+item_id+" the new way.");
+    
 
     bullet_all_data = nodesFromXml[item_id]
-
-    console.log(typeof bullet_all_data);
+    console.log(`Processing ${item_id} the new way. Data is ${typeof bullet_all_data}`);
 
     if(nodesFromXml[item_id]) {
       AddNodeToSearch(bullet_all_data, item_id)
@@ -813,7 +821,7 @@ function parseNetConfig(item_all_data) {
 
 
 
-  let netCfgObj = jsonObj.NetConfig.ParallelsNetworkConfig
+  let netCfgObj = jsonObj.ParallelsNetworkConfig
 
   let kextless = netCfgObj.UseKextless
 
@@ -1002,6 +1010,9 @@ var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
 }
 
 function parseMoreHostInfo(item_all_data) {
+
+      if(item_all_data.length>120&&item_all_data.length<250)
+      {return item_all_data}else if(item_all_data.length<121){return "Empty"}
 
     regex = /(\<More[^$]*dtd\"\>|\<\=|\<\/MoreHostInfo>)/gm
     item_all_data = item_all_data.replace(regex, '');
@@ -1299,7 +1310,6 @@ function parseGuestCommands(item_all_data) {
     //lots of weird regexes to make it parse regardless of the language.
     let adapters_regex = /\n[ \w][^\n\:]*\:[\r\n]+( +[^\n]*\n){1,}/gi
     let adapters = command_result.match(adapters_regex)
-    console.log(adapters);
 
     if (adapters!== null){
 
@@ -1428,7 +1438,7 @@ function parsetoolsLog(item_all_data) {
 }
 
 function parseLicenseData(item_all_data){
-  let licenseData = JSON.parse(item_all_data.match(/\<License[^>]*>([^<]*)<\/LicenseData>/m)[1])
+  let licenseData = JSON.parse(item_all_data)
   let expirationDate = Date.parse(licenseData['license']['main_period_ends_at'])
   if(expirationDate-Date.now()>5*365*24*3600*1000){markBullet('LicenseData','pirated')}
   return "Expires: "+licenseData['license']['main_period_ends_at']
@@ -1439,7 +1449,7 @@ function parseAppConfig(item_all_data){
 
 let appConfigContents = ''
 
-let AppConfigJson = strToXmlToJson(item_all_data).AppConfig.ParallelsPreferences
+let AppConfigJson = strToXmlToJson(item_all_data).ParallelsPreferences
 
 let verboseLoggingEnabled = AppConfigJson.ServerSettings.CommonPreferences.Debug.VerboseLogEnabled
 
@@ -1472,6 +1482,7 @@ function parseLaunchdInfo(item_all_data){
   }
 
 function parseAutoStatisticInfo(item_all_data){
+  console.log(item_all_data);
   markBullet('AutoStatisticInfo','install')
 
   let installationHistory = 'PD Installations:\n'
@@ -2102,7 +2113,7 @@ const icons = {
 'vms':'https://insmac.org/uploads/posts/2017-08/1503641514_parallels.png',
 'vpn':'https://image.flaticon.com/icons/png/128/1451/1451546.png',
 'external drive':"https://cdn4.iconfinder.com/data/icons/computer-58/64/external-hard-disk-drive-storage-64.png",
-'copied vm':'https://www.subrosasoft.com/wp-content/uploads/2016/03/DiskCopyIcon.png',
+'copied vm':'https://cdn2.iconfinder.com/data/icons/small-color-v5/512/clone_copy_document_duplicate_files-128.png',
 'AppleHV':'https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/OS_Apple.png',
 'Nested':'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-128.png',
 'splitted':'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-32.png',
