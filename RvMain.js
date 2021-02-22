@@ -44,7 +44,6 @@ function strToXmlToJson(data){
   return jsonObj
 }
 
-
 function parseLsLr(raw){
   let lsFileRegex = /(?<permissions>[\w-]{10}).? +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>\w+) +(?<type>[\w-]+)? +(?<size>\d+) +(?<modified>\w{3} +\d{1,2} +(\d\d\:){2}\d\d +\d{4}) +(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
   let lsFolderRegex = /(\/[\w ]+\.pvm)?\/(?<location>[^:\n]*):$/gm //the .pvm part is for cases when showing list of files inside .pvm
@@ -553,8 +552,7 @@ item_all_data = item_all_data.replaceAll(/(Kernel Extensions in backtrace)/g, "<
 return item_all_data
 }
 
-
-ObjByString = function(o, s) {
+var ObjByString = function(o, s) {
   s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
   s = s.replace(/^\./, '');           // strip a leading dot
   var a = s.split('.');
@@ -864,10 +862,10 @@ function parseNetConfig(item_all_data) {
 
   //var networkBullet = CreateBullet('Networks', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
 
-     return network;}
+     return network;
+    }
 
-
-     function 	parseClientProxyInfo(item_all_data) {
+function 	parseClientProxyInfo(item_all_data) {
 
       proxies_regex = /\<dictionary\> {[^}]*}([^}]*)}/gm
 
@@ -2146,4 +2144,5 @@ const icons = {
 'service':'https://i.pinimg.com/originals/71/d1/77/71d177d628bca6aff2813176cba0c18f.png',
 'apps':'https://cdn2.iconfinder.com/data/icons/engineering-butterscotch-vol-1/512/Applications-128.png',
 'installedApps':'https://icons.iconarchive.com/icons/mcdo-design/smooth-leopard/256/Applications-Folder-Blue-icon.png',
-'hotcpu':'https://cdn4.iconfinder.com/data/icons/it-components-2/24/microchip_processor_chip_cpu_hot_burn-128.png'}
+'hotcpu':'https://cdn4.iconfinder.com/data/icons/it-components-2/24/microchip_processor_chip_cpu_hot_burn-128.png'
+}
