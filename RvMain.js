@@ -1877,7 +1877,7 @@ $("#searchField").on('keyup', function (e) {
   }
   nodeContents[nodeName]=node
   
-  let searchIcon = `<img src="https://icons.iconarchive.com/icons/vexels/office/64/document-search-icon.png" 
+  let searchIcon = `<img src="${icons.docSearch}" 
   id=`+nodeName+`_searchFocus
   title="search" 
   style="display: linline; height: 1.5em; margin-left:-1.5em; cursor: pointer; opacity: 0.7;">`
@@ -2144,5 +2144,6 @@ const icons = {
 'service':'https://i.pinimg.com/originals/71/d1/77/71d177d628bca6aff2813176cba0c18f.png',
 'apps':'https://cdn2.iconfinder.com/data/icons/engineering-butterscotch-vol-1/512/Applications-128.png',
 'installedApps':'https://icons.iconarchive.com/icons/mcdo-design/smooth-leopard/256/Applications-Folder-Blue-icon.png',
-'hotcpu':'https://cdn4.iconfinder.com/data/icons/it-components-2/24/microchip_processor_chip_cpu_hot_burn-128.png'
+'hotcpu':'https://cdn4.iconfinder.com/data/icons/it-components-2/24/microchip_processor_chip_cpu_hot_burn-128.png',
+'docSearch':'https://image.flaticon.com/icons/png/128/3126/3126554.png'
 }
