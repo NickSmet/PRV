@@ -7,17 +7,17 @@
 
 // @include     http://reportus.prls.net/webapp/reports/*
 
-// @include     https://reports.prls.net/Reports/Report.aspx?ReportId=*
-// @include      https://reports.parallels.com/Reports/Report.aspx?ReportId=*
+// @include     https://reports.prls.net/*/Report.aspx?ReportId=*
+// @include      https://reports.parallels.com/*/Report.aspx?ReportId=*
 
-// @include      http://reports.prls.net/Reports/Report.aspx?ReportId=*
-// @include      http://reports.parallels.com/Reports/Report.aspx?ReportId=*
+// @include      http://reports.prls.net/*/Report.aspx?ReportId=*
+// @include      http://reports.parallels.com/*/Report.aspx?ReportId=*
 
-// @include      https://reports.prls.net/Reports/Log.aspx?ReportId=*&LogName=*
-// @include      https://reports.parallels.com/Reports/Log.aspx?ReportId=*&LogName=*
+// @include      https://reports.prls.net/*/Log.aspx?ReportId=*&LogName=*
+// @include      https://reports.parallels.com/*/Log.aspx?ReportId=*&LogName=*
 
-// @include      http://reports.prls.net/Reports/Log.aspx?ReportId=*&LogName=*
-// @include      http://reports.parallels.com/Reports/Log.aspx?ReportId=*&LogName=*
+// @include      http://reports.prls.net/*/Log.aspx?ReportId=*&LogName=*
+// @include      http://reports.parallels.com/*/Log.aspx?ReportId=*&LogName=*
 
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
 

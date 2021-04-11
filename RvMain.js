@@ -628,9 +628,9 @@ function parseCurrentVm(CurrentVmData) {
       'Pause When Possible': vmObj.Settings.Tools.Coherence.PauseIdleVM,
 
       'Section0':'General',
-            
-      //Initially, ".replace" is to remove pvsp/pvs from path (leaving just .pvm), and brackets bit is to account for brackets in VM path so as not to break regexp. 
-      'PVM Location': vmObj.Identification.VmHome.replace(/\/config.pvsp?/,'').replace(/\[/,'\\\[').replace(/\]/,'\\\]').replace(/\)/,'\\\)').replace(/\(/,'\\\('),
+      
+      'VM Name': vmObj.Identification.VmName,
+      'PVM Location': vmObj.Identification.VmHome.replace(/\/config.pvsp?/,''),
       'Creation date': vmObj.Identification.VmCreationDate,
       'This VM UUID': vmObj.Identification.VmUuid,
       'Source   UUID': vmObj.Identification.SourceVmUuid, 
@@ -643,6 +643,8 @@ function parseCurrentVm(CurrentVmData) {
       'Video Mode': parseInt(vmObj.Hardware.Video.EnableHiResDrawing) + parseInt(vmObj.Hardware.Video.NativeScalingInGuest),
       'Scale To Fit Screen': vmObj.Settings.Runtime.FullScreen.ScaleViewMode,
       '3D Acceleration': vmObj.Hardware.Video.Enable3DAcceleration,
+      'Keyboard': vmObj.Settings.Runtime.OptimizeModifiers,
+      'Mouse': parseInt(vmObj.Settings.Tools.SmartMouse.Enabled)+parseInt(vmObj.Settings.Tools.MouseSync),
       //'Lan Adapter': $xml.find('AdapterType').text(),
       //'Networks': $xml.find('NetworkAdapter > EmulatedType').text(),
       'Subbullet3': VMNETWORKs,
@@ -686,14 +688,15 @@ function parseCurrentVm(CurrentVmData) {
     if(VMHDDs.match(/<u>Expanding<\/u>: 0/)){markBullet('CurrentVm', icons["plain vHDD"])}
   }
   
-  let externalVhddRegex = RegExp('(<u>Location</u>: ((?!'+currentVmSpecs['PVM Location']+').)+)','gm') //chckse if there are vHDDs with "Location" outside of PVM
+  let externalVhddRegex = RegExp('(<u>Location</u>: ((?!'+currentVmSpecs['PVM Location'].replace(/\(/g,"\\(").replace(/\)/g,"\\)")+').)+)','gm') //chckse if there are vHDDs with "Location" outside of PVM
   
-  if(VMHDDs.match(externalVhddRegex)){markBullet('CurrentVm', icons["external vHDD"])}
+  if(VMHDDs.match(externalVhddRegex)&&bigReportObj.ParallelsProblemReport.ProductName!='Parallels Desktop for Chrome OS'){markBullet('CurrentVm', icons["external vHDD"])}
 
 
   if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){markBullet('CurrentVm', icons["network conditioner"])}
 
-
+  
+  if(bigReportObj.ParallelsProblemReport.ProductName=='Parallels Desktop for Chrome OS' && !currentVmSpecs["VM Name"].match(/PvmDefault/i)){markBullet('CurrentVm','not PvmDefault')}
     
     var all_specs = '';
 
@@ -751,7 +754,10 @@ function parseCurrentVm(CurrentVmData) {
       'Graphic Switching':{1:'Off',0:'On'},
       'Hypervisor':{0:'Parallels', 1:'Apple'},
       'Video Mode':{0:'Scaled',1:'Best for Retina',2:'Best for external displays'},
-      'Scale To Fit Screen':{0:'Off',1:'Auto',2:'Keep ratio',3:'Stretch'}
+      'Scale To Fit Screen':{0:'Off',1:'Auto',2:'Keep ratio',3:'Stretch'},
+      'Keyboard':{0:'Don\'t optimize for games',1:'Optimize for games',2:'WTF?',3:'Auto'},
+      'Mouse':{0:'Optimize for games',1:'Don\'t optimize for games',2:'Auto',3:'WTF?'}
+
     }
 
 
@@ -771,7 +777,9 @@ function parseCurrentVm(CurrentVmData) {
     keysWithIcons = {
       'Share Host Printers':'printers',
       'Scale To Fit Screen':'fullscreen',
-    'Smart Guard':'smart guard'}
+    'Smart Guard':'smart guard',
+    'Keyboard':'keyboard',
+    'Mouse':'mouse'}
     
 
     for (var key in currentVmSpecs) {//я немного запутался, но оно рабоатет
@@ -1220,21 +1228,39 @@ function parseAllProcesses(item_all_data) {
 
 function parseMountInfo(item_all_data) {
 
-    var mountinfo_regex = /^.*(Gi|Filesystem|Ti).*$/gm;
-    var mountinfo = item_all_data.match(mountinfo_regex);
- //console.log (mountinfo);
+    let mountInfoRegex = /(?<Filesystem>(map |\/dev|\/\/|devfs)[\w\/\-@\.]*)  +(?<Size>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Used>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Avail>[\d\.]*(Gi|Ti|Bi|Ki|Mi) +)(?<Capacity>\d+\%) +(?<iused>\d+) +(?<ifree>\d+) +(?<iused2>\d+\%) +(?<MountedOn>\/.*)(\n|$)/ 
+    
+    let mountInfoLinesArray = item_all_data.split('\n')
 
+    let hostinfoObjArray = []
+  
+    for (let index = 0; index < mountInfoLinesArray.length; index++) {
+      let line = mountInfoLinesArray[index]
+      if(!line.match(mountInfoRegex)){continue}
 
-    var drive_regex = /^([^ ]* +){5}/gm;
-    var i
-    for (i = 0; i < mountinfo.length; i++) {
-        mountinfo[i] = mountinfo[i].match(drive_regex)
+      let volumeProperties = mountInfoRegex.exec(line)?.groups
+      
+      let identifier = volumeProperties.Filesystem
+
+      if(identifier.match(/(map|devfs)/)){continue}
+
+      hostinfoObjArray.push({'Identifier':volumeProperties.Filesystem, 'Mounted on':volumeProperties.MountedOn,'Size':volumeProperties.Size,'Free':volumeProperties.Avail, 'Capacity':volumeProperties.Capacity})
+
+      
+
+//       return `<div style="overflow-x: scroll; max-width: 70em; max-height: 70em;">
+// <div style="width: 10000px; ">
+// <b>TOP CPU USAGE</b>\n${top5cpu}\n\r<b>TOP MEMORY USAGE</b>\n${top5mem}
+// </div>
+// </div>`
+
     }
 
-    var mountinfo_all = mountinfo.join('\r\n');
+    
+    let drives = objArrayToTable(hostinfoObjArray.sort((a, b) => a.Identifier.localeCompare(b.Identifier)))
 
 
-    return mountinfo_all
+    return drives
 
 
 }
@@ -1375,7 +1401,7 @@ function parseGuestCommands(item_all_data) {
 function parseVmDirectory(item_all_data) {
   item_all_data = item_all_data.replace(/&/g, "_") //cuz & in xml causes parsing issues
   //counts number of VMs and marks bullet accordingly
-  var numberofvms = item_all_data.match(/VmName/g).length/2
+  let numberofvms = item_all_data.match(/VmName/g) ? item_all_data.match(/VmName/g).length/2 : 0
   if(numberofvms>0){
     markBullet("VmDirectory", "vms")
     markBullet("VmDirectory", "Custom", '<a>'+numberofvms+'* </a>')
@@ -1383,7 +1409,7 @@ function parseVmDirectory(item_all_data) {
 
   xmlDoc = $.parseXML( item_all_data ),
   $xml = $( xmlDoc );
-  var VMParams = {'Name':'VmName', 'Location':'VmHome','UUID':'Uuid','Registered on':'RegistrationDateTime',}
+  let VMParams = {'Name':'VmName', 'Location':'VmHome','UUID':'Uuid','Registered on':'RegistrationDateTime',}
 return parseXMLItem(item_all_data, 'VirtualMachine', VMParams);
 
 
@@ -1449,11 +1475,33 @@ let appConfigContents = ''
 
 let AppConfigJson = strToXmlToJson(item_all_data).ParallelsPreferences
 
+let prlUsers = AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser
+
+
+console.log(JSON.stringify(prlUsers));
+
+console.log(prlUsers[1]);
+
+console.log(prlUsers.isArray );
+
+
+let defaultVmFolder = (Array.isArray(prlUsers)) ? prlUsers[1].UserWorkspace.UserDefaultVmFolder : prlUsers.UserWorkspace.UserDefaultVmFolder
+//a bit hacky: because ParallelsUser can be an array, when there are multiple users. In that case, usually the first user is @root
+//so I'm skipping it and getting the first normal user. This will be inaccurate in some cases, but noone will care.
+
 let verboseLoggingEnabled = AppConfigJson.ServerSettings.CommonPreferences.Debug.VerboseLogEnabled
 
 if (verboseLoggingEnabled==1){markBullet('AppConfig','verbose logging')}
-
 appConfigContents += bulletSubItem('Verbose logging', verboseLoggingEnabled)
+
+
+if(defaultVmFolder){appConfigContents += bulletSubItem('Default VM Folder', defaultVmFolder)}
+if(defaultVmFolder.match(/^\/Volumes/)){markBullet('AppConfig', 'External Default VM folder')}
+
+
+
+
+
 
 //appConfigContents += bulletSubItem('VM Home', AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser.UserWorkspace.UserHomeFolder)
 
@@ -1997,11 +2045,11 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
 //all report items for which bullets will be constructed in the bullet container
 const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs',"MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData','InstalledSoftware', 'LaunchdInfo','AutoStatisticInfo'];
 //report log links that will be cloned to the bullet container
-const pinned_logs = ["parallels-system.log","system.log","vm.log","dmesg.log", 'install.log','tools.log', 'panic.log'];
+const pinned_logs = ["parallels-system.log","system.log","system.0.gz.log","vm.log", "vm.1.gz.log", "dmesg.log", 'install.log','tools.log', 'panic.log', ];
 //pinned_items that will have a collapsible with parsed info
 const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','GuestCommands','GuestOs','MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig','AppConfig','LicenseData','InstalledSoftware','AutoStatisticInfo', 'LaunchdInfo','panic.log'];
 
-const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo', 'InstalledSoftware', 'LaunchdInfo','AutoStatisticInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig', 'AppConfig','install.log','panic.log']
+const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo', 'InstalledSoftware', 'LaunchdInfo','AutoStatisticInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig', 'AppConfig','install.log','panic.log',"system.0.gz.log", "vm.1.gz.log"]
 
 var nodeContents = {}//it't almost raw data. Mostly for the search function.
 
@@ -2096,6 +2144,8 @@ window.addEventListener("load", function(event) {
 
 //note to self -- start hosting those somewhere (github even?)
 const icons = {
+  'keyboard':'https://image.flaticon.com/icons/png/128/2293/2293934.png',
+  'mouse':'https://image.flaticon.com/icons/png/128/2817/2817912.png',
   'printers':'https://image.flaticon.com/icons/svg/2489/2489670.svg',
   'all good':'https://image.flaticon.com/icons/png/128/1828/1828520.png',
   'warning' : 'https://image.flaticon.com/icons/svg/497/497738.svg',
@@ -2145,5 +2195,8 @@ const icons = {
 'apps':'https://cdn2.iconfinder.com/data/icons/engineering-butterscotch-vol-1/512/Applications-128.png',
 'installedApps':'https://icons.iconarchive.com/icons/mcdo-design/smooth-leopard/256/Applications-Folder-Blue-icon.png',
 'hotcpu':'https://cdn4.iconfinder.com/data/icons/it-components-2/24/microchip_processor_chip_cpu_hot_burn-128.png',
-'docSearch':'https://image.flaticon.com/icons/png/128/3126/3126554.png'
+'docSearch':'https://image.flaticon.com/icons/png/128/3126/3126554.png',
+'External Default VM folder':'https://image.flaticon.com/icons/png/128/3637/3637372.png',
+'not PvmDefault':'https://image.flaticon.com/icons/png/128/983/983874.png'
+
 }
