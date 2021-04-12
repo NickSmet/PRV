@@ -5,6 +5,7 @@
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/RvDeploy.user.js
 
+// @include     https://reportus.prls.net/webapp/reports/*
 // @include     http://reportus.prls.net/webapp/reports/*
 
 // @include     https://reports.prls.net/*/Report.aspx?ReportId=*
