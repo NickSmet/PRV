@@ -644,7 +644,7 @@ function parseCurrentVm(CurrentVmData) {
       'Scale To Fit Screen': vmObj.Settings.Runtime.FullScreen.ScaleViewMode,
       '3D Acceleration': vmObj.Hardware.Video.Enable3DAcceleration,
       'Keyboard': vmObj.Settings.Runtime.OptimizeModifiers,
-      'Mouse': parseInt(vmObj.Settings.Tools.SmartMouse.Enabled)+parseInt(vmObj.Settings.Tools.MouseSync),
+      'Mouse': parseInt(vmObj.Settings.Tools.SmartMouse.Enabled)+parseInt(vmObj.Settings.Tools.MouseSync.Enabled),
       //'Lan Adapter': $xml.find('AdapterType').text(),
       //'Networks': $xml.find('NetworkAdapter > EmulatedType').text(),
       'Subbullet3': VMNETWORKs,
