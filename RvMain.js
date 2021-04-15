@@ -657,6 +657,15 @@ function parseCurrentVm(CurrentVmData) {
       'Section2':'Sharing',
       'Isolated': vmObj.Settings.Tools.IsolatedVm,
       'Shared profile': vmObj.Settings.Tools.SharedProfile.Enabled,
+      'Share Host Cloud': vmObj.Settings.Tools.SharedFolders.HostSharing.SharedCloud,
+      'Map Mac Volumes' : vmObj.Settings.Tools.SharedVolumes.Enabled,
+      'Access Guest from Host' : vmObj.Settings.Tools.SharedFolders.GuestSharing.Enabled,
+      'Share OneDrive with Host' : vmObj.Settings.Tools.SharedFolders.GuestSharing.AutoMountCloudDrives,
+      'Share Guest Netw. Drives': vmObj.Settings.Tools.SharedFolders.GuestSharing.AutoMountNetworkDrives,
+      'Share Guest Extern. Drives': vmObj.Settings.Tools.SharedFolders.GuestSharing.ShareRemovableDrives,
+      'Shared Guest Apps': vmObj.Settings.Tools.SharedApplications.FromWinToMac,
+      'Shared Host Apps': vmObj.Settings.Tools.SharedApplications.FromMacToWin,
+      
       // 'Win>Mac Sharing': FromWinToMac, NEED TO REWORK SHARING
       // 'Mac>Win Sharing': FromMacToWin,
       'Clipboard': vmObj.Settings.Tools.ClipboardSync.Enabled,
@@ -779,7 +788,11 @@ function parseCurrentVm(CurrentVmData) {
       'Scale To Fit Screen':'fullscreen',
     'Smart Guard':'smart guard',
     'Keyboard':'keyboard',
-    'Mouse':'mouse'}
+    'Mouse':'mouse',
+    'Share Guest Extern. Drives':'usb',
+    'Share Guest Netw. Drives':'network folder',
+    'Share OneDrive with Host':'onedrive'
+  }
     
 
     for (var key in currentVmSpecs) {//я немного запутался, но оно рабоатет
@@ -1227,24 +1240,33 @@ function parseAllProcesses(item_all_data) {
 }
 
 function parseMountInfo(item_all_data) {
+    let fileSystemRegex = /^(?<id>[\w\/]*) on [^\(]* \((?<filesystem>[^,]+)/
 
-    let mountInfoRegex = /(?<Filesystem>(map |\/dev|\/\/|devfs)[\w\/\-@\.]*)  +(?<Size>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Used>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Avail>[\d\.]*(Gi|Ti|Bi|Ki|Mi) +)(?<Capacity>\d+\%) +(?<iused>\d+) +(?<ifree>\d+) +(?<iused2>\d+\%) +(?<MountedOn>\/.*)(\n|$)/ 
+    let mountInfoRegex = /(?<id>(map |\/dev|\/\/|devfs)[\w\/\-@\.]*)  +(?<Size>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Used>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Avail>[\d\.]*(Gi|Ti|Bi|Ki|Mi) +)(?<Capacity>\d+\%) +(?<iused>\d+) +(?<ifree>\d+) +(?<iused2>\d+\%) +(?<MountedOn>\/.*)(\n|$)/ 
     
     let mountInfoLinesArray = item_all_data.split('\n')
 
     let hostinfoObjArray = []
+
+    let fs = {}
   
     for (let index = 0; index < mountInfoLinesArray.length; index++) {
       let line = mountInfoLinesArray[index]
+
+      if(line.match(fileSystemRegex)){
+        diskProperties = fileSystemRegex.exec(line)?.groups
+        fs[diskProperties.id] = diskProperties.filesystem.replace('ntfs','<b><u>ntfs</u></b>')
+      }
+
       if(!line.match(mountInfoRegex)){continue}
 
       let volumeProperties = mountInfoRegex.exec(line)?.groups
       
-      let identifier = volumeProperties.Filesystem
+      let identifier = volumeProperties.id
 
       if(identifier.match(/(map|devfs)/)){continue}
 
-      hostinfoObjArray.push({'Identifier':volumeProperties.Filesystem, 'Mounted on':volumeProperties.MountedOn,'Size':volumeProperties.Size,'Free':volumeProperties.Avail, 'Capacity':volumeProperties.Capacity})
+      hostinfoObjArray.push({'Identifier':volumeProperties.id, 'Mounted on':volumeProperties.MountedOn,'Size':volumeProperties.Size,'Free':volumeProperties.Avail, 'Capacity':volumeProperties.Capacity, 'File System':fs[volumeProperties.id]})
 
       
 
@@ -2144,6 +2166,9 @@ window.addEventListener("load", function(event) {
 
 //note to self -- start hosting those somewhere (github even?)
 const icons = {
+  'onedrive':'https://image.flaticon.com/icons/png/128/2335/2335410.png',
+  'network folder':'https://image.flaticon.com/icons/png/128/1930/1930805.png',
+  'usb':'https://image.flaticon.com/icons/svg/1689/1689028.svg',
   'keyboard':'https://image.flaticon.com/icons/png/128/2293/2293934.png',
   'mouse':'https://image.flaticon.com/icons/png/128/2817/2817912.png',
   'printers':'https://image.flaticon.com/icons/svg/2489/2489670.svg',
