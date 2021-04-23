@@ -59,7 +59,7 @@ function parseLsLr(raw){
 
 
     if (line.match(lsFileRegex) && filesProperties.fileName != "." && filesProperties.fileName != "..") {
-      if(filesProperties.ownerName=='root') {filesProperties.ownerName= `<b><font color="red">${filesProperties.ownerName}</font></b>`}
+      if(filesProperties.ownerName.match(/root|\_unknown/)) {filesProperties.ownerName= `<b><font color="red">${filesProperties.ownerName}</font></b>`}
       bundleContents += `${humanFileSize(filesProperties.size)} <b>${filesProperties.fileName}</b> <span style="color: #999999;">${filesProperties.permissions} ${filesProperties.ownerName} ${filesProperties.modified}</span>\n `
     } else
       if (folderProperties) {
@@ -919,8 +919,8 @@ function parseAdvancedVmInfo(item_all_data) {
     markBullet('AdvancedVmInfo', 'ACL')
   }
 
-  if (item_all_data.match(/ root /)) {
-    markBullet('AdvancedVmInfo', 'root owner')
+  if (item_all_data.match(/ root |\_unknown/)) {
+    markBullet('AdvancedVmInfo', 'root or unknown owner')
   }
 
   var number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length / 2 - 1 : 0;
@@ -998,6 +998,10 @@ var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
   'Subbullet7': (CCIDs_data=='Nothing') ?CreateBullet('Host_CCIDs','blank', CCIDs_data, iconCCIDS) : CreateBullet('Host_CCIDs','Custom', CCIDs_data, iconCCIDS),
 
   };
+
+  if(item_all_data.match('DisplayLink')){markBullet('HostInfo','DisplayLink device!')}
+
+
   var all_specs = '';
 
   var specs_to_name = {
@@ -1289,8 +1293,12 @@ function parseMountInfo(item_all_data) {
 
 function parseGuestOs(item_all_data) {
 
-  xmlDoc = $.parseXML( item_all_data ),
-  $xml = $( xmlDoc );
+
+  let guestOsVersion = strToXmlToJson(item_all_data).GuestOsInformation.RealOsVersion.replace(/(,$)/g, "") || '--' //removing trailing comma
+
+
+  $("table.reportList>tbody>tr:nth-child(19)>td:nth-child(2)").append(` (${guestOsVersion})`)
+
   var ToolsParams = {'Name':'ToolName', 'Version':'ToolVersion','Last updated':'ToolDate','Status':'ToolUpdateStatus'}
   var ToolsAdjust = {'Last updated':'Time'}
   var ToolsFilter = {'ToolUpdateStatus':'UpToDate','ToolVersion':'0.0.0.0'}
@@ -1573,6 +1581,7 @@ function loadMacSpecs(mac_url, mac_cpu, macElement, macID) {
   
 
   function ExtractSpecs(allmacs, cpu, macElement){
+    console.log({allmacs});
     var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
      if(mac.length==0){mac = allmacs.find("table:nth-child(3)")}//if I can't parce CPU correctly, then just taking the 1st model
     var mac_type = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(3) > td:nth-child(2)').text()
@@ -1635,8 +1644,8 @@ function computerModel(){
   let cpuElementPath = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(11) > td:nth-child(2)") : $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)')
 
 
-  try{var mac_cpu = cpuElementPath.text().toUpperCase().match(/ ([^ ]*) CPU/)[1]}
-  catch(e){var mac_cpu = ""}
+  let mac_cpu = cpuElementPath.text().toUpperCase().match(/ ([^ ]*) CPU|Apple M\d/) ? cpuElementPath.text().toUpperCase().match(/ ([^ ]*) CPU|Apple M\d/)   [1] : ""
+  
   console.log(mac_cpu)
   var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
   var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel+'</a></td>')
@@ -1849,7 +1858,15 @@ else
   }
   if(bullet_name=='this'){return img}
   else
-  {$('.container > div > a:contains("'+bullet_name+'")').prepend($(img))}}
+  {
+    
+    $('.container > div > a:contains("'+bullet_name+'")').filter(function(){
+      return $(this).text() === bullet_name ? true : false;
+  }).prepend($(img));
+    
+    
+    //('.container > div > a:contains("'+bullet_name+'")').prepend($(img))
+  }}
 
 
   function setupSearch(){
@@ -2166,6 +2183,7 @@ window.addEventListener("load", function(event) {
 
 //note to self -- start hosting those somewhere (github even?)
 const icons = {
+  'DisplayLink device!':'https://image.flaticon.com/icons/png/128/3273/3273973.png',
   'onedrive':'https://image.flaticon.com/icons/png/128/2335/2335410.png',
   'network folder':'https://image.flaticon.com/icons/png/128/1930/1930805.png',
   'usb':'https://image.flaticon.com/icons/svg/1689/1689028.svg',
@@ -2206,7 +2224,7 @@ const icons = {
 'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-128.png',
 'smart guard': 'https://www.seekpng.com/png/full/595-5952790_download-svg-download-png-shield-icon-png.png',
 'Boot Camp':'https://user-images.githubusercontent.com/10322311/96314275-97616700-1016-11eb-9990-8b2e92d49052.png',
-'root owner':'https://user-images.githubusercontent.com/10322311/100492918-868e3000-3142-11eb-9ee6-44826cd637c7.png',
+'root or unknown owner':'https://user-images.githubusercontent.com/10322311/100492918-868e3000-3142-11eb-9ee6-44826cd637c7.png',
 'resource quota':'https://cdn2.iconfinder.com/data/icons/flat-pack-1/64/Gauge-128.png',
 'pirated':'https://cdn1.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2/128/death2-circle-red-64.png',
 'kext':'https://cdn2.iconfinder.com/data/icons/gaming-color-icons/104/17-gaming-puzzle-piece-lego-128.png',
