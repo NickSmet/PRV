@@ -45,7 +45,7 @@ function strToXmlToJson(data){
 }
 
 function parseLsLr(raw){
-  let lsFileRegex = /(?<permissions>[\w-]{10}).? +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>\w+) +(?<type>[\w-]+)? +(?<size>\d+) +(?<modified>\w{3} +\d{1,2} +(\d\d\:){2}\d\d +\d{4}) +(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
+  let lsFileRegex = /(?<permissions>[\w-]{10}@?) +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>\w+) +(?<type>[\w-]+)? +(?<size>\d+) +(?<modified>(?<month>\w{3}) +(?<day>\d{1,2}) +(?<time>(\d\d\:){1,2}\d\d)? (?<year>\d{4} )?)(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
   let lsFolderRegex = /(\/[\w ]+\.pvm)?\/(?<location>[^:\n]*):$/gm //the .pvm part is for cases when showing list of files inside .pvm
 
   let bundleContents = ''
@@ -407,7 +407,7 @@ function BulletData(item_id, option) {
 }
 
 
-let haveJsonFormat = ['GuestCommands','AutoStatisticInfo']
+let haveJsonFormat = ['GuestCommands']
 
   if (item_id in nodesFromXml){
     
@@ -417,7 +417,7 @@ let haveJsonFormat = ['GuestCommands','AutoStatisticInfo']
     console.log(`Processing ${item_id} the new way. Data is ${typeof bullet_all_data}`);
 
     if(nodesFromXml[item_id]) {
-      AddNodeToSearch(bullet_all_data, item_id)
+      if(haveJsonFormat.includes(item_id)){AddNodeToSearch(bullet_all_data, item_id)}else{AddNodeToSearch(bullet_all_data, item_id)}
       eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
     }
     
