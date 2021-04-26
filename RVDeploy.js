@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels ReportViewer 
-// @version            1.0.4.0
+// @version            1.0.4.5
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://gist.github.com/NickSmet/e64f7f26520be1402f3a624071419ad7/raw/reportViewer.user.js
