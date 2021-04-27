@@ -1472,12 +1472,14 @@ function parseCpuUsage(command_result) {
 }
 
 function parseTimeZone(item_all_data) {
-  //console.log(item_all_data)
-    var timezone_regex = /<TimeZone>(.*)?<\/TimeZone>/;
-    var timezone = item_all_data.match(timezone_regex)[1]
-    var timediff = parseInt(timezone)
-    //console.log(timediff)
-    return timediff
+//this function is redundant. still keeping it
+
+
+    // var timezone_regex = /<TimeZone>(.*)?<\/TimeZone>/;
+    // var timezone = item_all_data.match(timezone_regex)[1]
+    // var timediff = parseInt(timezone)
+
+    return parseInt(item_all_data.match(bigReportObj.ParallelsProblemReport.TimeZone))
 
 
 }
@@ -1504,6 +1506,8 @@ function parseAppConfig(item_all_data){
 let appConfigContents = ''
 
 let AppConfigJson = strToXmlToJson(item_all_data).ParallelsPreferences
+
+if(!AppConfigJson){return "It's <b>UserDefinedOnDisconnectedServer</b>"}
 
 let prlUsers = AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser
 
@@ -1580,10 +1584,14 @@ function loadMacSpecs(mac_url, mac_cpu, macElement, macID) {
     
   
 
-  function ExtractSpecs(allmacs, cpu, macElement){
-    console.log({allmacs});
+  function ExtractSpecs(allmacs, cpu){
+    console.log(allmacs);
+    console.log(allmacs.find("table:nth-child(3)"));
     var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
      if(mac.length==0){mac = allmacs.find("table:nth-child(3)")}//if I can't parce CPU correctly, then just taking the 1st model
+    console.log(cpu);
+     if(cpu=='Apple M1'){mac=$(allmacs.find("table:nth-child(3)"))
+    console.log('M1!!!!!!!!!');}
     var mac_type = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(3) > td:nth-child(2)').text()
     var produced_from = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(2)').text()
     var produced_till = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(4)').text()
@@ -1599,8 +1607,8 @@ function loadMacSpecs(mac_url, mac_cpu, macElement, macID) {
     "Year: ", produced_from, " - ", produced_till]
 
 
-    macElement.append(macSpecs)
-    if(storage){
+    $('td:contains("Computer Model")').next().append(macSpecs)
+    if(storage!=''){
       GM_setValue(macID, macSpecs)
     console.log(macID, " added!")
     }
@@ -1616,9 +1624,12 @@ function GetMacsModel (fetchURL, cpu, macElement) {
             onload:     function (responseDetails) {
                             // DO ALL RESPONSE PROCESSING HERE...
                                 
-                                var cool = responseDetails.responseText.match(/<center>[^$]*<\/center>/)[0]
+                                var contents = $(responseDetails.responseText)
                                 //var allmacs = $('center', cool)
-                                var allmacs = $(cool)
+                                let allmacs = $(contents.find('center')[2])
+
+                                // let allmacs = $(cool)
+                                // console.log(allmacs);
                                 ExtractSpecs(allmacs, cpu, macElement)
                             
                         }
@@ -1633,37 +1644,39 @@ function GetMacsModel (fetchURL, cpu, macElement) {
 
 function computerModel(){
 
-  var computer_model = $('td:contains("Computer Model")');
-  if (computer_model == null){return}
+  // var computer_model = $('td:contains("Computer Model")');
+  // if (computer_model == null){return}
 
-  var macModelElement = computer_model.next();
-  var macModel = macModelElement.text()
+  let macElement = $('td:contains("Computer Model")').next();
+  var macModel = bigReportObj.ParallelsProblemReport.ComputerModel
 
   if (!macModel.match(/MacBook|iMac|Macmini|MacPro/)){return}
 
-  let cpuElementPath = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(11) > td:nth-child(2)") : $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)')
+  // let cpuElementPath = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(11) > td:nth-child(2)") : $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)')
+  
+  let mac_cpu = strToXmlToJson(bigReportObj.ParallelsProblemReport.HostInfo).ParallelsHostInfo.Cpu.Model
 
-
-  let mac_cpu = cpuElementPath.text().toUpperCase().match(/ ([^ ]*) CPU|Apple M\d/) ? cpuElementPath.text().toUpperCase().match(/ ([^ ]*) CPU|Apple M\d/)   [1] : ""
+  mac_cpu = mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/)[1] || mac_cpu
   
   console.log(mac_cpu)
+  
   var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
+  
   var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel+'</a></td>')
-  macModelElement.replaceWith(mac_model_linked)
+  macElement.replaceWith(mac_model_linked)
 
   var macID = macModel.concat(mac_cpu)
   var macSpecs = GM_getValue(macID)  
 
-  var macElement = computer_model.next();
-
   if (macSpecs){
-    macElement.append(macSpecs)
+    $('td:contains("Computer Model")').next().append(macSpecs);
+    //macElement.append(macSpecs)
     console.log("Specs loaded from local storage")
   }else
   {
     $("#macmodel").append($('<button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button>'))
     $('#loadMacSpecs').click(function() {
-    loadMacSpecs(mac_url, mac_cpu, macElement,macID)
+    loadMacSpecs(mac_url, mac_cpu, macID)
     this.remove()
   });}
  
