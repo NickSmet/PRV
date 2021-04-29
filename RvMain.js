@@ -133,13 +133,14 @@ function upper_menu() {
     "display":"inline-block"
   })
   
-    var bullet_container = $('<div/>')
+    var bullet_container = $('<tbody/>')
     .attr("id", "doc_top_bar")
     .addClass("container")
     .css({
       "margin-left":"2.5em",
       "width":"50%",
       "display":"inline-block",
+      'vertical-align':'top'
     })
     doc_top_bar.append(bullet_container);
     
@@ -1608,6 +1609,7 @@ function loadMacSpecs(mac_url, mac_cpu, macElement, macID) {
 
 
     $('td:contains("Computer Model")').next().append(macSpecs)
+    console.log();
     if(storage!=''){
       GM_setValue(macID, macSpecs)
     console.log(macID, " added!")
@@ -1656,14 +1658,14 @@ function computerModel(){
   
   let mac_cpu = strToXmlToJson(bigReportObj.ParallelsProblemReport.HostInfo).ParallelsHostInfo.Cpu.Model
 
-  mac_cpu = mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/)[1] || mac_cpu
+  mac_cpu = mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/) ? mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/)[1] : mac_cpu
   
   console.log(mac_cpu)
   
   var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
   
   var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel+'</a></td>')
-  macElement.replaceWith(mac_model_linked)
+  $('td:contains("Computer Model")').next().replaceWith(mac_model_linked)
 
   var macID = macModel.concat(mac_cpu)
   var macSpecs = GM_getValue(macID)  
@@ -1676,7 +1678,7 @@ function computerModel(){
   {
     $("#macmodel").append($('<button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button>'))
     $('#loadMacSpecs').click(function() {
-    loadMacSpecs(mac_url, mac_cpu, macID)
+    loadMacSpecs(mac_url, mac_cpu, macElement, macID)
     this.remove()
   });}
  
@@ -1884,7 +1886,7 @@ else
 
   function setupSearch(){
     $("#doc_top_bar").prepend($(`
-    <div id=nodeSearch style="margin-left:-24em">
+    <div id=nodeSearch style="margin-left:-24em;margin-top:-10%">
     
     <div class="button dropdown"> 
     
