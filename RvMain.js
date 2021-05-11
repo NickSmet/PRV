@@ -1581,76 +1581,14 @@ function parseAutoStatisticInfo(item_all_data){
 //
 /** @description  This one appemds Mac's specs next to the Model (gets them at everymac.com)
  */
-function loadMacSpecs(mac_url, mac_cpu, macElement, macID) {
-    
-  
 
-  function ExtractSpecs(allmacs, cpu){
-    console.log(allmacs);
-    console.log(allmacs.find("table:nth-child(3)"));
-    var mac = allmacs.find('td:contains("'+cpu+'")').parents().eq(2).next()
-     if(mac.length==0){mac = allmacs.find("table:nth-child(3)")}//if I can't parce CPU correctly, then just taking the 1st model
-    console.log(cpu);
-     if(cpu=='Apple M1'){mac=$(allmacs.find("table:nth-child(3)"))
-    console.log('M1!!!!!!!!!');}
-    var mac_type = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(3) > td:nth-child(2)').text()
-    var produced_from = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(2)').text()
-    var produced_till = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(1) > td:nth-child(4)').text()
-    var ram = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(4) > td:nth-child(2)').text()
-    var vram = mac.find('tbody > tr > td.detail_info > table > tbody > tr:nth-child(4) > td:nth-child(4)').text()
-    var storage = mac.find ('tbody > tr > td.detail_info > table > tbody > tr:nth-child(5) > td:nth-child(2)').text()
-    
-    macSpecs = ['</br>',
-    "Model: ", mac_type,'</br>',
-    "Storage: ", storage, '</br>',
-    "Ram:",ram,'</br>', 
-    "Vram:",vram,'</br>',
-    "Year: ", produced_from, " - ", produced_till]
-
-
-    $('td:contains("Computer Model")').next().append(macSpecs)
-    console.log();
-    if(storage!=''){
-      GM_setValue(macID, macSpecs)
-    console.log(macID, " added!")
-    }
-    
-    
-}
-
-//https://stackoverflow.com/questions/11377191/how-to-use-gm-xmlhttprequest-in-injected-code
-function GetMacsModel (fetchURL, cpu, macElement) {
-        GM_xmlhttpRequest ( {
-            method:     'GET',
-            url:        fetchURL,
-            onload:     function (responseDetails) {
-                            // DO ALL RESPONSE PROCESSING HERE...
-                                
-                                var contents = $(responseDetails.responseText)
-                                //var allmacs = $('center', cool)
-                                let allmacs = $(contents.find('center')[2])
-
-                                // let allmacs = $(cool)
-                                // console.log(allmacs);
-                                ExtractSpecs(allmacs, cpu, macElement)
-                            
-                        }
-        } );
-    }
-
-    GetMacsModel(mac_url, mac_cpu, macElement)
-   
-    
-
-}
-
-function computerModel(){
+function computerModel(macDatabase){
 
   // var computer_model = $('td:contains("Computer Model")');
   // if (computer_model == null){return}
 
   let macElement = $('td:contains("Computer Model")').next();
-  var macModel = bigReportObj.ParallelsProblemReport.ComputerModel
+  let macModel = bigReportObj.ParallelsProblemReport.ComputerModel
 
   if (!macModel.match(/MacBook|iMac|Macmini|MacPro/)){return}
 
@@ -1662,26 +1600,114 @@ function computerModel(){
   
   console.log(mac_cpu)
   
-  var mac_url = 'http://0s.mv3gk4tznvqwgltdn5wq.nblz.ru/ultimate-mac-lookup/?search_keywords='+macModel//at some point everymac banned my IP. So opening through anonymizer.
-  
-  var mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel+'</a></td>')
+  let mac_url = 'http://everymac.com/ultimate-mac-lookup/?search_keywords='+macModel
+
+  let mac_model_linked = $('<td id="macmodel"> <a href='+mac_url+'>'+macModel+'</a></td>')
   $('td:contains("Computer Model")').next().replaceWith(mac_model_linked)
 
-  var macID = macModel.concat(mac_cpu)
-  var macSpecs = GM_getValue(macID)  
+  let macID = macModel.concat(mac_cpu)
+
+  console.log(macID);
+
+  console.log(macDatabase);
+  
+  let macSpecs = macDatabase[macID]  
+
+  let formattedSpecs = ['</br>',
+  "Model: ", macSpecs.model,'</br>',
+  "Storage: ", macSpecs.storage, '</br>',
+  "Ram:",macSpecs.ram,'</br>', 
+  "Vram:",macSpecs.vram,'</br>',
+  "Year: ", macSpecs.prodStart, " - ", macSpecs.prodEnd]
 
   if (macSpecs){
-    $('td:contains("Computer Model")').next().append(macSpecs);
+    $('td:contains("Computer Model")').next().append(formattedSpecs);
     //macElement.append(macSpecs)
-    console.log("Specs loaded from local storage")
+
   }else
   {
-    $("#macmodel").append($('<button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button>'))
-    $('#loadMacSpecs').click(function() {
-    loadMacSpecs(mac_url, mac_cpu, macElement, macID)
-    this.remove()
-  });}
+    //no longer works due to captcha, so DB is in google sheets now and I'm maintaining it
+
+    // $("#macmodel").append($('<button type="button"  style="border-color:black" class="btn btn-outline-secondary btn-sm" id=loadMacSpecs>Load specs</button>'))
+    // $('#loadMacSpecs').click(function() {
+    // loadMacSpecs(mac_url, mac_cpu, macElement, macID)
+    // this.remove()
+  // });
+}
  
+}
+
+// function googleCsv2JsonMacModels(csv){
+//   //that is a very dumb function, but it works. Won't touch it for now
+// console.log();
+
+// csv = csv.replace(/\"\,\"/gm,";").replace(/(\"\n\")/gm,"$1delimiter").replace(/(\]\n|\}\n)/g,"$1delimiter")
+
+
+// var headers=csv.split("\n")[0].split(";");
+
+
+// console.log({headers});
+// csv = csv.substring(csv.indexOf("\n") + 1)
+
+// var lines=csv.split('delimiter');
+
+// var result = [];
+
+// for(var i=1;i<lines.length-1;i++){
+
+//    var obj = {};
+//    let currentline=lines[i].split(";");
+
+//    //console.log(currentline);
+
+//    result[currentline[1].replace(/\"\n\"/gm,'')]=currentline[0].replace(/(\[[^\<]*|\n +]$)/gm,'').replace(/\"/gm,'').split(/\,\n +/)
+   
+
+// }
+// console.log(result);
+// //return result; //JavaScript object
+// return result; //JSON
+// }
+
+function googleCsv2JsonMacModels(csv){
+  //that is a very dumb function, but it works. 
+
+
+csv = csv.replace(/\"\,\"/gm,";").replace(/\"/gm,"").replace(/(\]\n|\}\n)/g,"$1delimiter")
+
+
+var headers=csv.split("\n")[0].split(";");
+
+
+csv = csv.substring(csv.indexOf("\n") + 1)
+
+
+var lines=csv.split('\n');
+
+var result = [];
+
+
+for(var i=0;i<lines.length-1;i++){
+
+   let macObj = {};
+   
+
+   let currentline=lines[i].split(";");
+   macID = currentline[0]
+   //console.log(currentline);
+   let specs = {};
+   for(var spec=0;spec<headers.length;spec++){
+    specs[headers[spec]] = currentline[spec]
+   }
+   result[macID]=specs
+
+   //result.push(macObj);
+
+}
+
+//return result; //JavaScript object
+return result; //JSON
 }
 
 /** @description  Appends customer time im addition to server's local
@@ -2134,7 +2160,17 @@ var report_id = current_url.match(/\d{7,9}/);
 let index
 
 function doReportOverview() {
-  computerModel();
+  
+  let macDataBaseUrl = "https://docs.google.com/spreadsheets/d/1lmcn0aRxolP5eXfsuaekRFcMl7dAFjxTe9ItQEUOarM/gviz/tq?tqx=out:csv&sheet=Database"
+  $.get(macDataBaseUrl, function ldd(data) {
+
+    console.log(data);
+    let macDatabase = googleCsv2JsonMacModels(data)
+   
+    computerModel(macDatabase);
+    
+    })
+  
   signatureBugs();
   BulletData('TimeZone','time');//should fix it later to get data from the bigJson
  
