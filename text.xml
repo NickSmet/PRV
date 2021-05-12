@@ -1,0 +1,171 @@
+<AdvancedVmInfo><AdvancedVmInfo dyn_lists="Hdd 1" id="-1">
+   
+      <Index>0</Index>
+<Parallels_disk_image Version="1.0">
+    <Disk_Parameters>
+        <Disk_size>536870912</Disk_size>
+        <Cylinders>1048576</Cylinders>
+        <PhysicalSectorSize>4096</PhysicalSectorSize>
+        <LogicSectorSize>512</LogicSectorSize>
+        <Heads>16</Heads>
+        <Sectors>32</Sectors>
+        <Padding>0</Padding>
+        <Encryption>
+            <Engine>{00000000-0000-0000-0000-000000000000}</Engine>
+            <Data></Data>
+        </Encryption>
+        <UID>{7f637ea3-4aab-41ff-83d7-b3616179e173}</UID>
+        <Name>Win10 x64 16.1.2 ParHV-0 SSD</Name>
+        <Miscellaneous>
+            <CompatLevel>level2</CompatLevel>
+            <SuspendState>0</SuspendState>
+            <DupBlocksCnt>0</DupBlocksCnt>
+            <CorruptBlocksCnt>0</CorruptBlocksCnt>
+            <UnrefBlocksCnt>0</UnrefBlocksCnt>
+            <OutOfDiskBlocksCnt>0</OutOfDiskBlocksCnt>
+            <BatOverlapBlocksCnt>0</BatOverlapBlocksCnt>
+            <BlocksCnt>0</BlocksCnt>
+            <TruncatedBlocksCnt>0</TruncatedBlocksCnt>
+            <ReferencedBlocksCnt>0</ReferencedBlocksCnt>
+            <Bootable>1</Bootable>
+            <ChangeState>0</ChangeState>
+            <GuestToolsVersion>17.0.0-51235</GuestToolsVersion>
+            <ShutdownState>2</ShutdownState>
+            <FragmentationRatio>:blocksTotal=3627:contigGroups=10</FragmentationRatio>
+        </Miscellaneous>
+    </Disk_Parameters>
+    <StorageData>
+        <Storage>
+            <Start>0</Start>
+            <End>536870912</End>
+            <Blocksize>2048</Blocksize>
+            <Image>
+                <GUID>{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}</GUID>
+                <Type>Compressed</Type>
+                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}.hds</File>
+            </Image>
+            <Image>
+                <GUID>{5fbaabe3-6958-40ff-92a7-860e329aab41}</GUID>
+                <Type>Compressed</Type>
+                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{5fbaabe3-6958-40ff-92a7-860e329aab41}.hds</File>
+            </Image>
+            <Image>
+                <GUID>{6340a12e-90d5-42c1-a520-6d80b241268f}</GUID>
+                <Type>Compressed</Type>
+                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{6340a12e-90d5-42c1-a520-6d80b241268f}.hds</File>
+            </Image>
+            <Image>
+                <GUID>{98146cec-5992-44e9-82a4-9c0a323d8a93}</GUID>
+                <Type>Compressed</Type>
+                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{98146cec-5992-44e9-82a4-9c0a323d8a93}.hds</File>
+            </Image>
+            <Image>
+                <GUID>{ac570b0c-483e-42c6-b997-4a16546842c2}</GUID>
+                <Type>Compressed</Type>
+                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{ac570b0c-483e-42c6-b997-4a16546842c2}.hds</File>
+            </Image>
+            <Image>
+                <GUID>{e90a5b2d-789b-4f5e-a09b-2175a7767900}</GUID>
+                <Type>Compressed</Type>
+                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{e90a5b2d-789b-4f5e-a09b-2175a7767900}.hds</File>
+            </Image>
+            <Image>
+                <GUID>{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}</GUID>
+                <Type>Compressed</Type>
+                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}.hds</File>
+            </Image>
+        </Storage>
+    </StorageData>
+    <Snapshots>
+        <Shot>
+            <GUID>{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}</GUID>
+            <ParentGUID>{6340a12e-90d5-42c1-a520-6d80b241268f}</ParentGUID>
+        </Shot>
+        <Shot>
+            <GUID>{5fbaabe3-6958-40ff-92a7-860e329aab41}</GUID>
+            <ParentGUID>{98146cec-5992-44e9-82a4-9c0a323d8a93}</ParentGUID>
+        </Shot>
+        <Shot>
+            <GUID>{6340a12e-90d5-42c1-a520-6d80b241268f}</GUID>
+            <ParentGUID>{00000000-0000-0000-0000-000000000000}</ParentGUID>
+        </Shot>
+        <Shot>
+            <GUID>{98146cec-5992-44e9-82a4-9c0a323d8a93}</GUID>
+            <ParentGUID>{e90a5b2d-789b-4f5e-a09b-2175a7767900}</ParentGUID>
+        </Shot>
+        <Shot>
+            <GUID>{ac570b0c-483e-42c6-b997-4a16546842c2}</GUID>
+            <ParentGUID>{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}</ParentGUID>
+        </Shot>
+        <Shot>
+            <GUID>{e90a5b2d-789b-4f5e-a09b-2175a7767900}</GUID>
+            <ParentGUID>{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}</ParentGUID>
+        </Shot>
+        <Shot>
+            <GUID>{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}</GUID>
+            <ParentGUID>{00000000-0000-0000-0000-000000000000}</ParentGUID>
+        </Shot>
+    </Snapshots>
+</Parallels_disk_image>
+
+   
+   <NameInArchive/>
+   <Snapshots>
+
+    <SavedStateItem guid="" state="poweroff"></SavedStateItem>
+        <Name></Name>
+        <DateTime></DateTime>
+        <Creator></Creator>
+        <ScreenShot></ScreenShot>
+        <Description><![CDATA[]]></Description>
+        </Snapshots>
+        <AutoCreatedForLinkedClone>-1</AutoCreatedForLinkedClone>
+        <SavedStateItem guid="{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}" state="poweron">
+            <Name>win20H2 16.1.2 (49151)</Name>
+            <DateTime>2021-02-01 17:04:06</DateTime>
+            <Creator/>
+            <ScreenShot/>
+            <Description><![CDATA[PRL_LEN=0]]></Description>
+            <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
+            <SavedStateItem guid="{e90a5b2d-789b-4f5e-a09b-2175a7767900}" state="suspend">
+                <Name>16.1.3 (49160)</Name>
+                <DateTime>2021-02-01 17:38:10</DateTime>
+                <Creator/>
+                <ScreenShot/>
+                <Description><![CDATA[PRL_LEN=0]]></Description>
+                <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
+                <SavedStateItem guid="{98146cec-5992-44e9-82a4-9c0a323d8a93}" state="suspend" current="yes">
+                    <Name> 16.5.0 (49183)</Name>
+                    <DateTime>2021-04-08 12:17:53</DateTime>
+                    <Creator/>
+                    <ScreenShot/>
+                    <Description><![CDATA[PRL_LEN=0]]></Description>
+                    <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
+                </SavedStateItem>
+            </SavedStateItem>
+        </SavedStateItem>
+        <SavedStateItem guid="{6340a12e-90d5-42c1-a520-6d80b241268f}" state="suspend">
+            <Name>win2004 16.1.2 (49151)</Name>
+            <DateTime>2020-12-24 12:38:00</DateTime>
+            <Creator/>
+            <ScreenShot/>
+            <Description><![CDATA[PRL_LEN=0]]></Description>
+            <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
+            <SavedStateItem guid="{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}" state="poweron">
+                <Name>16.1.3 (49160)</Name>
+                <DateTime>2021-02-01 16:47:19</DateTime>
+                <Creator/>
+                <ScreenShot/>
+                <Description><![CDATA[PRL_LEN=0]]></Description>
+                <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
+                <SavedStateItem guid="{ac570b0c-483e-42c6-b997-4a16546842c2}" state="suspend">
+                    <Name>17.0.0 (51157) TP4</Name>
+                    <DateTime>2021-05-04 11:39:19</DateTime>
+                    <Creator/>
+                    <ScreenShot/>
+                    <Description><![CDATA[PRL_LEN=0]]></Description>
+                    <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
+                </SavedStateItem>
+            </SavedStateItem>
+        </SavedStateItem>
+    </AdvancedVmInfo></AdvancedVmInfo>
