@@ -1,15 +1,49 @@
 
 
-var x2js = new X2JS();
+let x2js = new X2JS();
 let bigReportObj 
 let params
 
+let limitLogging = 'AdvancedVmInfo'
+let currentlyProcessedNode 
+
+function mention(whatTosSay, strict){
+  if(strict){
+    console.log(whatTosSay)
+    return
+  }
+if (limitLogging){
+  if(currentlyProcessedNode==limitLogging){console.log(whatTosSay)}
+}
+
+// if(!silence){
+// }
+}
 
 //Костыльные переменные, чтобы работало на reportus (и там еще немного кода внутри функций)
 let reportus
 let reportsPrms = {'appendTo':'.reportList','nodeProperty':'href'}
 let reportusPrms = {'appendTo':'.table-striped','nodeProperty':'Onclick'}
 
+function getData(requestLink, tries){
+
+  return new Promise (function(resolse, reject){
+
+    $.ajaxSetup({
+ 
+      error: function(xhr, status, error) {
+        tries[requestLink]--
+        if(tries[requestLink]>0){getData(requestLink, tries)}
+           } 
+          });
+    
+    $.get(requestLink, function ldd(data) {
+      resolve(data)
+    })
+
+  })
+
+}
 
 function getXmlReport(requestLink){
 
@@ -18,21 +52,12 @@ function getXmlReport(requestLink){
     return theString.replace(NOT_SAFE_IN_XML_1_0, '');
 }
 
+return new Promise(function(resolve, reject){
   $.get(requestLink, function ldd(data) {
-
     data = sanitizeStringForXML(data)
-
-    
-    
-    //$xml = $( xmlDoc );
-    
-    bigReportObj = strToXmlToJson(data)
-    
-
-    //console.log(data);
-
-    doReportOverview()
-
+    let xmlObj = strToXmlToJson(data)
+    resolve(xmlObj)
+})
 })
 
 }
@@ -45,7 +70,7 @@ function strToXmlToJson(data){
 }
 
 function parseLsLr(raw){
-  let lsFileRegex = /(?<permissions>[\w-]{10}@?) +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>\w+) +(?<type>[\w-]+)? +(?<size>\d+) +(?<modified>(?<month>\w{3}) +(?<day>\d{1,2}) +(?<time>(\d\d\:){1,2}\d\d)? (?<year>\d{4} )?)(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
+  let lsFileRegex = /(?<permissions>[\w-+]{9,11}@?) +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>\w+) +(?<type>[\w-]+)? +(?<size>\d+) +(?<modified>(?<month>\w{3}) +(?<day>\d{1,2}) +(?<time>(\d\d\:){1,2}\d\d)? (?<year>\d{4} )?)(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
   let lsFolderRegex = /(\/[\w ]+\.pvm)?\/(?<location>[^:\n]*):$/gm //the .pvm part is for cases when showing list of files inside .pvm
 
   let bundleContents = ''
@@ -53,6 +78,7 @@ function parseLsLr(raw){
   let bundleLines = raw.split('\n')
 
   for (let index = 0; index < bundleLines.length; index++) {
+
     const line = bundleLines[index];
     let folderProperties = lsFolderRegex.exec(line)?.groups
     let filesProperties = lsFileRegex.exec(line)?.groups
@@ -90,13 +116,13 @@ function parseLsLr(raw){
 
 //https://stackoverflow.com/questions/26891846/is-there-an-equivalent-of-console-table-in-the-browser
 function objArrayToTable(jsonArray, colorcolumn){
-  var cols = [];
+  let cols = [];
 for (var index in jsonArray) {
   for (var c in jsonArray[index]) {
     if (cols.indexOf(c)===-1) cols.push(c);
   }
 }
-var html = `<table>
+let html = `<table>
 <colgroup>
 <col colid=1>
 <col colid=2>
@@ -116,15 +142,14 @@ html=html.replace(''+colorcolumn,`${colorcolumn} style="background-color:#ff9b9b
 return html
 }
 
-
 //Constrution of menu with bullets and log links
-function upper_menu() {
+function buildMenu() {
 
-  $('.headerMain').eq(1).append($("<a href='http://reportus.prls.net/webapp/reports/"+report_id+"'>Open on Reportus</a>"))
+  $('.headerMain').eq(1).append($(`<a href='http://reportus.prls.net/webapp/reports/${report_id}'>Open on Reportus</a>`))
   
-  let appendto = params.appendTo
+  let appendto = params.appendTo//because it's different on reportus
 //Making the main informationpanel occupy half of the screen
-    var doc_top_bar = $(appendto).first();
+    let doc_top_bar = $(appendto).first();
     $(doc_top_bar).css({
       "textAlign":"left"
   });
@@ -133,7 +158,7 @@ function upper_menu() {
     "display":"inline-block"
   })
   
-    var bullet_container = $('<tbody/>')
+    let bullet_container = $('<tbody/>')
     .attr("id", "doc_top_bar")
     .addClass("container")
     .css({
@@ -144,33 +169,25 @@ function upper_menu() {
     })
     doc_top_bar.append(bullet_container);
     
-  	ConstructBullets(pinned_items, 'item', bullet_container)
-    ConstructBullets(pinned_logs, 'log', bullet_container)
-
-    /*input prl report url, output -- 'data:image/png;base64' string*/
+  	ConstructNodeBullets(pinned_items, 'item', bullet_container)
+    ConstructNodeBullets(pinned_logs, 'log', bullet_container)
     }
 
 /** @description  Creates bullets and arranges bullets into an array
  */
-function ConstructBullets (elements_array, elements_type, append_to) {
+function ConstructNodeBullets (nodeNamesArray, nodesType, appendNodeBulletsTo) {
+    let nodeBulletElement
     let nodeProperty = params.nodeProperty
-    var i
-    for (i = 0; i < elements_array.length; i++) {
-        var item_element
-        //if the element is not present on page, will create a greyed out bullet (it's better to see that something is missing)
-        //console.log($('a[href*="' + elements_array[i] + '"]').text())
-        if ($('a['+nodeProperty+'*="' + elements_array[i] + '"]').length===0) {
-            var bulletElement = CreateBullet(elements_array[i], 'blank')
-            if(['GuestCommands','GuestOs','CurrentVm'].includes(elements_array[i])&&reportus){bulletElement = CreateBullet(elements_array[i], elements_type)}//reportus
+    for (let i = 0; i < nodeNamesArray.length; i++) {   
+        //if the element is not present on page, will create a grayed out bullet (it's better to see that something is missing)
+        if ($('a['+nodeProperty+'*="' + nodeNamesArray[i] + '"]').length===0&&!reportus) {
+            nodeBulletElement = buildNodeBullet(nodeNamesArray[i], 'blank')
+            // if(['GuestCommands','GuestOs','CurrentVm'].includes(nodeNamesArray[i])&&reportus){nodeBulletElement = CreateBullet(nodeNamesArray[i], nodesType)}//reportus
         }
         else {
-            bulletElement = CreateBullet(elements_array[i], elements_type)
-
-
+            nodeBulletElement = buildNodeBullet(nodeNamesArray[i], nodesType)
         }
-
-
-        $(bulletElement).appendTo(append_to)
+        $(nodeBulletElement).appendTo(appendNodeBulletsTo)
 
 
 }
@@ -186,8 +203,8 @@ function ConstructBullets (elements_array, elements_type, append_to) {
  * @param {Object} exclude Object like {"NetworkType":"0"}. Bullet elements consistent with these
  * criteria will be skipped.  
  */
-function parseXMLItem( data, elementName, parameters, adjustments={}, exclude={}){
-  //console.log(data)
+function parseXMLItem( data, elementName, parameters, adjustments={}, exclude={}, count=false){
+  //mention(data)
   data = data.replace(/\<\-\>/g,"")
   data = data.replace(/<\?xml[^>]*>/g,"")
   data = data.replace(/\&/g,"")
@@ -197,26 +214,26 @@ function parseXMLItem( data, elementName, parameters, adjustments={}, exclude={}
   xmlDoc = $.parseXML( data ),
   $xml = $( xmlDoc );
 
-  var subBullet = ''
+  let subBullet = ''
 
-  var element = $xml.find(elementName)
-  //console.log (element)
+  let element = $xml.find(elementName)
+  //mention (element)
   element.each(function () {
-    //console.log($(this))
-    for (var key in exclude){
-      //console.log(exclude[i])
-      //console.log(key+value+$(this).find(key).first().text())
-      var value_here = $(this).find(key).first().text()
+    //mention($(this))
+    for (let key in exclude){
+      //mention(exclude[i])
+      //mention(key+value+$(this).find(key).first().text())
+      let value_here = $(this).find(key).first().text()
       if (exclude[key] == value_here || value_here.match(exclude[key].toString())){return true}
     }
     
-    var subBulletItem = ''
+    let subBulletItem = ''
 
 
-    for (var parameter in parameters){
+    for (let parameter in parameters){
   
       if(elementName=='HardDisk'||elementName=='SavedStateItem'){//long story
-        var paramValue = $.trim($(this).find(parameters[parameter]).first().text())
+        let paramValue = $.trim($(this).find(parameters[parameter]).first().text())
         if (parameter in adjustments){
             paramValue = adjustSpec(paramValue, adjustments[parameter])
         }
@@ -226,7 +243,7 @@ function parseXMLItem( data, elementName, parameters, adjustments={}, exclude={}
     }else{
       $(this).find(parameters[parameter]).each(function(){
         
-        var paramValue = $.trim(($(this).text()))
+        let paramValue = $.trim(($(this).text()))
         if (parameter in adjustments){
             paramValue = adjustSpec(paramValue, adjustments[parameter])
         }
@@ -238,6 +255,7 @@ function parseXMLItem( data, elementName, parameters, adjustments={}, exclude={}
   }
     subBullet = subBullet+subBulletItem+'\n';  })
     if (subBullet.trim() == ''){subBullet='Nothing'}
+    
 return subBullet}
 
 
@@ -268,7 +286,7 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, exclude={}){
      subBullet=CreateSubItem(itemObject)+'\n'
    }
  function CreateSubItem(itemObject){
-   var subItem = ''
+   let subItem = ''
    for (const property in parameters) {
    let id = parameters[property]
    let hName = property
@@ -276,7 +294,7 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, exclude={}){
      
    if (hName in adjustments){value = adjustSpec(value, adjustments[hName])}
      subItem +='<u>'+hName+'</u>: '+ value+'\n'
-      //console.log(`${hName}: ${value}`);
+      //mention(`${hName}: ${value}`);
  }
  return subItem
  }
@@ -290,12 +308,12 @@ function parseJsonItem(itemObject, parameters={}, adjustments={}, exclude={}){
  * @param {Object} data Bullet's data. What you want to see when it's expanded.
  * @param {Object} icon_url  
  */
-function CreateBullet(item_name, bullet_type, data, icon_url, sublevel=0) {
+function buildNodeBullet(item_name, bullet_type, data, icon_url, sublevel=0) {
   //if(!data){return}
-  var sublevel_space = "    "
+  let sublevel_space = "    "
     
     //Here it's templating enginge syntax
-    var collapsible_template = '<div>\
+    let collapsible_template = '<div>\
 <button type="button" id={{:button_id}} class="btn btn-primary btn-xs" aria-pressed="true" data-toggle="collapse" data-target={{:item_target}}>\
 ➤\
 </button>\
@@ -344,7 +362,7 @@ nothing yet</div>'
         'blank' : ''
     }}else if (reportus){
       type_to_link={
-        'item':'http://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_name,
+        'item':'https://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_name,
         'log' : $('a[href*="' + item_name + '"]').attr('href'),
           'blank' : ''
       }
@@ -353,21 +371,21 @@ nothing yet</div>'
 
 
 
-    var item_data = data;
+    let item_data = data;
   	var item_link = type_to_link[bullet_type];
     
-    var item_id = item_name.split(" ").join("");;
+    let item_id = item_name.split(" ").join("");;
     if(bullet_type=='log'){
       item_id = item_name.replace('Log')
     }
     
     
-    var button_id = "btn_" + item_id;
-    var item_summary = "nothing yet";
-    var item_target = '#' + item_id.replaceAll('\.','\\\.');
+    let button_id = "btn_" + item_id;
+    let item_summary = "nothing yet";
+    let item_target = '#' + item_id.replaceAll('\.','\\\.');
 
 
-    var bullet_content = {
+    let bullet_content = {
         item_data : item_data,
         item_link: item_link,
         item_name: item_name,
@@ -379,17 +397,25 @@ nothing yet</div>'
     };
 
     collapsible_template = $.templates(collapsible_template);
-    var bullet = collapsible_template.render(bullet_content)
+    let bullet = collapsible_template.render(bullet_content)
     
     return bullet
 
 }
 
+
+
 function BulletData(item_id, option) {
-  let nodesFromXml = {
-    'CurrentVm':bigReportObj.ParallelsProblemReport.CurrentVm,
-    'LoadedDrivers':bigReportObj.ParallelsProblemReport.LoadedDrivers,
-    'AllProcesses':bigReportObj.ParallelsProblemReport.AllProcesses,
+  let bullet_parsed_data
+  let panic
+
+  currentlyProcessedNode =  item_id
+  mention({currentlyProcessedNode})
+
+  let extractedFromReportXml  = {
+  'CurrentVm':bigReportObj.ParallelsProblemReport.CurrentVm,
+  'LoadedDrivers':bigReportObj.ParallelsProblemReport.LoadedDrivers,
+  'AllProcesses':bigReportObj.ParallelsProblemReport.AllProcesses,
   'GuestCommands':bigReportObj.ParallelsProblemReport.GuestCommands,
   'GuestOs':bigReportObj.ParallelsProblemReport.GuestOs,
   'MountInfo':bigReportObj.ParallelsProblemReport.MountInfo,
@@ -410,14 +436,12 @@ function BulletData(item_id, option) {
 
 let haveJsonFormat = ['GuestCommands']
 
-  if (item_id in nodesFromXml){
+  if (item_id in extractedFromReportXml ){
     
-    
+    bullet_all_data = extractedFromReportXml [item_id]
+    mention(`Processing ${item_id} the new way. Data is ${typeof bullet_all_data}`);
 
-    bullet_all_data = nodesFromXml[item_id]
-    console.log(`Processing ${item_id} the new way. Data is ${typeof bullet_all_data}`);
-
-    if(nodesFromXml[item_id]) {
+    if(extractedFromReportXml [item_id]) {
       if(haveJsonFormat.includes(item_id)){AddNodeToSearch(bullet_all_data, item_id)}else{AddNodeToSearch(bullet_all_data, item_id)}
       eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
     }
@@ -427,27 +451,20 @@ let haveJsonFormat = ['GuestCommands']
     return
   }
 
-
-
-
-
   if (tries[item_id]){tries[item_id]--}else{tries[item_id]=tries['tries']}
-    var bullet_parsed_data = 'nothing yet';
+    bullet_parsed_data = 'nothing yet';
 
     if (pinned_collapsibles.includes(item_id)){$('#' + item_id.replaceAll('\.','\\\.')).text('loading...');}
-
-    //console.log(item_id);
-    var theerror = ''
     
     
-    var request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
-    if (reportus){request_link = 'http://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_id;}
+    let request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
+    if (reportus){request_link = 'https://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_id;}
 
 if (item_id.match('[^c].log')){
       request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
   }else if (item_id.match('panic.log')){
     request_link='https://reports.prls.net/Reports/Log.aspx?ReportId=+'+report_id+'+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
-  var panic=true
+  panic=true
   }
   
   if (reportus&&item_id.match('\.log')){request_link=$('a[href*="' + item_id + '"]').attr('href')
@@ -465,7 +482,7 @@ if (item_id.match('[^c].log')){
     $.get(request_link, function ldd(data) {
       
       
-        var bullet_all_data
+        let bullet_all_data
         if (panic==true){
           data=JSON.parse(data)
           bullet_all_data=data["log_path"]+"\n\n"+data["panic_string"]}
@@ -482,7 +499,7 @@ if (item_id.match('[^c].log')){
 
         AddNodeToSearch(bullet_all_data, item_id) // AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
         eval("bullet_parsed_data=parse"+item_id.replace('.log','Log')+"(bullet_all_data)")
-        console.log("PARSING "+item_id)
+        mention("PARSING "+item_id)
 
         if (!bullet_parsed_data){return}//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
         if(typeof option === "undefined") {
@@ -498,17 +515,17 @@ if (item_id.match('[^c].log')){
             let gmtElement = reportus ? $(timeElementPath).parent().next() : $(timeElementPath)
           
 
-            var gmt_string = reportus ? gmtElement.text() : $(".reportList:first tbody:first tr:nth-child(3) script").text()
+            let gmt_string = reportus ? gmtElement.text() : $(".reportList:first tbody:first tr:nth-child(3) script").text()
 
-            var gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
-            var gmt_substr =  gmt_string.match(gmt_regex)[1];
-            var gmt_time = Date.parse(gmt_substr);
-            //console.log(gmt_time)
-            var time_seconds = gmt_time/1000;
-            //console.log(time_seconds)
-            var correct_time1 = new Date(0);
-          //console.log(correct_time)
-            //console.log(timediff)
+            let gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
+            let gmt_substr =  gmt_string.match(gmt_regex)[1];
+            let gmt_time = Date.parse(gmt_substr);
+            //mention(gmt_time)
+            let time_seconds = gmt_time/1000;
+            //mention(time_seconds)
+            let correct_time1 = new Date(0);
+          //mention(correct_time)
+            //mention(timediff)
             correct_time1.setUTCSeconds(time_seconds+10800)
             gmt_time = correct_time1.toString().substring(4,24)
             $(gmtElement).html("Customer: "+correcttime+"</br> Moscow:&nbsp;&nbsp;&thinsp;&thinsp;"+gmt_time)
@@ -534,13 +551,13 @@ panicCreationString = item_all_data.match(panicDateRegex2)[0]
 panicDateRegex = panicDateRegex2
 }
 
-console.log({panicCreationString})
+mention({panicCreationString})
 
 let dateString = panicCreationString.replace(panicDateRegex,"$<month>-$<day>-$<year> $<hour>:$<min>:$<sec>")
 
 panicTime=Date.parse(dateString)
-var time_seconds = panicTime/1000;
-var correct_time = new Date(0);
+let time_seconds = panicTime/1000;
+let correct_time = new Date(0);
 correct_time.setUTCSeconds(time_seconds)
 panicTime = correct_time.toString().substring(4,24)
 
@@ -553,12 +570,12 @@ item_all_data = item_all_data.replaceAll(/(Kernel Extensions in backtrace)/g, "<
 return item_all_data
 }
 
-var ObjByString = function(o, s) {
+let ObjByString = function(o, s) {
   s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
   s = s.replace(/^\./, '');           // strip a leading dot
-  var a = s.split('.');
+  let a = s.split('.');
   for (var i = 0, n = a.length; i < n; ++i) {
-      var k = a[i];
+      let k = a[i];
       if (k in o) {
           o = o[k];
       } else {
@@ -570,9 +587,11 @@ var ObjByString = function(o, s) {
 
 function parseCurrentVm(CurrentVmData) {
 
+    mention(CurrentVmData)
+
     // xmlDoc = $.parseXML( item_all_data );
     // //$xml = $( xmlDoc );
-    // var jsonObj = x2js.xml2json(xmlDoc);
+    // let jsonObj = x2js.xml2json(xmlDoc);
     // theBigReportObject['vm'] = jsonObj
 
     //$xml = $(x2js.json2xml(theBigReportObject['vm']['CurrentVm']))
@@ -582,47 +601,48 @@ function parseCurrentVm(CurrentVmData) {
     let vmObj = strToXmlToJson(CurrentVmData).ParallelsVirtualMachine
 
 
-    var ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode', 'Expanding':'DiskType'}
-    var AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
-    var iconVMHDDs = icons.hdds
+    let ParamVMHDDs = {'Location':'SystemName', 'Virtual Size':'Size', 'Actual Size':'SizeOnDisk', 'Interface':'InterfaceType', 'Splitted':'Splitted', 'Trim':'OnlineCompactMode', 'Expanding':'DiskType'}
+    let AdjustsVMHDDs = {'Interface':'hddtype', 'Actual Size': 'appleMbytes','Virtual Size':'mbytes'}
+    let iconVMHDDs = icons.hdds
 
-    var VMHDDs_data = parseJsonItem (vmObj.Hardware.Hdd, ParamVMHDDs,AdjustsVMHDDs)
+    let VMHDDs_data = parseJsonItem (vmObj.Hardware.Hdd, ParamVMHDDs,AdjustsVMHDDs)
     //var VMHDDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMHDDs,AdjustsVMHDDs)
 
-    var VMHDDs = CreateBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
+    let VMHDDs = buildNodeBullet('HDDs','Custom', VMHDDs_data, iconVMHDDs)
 
-    var ParamVMCDs = {'Location':'SystemName','Interface':'InterfaceType'}
-    var AdjustsVMCDs = {'Interface':'hddtype'}
-    var iconVMCDs = icons.cd
-    var CdExclude = {'Connected':'0'}
+    let ParamVMCDs = {'Location':'SystemName','Interface':'InterfaceType'}
+    let AdjustsVMCDs = {'Interface':'hddtype'}
+    let iconVMCDs = icons.cd
+    let CdExclude = {'Connected':'0'}
 
-    var VMCDs_data = parseJsonItem (vmObj.Hardware.CdRom, ParamVMCDs,AdjustsVMCDs,CdExclude)
+    let VMCDs_data = parseJsonItem (vmObj.Hardware.CdRom, ParamVMCDs,AdjustsVMCDs,CdExclude)
     //var VMCDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMCDs,AdjustsVMCDs)
 
-    var VMCDs = CreateBullet('CDs','Custom', VMCDs_data, iconVMCDs)
+    let VMCDs = buildNodeBullet('CDs','Custom', VMCDs_data, iconVMCDs)
     
-    var ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', "Mac":'MAC', 'Conditioner':'LinkRateLimit.Enable'}//also had '"Name':'AdapterName'", but it's kind of pointless
-    var AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
-    var iconVMNETWORKs = icons.networkAdapter
+    let ParamVMNETWORKs = {'Type':'AdapterType', 'Mode':'EmulatedType', 'Adapter name':'AdapterName', "Mac":'MAC', 'Conditioner':'LinkRateLimit.Enable'}
+    let AdjustsVMNETWORKs = {'Type':'networkAdapter', 'Mode':'networkMode','Mac':'networkMac'}
+    let iconVMNETWORKs = icons.networkAdapter
 
     //var VMNETWORKs_data = parseXMLItem (item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
-    var VMNETWORKs_data = parseJsonItem ( vmObj['Hardware']['NetworkAdapter'], ParamVMNETWORKs, AdjustsVMNETWORKs)
-    var VMNETWORKs = CreateBullet('Networks','Custom', VMNETWORKs_data, iconVMNETWORKs)
+    networkAdapters = vmObj.Hardware.NetworkAdapter
+    let VMNETWORKs_data = parseJsonItem ( networkAdapters, ParamVMNETWORKs, AdjustsVMNETWORKs)
+    let VMNETWORKs = buildNodeBullet('Networks','Custom', VMNETWORKs_data, iconVMNETWORKs)
 
     
     if(VMNETWORKs.match('Shared')){markBullet('CurrentVm','shared')}
     if(VMNETWORKs.match('Bridged')){markBullet('CurrentVm','bridged')}
 
-    var ParamVMUSBs = {'Name':'SystemName', 'Last connected':'Timestamp'}
-    var AdjustsVMUSBs = {'Last connected':'time'}
-    var iconVMUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
+    let ParamVMUSBs = {'Name':'SystemName', 'Last connected':'Timestamp'}
+    let AdjustsVMUSBs = {'Last connected':'time'}
+    let iconVMUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
 
     usbObj = vmObj.Hardware.UsbConnectHistory?.USBPort
-    var VMUSBs_data = parseJsonItem (usbObj, ParamVMUSBs,AdjustsVMUSBs)
+    let VMUSBs_data = parseJsonItem (usbObj, ParamVMUSBs,AdjustsVMUSBs)
     //var VMUSBs_data = parseXMLItem ( item_all_data, element = "USBPort", ParamVMUSBs,AdjustsVMUSBs)
-    var VMUSBs = CreateBullet('USBs','Custom', VMUSBs_data, iconVMUSBs)
+    let VMUSBs = buildNodeBullet('USBs','Custom', VMUSBs_data, iconVMUSBs)
 
-    var currentVmSpecs = {
+    let currentVmSpecs = {
       'Section5':'Startup',
       'AutoStart': vmObj.Settings.Startup.AutoStart,
       'OnVmWindowClose': vmObj.Settings.Shutdown.OnVmWindowClose,
@@ -703,17 +723,53 @@ function parseCurrentVm(CurrentVmData) {
   if(VMHDDs.match(externalVhddRegex)&&bigReportObj.ParallelsProblemReport.ProductName!='Parallels Desktop for Chrome OS'){markBullet('CurrentVm', icons["external vHDD"])}
 
 
-  if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){markBullet('CurrentVm', icons["network conditioner"])}
+function markConditioner(adapter){
+
+    if (adapter.LinkRateLimit.Enable == 0) {
+      return
+    } //для наглядности
+    if (
+      adapter.LinkRateLimit.Enable == 1 &&
+      adapter.LinkRateLimit.TxBps +
+        adapter.LinkRateLimit.RxBps +
+        adapter.LinkRateLimit.TxLossPpm +
+        adapter.LinkRateLimit.RxLossPpm +
+        adapter.LinkRateLimit.TxDelayMs +
+        adapter.LinkRateLimit.RxDelayMs !=
+        0
+    ) {
+      markBullet('CurrentVm', icons['network conditioner limited']) 
+      return
+    }
+
+    if (adapter.LinkRateLimit.Enable == 1) {
+      markBullet('CurrentVm', icons['network conditioner fullspeed'])
+    }
+  }
+
+
+
+  if (Array.isArray(networkAdapters)) {
+    for (key in networkAdapters){
+      let adapter = networkAdapters[key]
+      markConditioner(adapter)}
+  }
+  else{markConditioner(networkAdapters)}
+  
+  // if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){
+
+  //   markBullet('CurrentVm', icons["network conditioner"])
+  // }
 
   
   if(bigReportObj.ParallelsProblemReport.ProductName=='Parallels Desktop for Chrome OS' && !currentVmSpecs["VM Name"].match(/PvmDefault/i)){markBullet('CurrentVm','not PvmDefault')}
     
-    var all_specs = '';
+    let all_specs = '';
 
     //check if VM ram is not more than 1/2 of Host.
-    var hostram = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(14) > td:nth-child(2)") : $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
+    let hostram = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(14) > td:nth-child(2)") : $("table.reportList > tbody > tr:nth-child(17) > td:nth-child(2)").text()
     
-    var vmram = currentVmSpecs['Ram']
+    let vmram = currentVmSpecs['Ram']
 
     if (vmram>hostram/2&&hostram-vmram<6144){
       currentVmSpecs['Ram']+='<b style="color:red">!!!!! Too Much</b>',
@@ -757,7 +813,7 @@ function parseCurrentVm(CurrentVmData) {
 
     //Identifying if has bootflags and marking bullet accordingly
     if (currentVmSpecs['<b>Boot Flags</b>']!=''){markBullet("CurrentVm","flags")}
-    var specs_to_name = {
+    let specs_to_name = {
       'Lan Adapter':{0: 'Legacy',1 :'RealTek RTL8029AS',2: 'Intel(R) PRO/1000MT',3:'Virtio', 4:'Intel(R) Gigabit CT (82574l)'},
       'Network':{1: 'Shared',2 :'Bridged'},
       'Opt.TimeMachine':{1: 'On',2 :'Off'},
@@ -797,9 +853,9 @@ function parseCurrentVm(CurrentVmData) {
     
 
     for (var key in currentVmSpecs) {//я немного запутался, но оно рабоатет
-      var spec
-       var specName = key
-       var specValue = currentVmSpecs[key] || 0
+      let spec
+       let specName = key
+       let specValue = currentVmSpecs[key] || 0
 
        
        if (key in specs_to_name) {
@@ -833,7 +889,7 @@ function parseCurrentVm(CurrentVmData) {
 function parseNetConfig(item_all_data) {
 
   let xmlDoc = $.parseXML( item_all_data );
-  var jsonObj = x2js.xml2json(xmlDoc);
+  let jsonObj = x2js.xml2json(xmlDoc);
  
   bigReportObj['ParallelsProblemReport']['NetConfig'] = jsonObj
 
@@ -902,17 +958,22 @@ function 	parseClientProxyInfo(item_all_data) {
 
 function parseAdvancedVmInfo(item_all_data) {
 
+
   //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
   regex1 = /\<\/AdvancedVmInfo\>\n\<\/AdvancedVmInfo\>/gm,
     regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
   regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
   regex4 = /\<AdvancedVmInfo\>\n\<AdvancedVmInfo[^>]*\>/gm,
+  regex5= /<\?xml[^>]*>/gm
 
-    item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
+ item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
   item_all_data = item_all_data.replace(regex2, "")
   item_all_data = item_all_data.replace(regex3, "")
   item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
+  //item_all_data = item_all_data.replace(regex5, '')
   //item_all_data = item_all_data.replace(regex3,"")
+
+  mention(item_all_data);
 
   let AdvancedVmInfoContents = ''
 
@@ -924,7 +985,7 @@ function parseAdvancedVmInfo(item_all_data) {
     markBullet('AdvancedVmInfo', 'root or unknown owner')
   }
 
-  var number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length / 2 - 1 : 0;
+  let number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length / 2 - 1 : 0;
 
 
   if (number_of_snapshots < 1) {
@@ -937,15 +998,15 @@ function parseAdvancedVmInfo(item_all_data) {
       'Name': 'Name',
       'Created on': 'DateTime'
     }
-    var snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
-    var snapshotBullet = CreateBullet('Snapshots', 'Custom', snapshots, 'https://image.flaticon.com/icons/svg/387/387157.svg')
+    let snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
+    let snapshotBullet = buildNodeBullet('Snapshots', 'Custom', snapshots, 'https://image.flaticon.com/icons/svg/387/387157.svg')
     AdvancedVmInfoContents += snapshotBullet
   }
 
 
   bundleData = parseLsLr(item_all_data)
   
-  let bundleBullet = CreateBullet('PVM Bundle', 'Custom', bundleData, 'https://fileinfo.com/img/icons/files/128/pvm-3807.png')
+  let bundleBullet = buildNodeBullet('PVM Bundle', 'Custom', bundleData, 'https://fileinfo.com/img/icons/files/128/pvm-3807.png')
   AdvancedVmInfoContents += bundleBullet
 
   return AdvancedVmInfoContents;
@@ -954,58 +1015,58 @@ function parseAdvancedVmInfo(item_all_data) {
 }
 
 function parseHostInfo(item_all_data) {
-  //console.log(item_all_data)
+  //mention(item_all_data)
  
 
-var ParamUSBs = {'Name':'Name', 'UUID':'Uuid'}
-var iconUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
+let ParamUSBs = {'Name':'Name', 'UUID':'Uuid'}
+let iconUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
 
-var ParamHDDs = {'Name':'Name', 'UUID':'Uuid', "Size":"Size"}
-var AdjustsHdd = {"Size":"bytes"}
-var HddFilter = {'Name':'AppleAPFSMedia'}
-var iconHDDS = 'https://image.flaticon.com/icons/svg/1689/1689016.svg'
+let ParamHDDs = {'Name':'Name', 'UUID':'Uuid', "Size":"Size"}
+let AdjustsHdd = {"Size":"bytes"}
+let HddFilter = {'Name':'AppleAPFSMedia'}
+let iconHDDS = 'https://image.flaticon.com/icons/svg/1689/1689016.svg'
 
-var paramCameras = {'Name':'Name', 'UUID':'Uuid'}
+let paramCameras = {'Name':'Name', 'UUID':'Uuid'}
 
-var ParamNetwork = {'Name':'Name','UUID':'Uuid', "MAC":"MacAddress","IP":'NetAddress'}
-var iconNetwork = "https://image.flaticon.com/icons/svg/969/969345.svg"
-var networkFilter = {}
+let ParamNetwork = {'Name':'Name','UUID':'Uuid', "MAC":"MacAddress","IP":'NetAddress'}
+let iconNetwork = "https://image.flaticon.com/icons/svg/969/969345.svg"
+let networkFilter = {}
 
-var ParamInputs = {'Name':'Name', 'UUID':'Uuid'}
-var iconInputs = "https://image.flaticon.com/icons/svg/1689/1689025.svg"
+let ParamInputs = {'Name':'Name', 'UUID':'Uuid'}
+let iconInputs = "https://image.flaticon.com/icons/svg/1689/1689025.svg"
 
-var ParamPrinters = {'Name':'Name', 'UUID':'Uuid'}
-var iconPrinters = "https://image.flaticon.com/icons/svg/2489/2489670.svg"
+let ParamPrinters = {'Name':'Name', 'UUID':'Uuid'}
+let iconPrinters = "https://image.flaticon.com/icons/svg/2489/2489670.svg"
 
-var ParamCCIDs = {'Name':'Name', 'UUID':'Uuid'}
-var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
+let ParamCCIDs = {'Name':'Name', 'UUID':'Uuid'}
+let iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
 
-  var USBs_data = parseXMLItem( item_all_data, element = "UsbDevice", ParamUSBs)
-  var Network_data = parseXMLItem( item_all_data, element = "NetworkAdapter", ParamNetwork,{},networkFilter)
-  var HDDs_data = parseXMLItem( item_all_data, element = "HardDisk", ParamHDDs, AdjustsHdd,HddFilter)
-  var Inputs_data = parseXMLItem( item_all_data, element = "HIDDevice", ParamInputs)
-  var Printers_data = parseXMLItem( item_all_data, element = "Printer", ParamPrinters)
-  var CCIDs_data = parseXMLItem( item_all_data, element = "SmartCardReaders", ParamCCIDs)
-  var camerasData = parseXMLItem( item_all_data, element = "Camera", paramCameras)
+  let USBs_data = parseXMLItem( item_all_data, element = "UsbDevice", ParamUSBs)
+  let Network_data = parseXMLItem( item_all_data, element = "NetworkAdapter", ParamNetwork,{},networkFilter)
+  let HDDs_data = parseXMLItem( item_all_data, element = "HardDisk", ParamHDDs, AdjustsHdd,HddFilter)
+  let Inputs_data = parseXMLItem( item_all_data, element = "HIDDevice", ParamInputs)
+  let Printers_data = parseXMLItem( item_all_data, element = "Printer", ParamPrinters)
+  let CCIDs_data = parseXMLItem( item_all_data, element = "SmartCardReaders", ParamCCIDs)
+  let camerasData = parseXMLItem( item_all_data, element = "Camera", paramCameras)
   
 //that's definitely super-repetative; but ok for now
-  var specs_definition = {
-  'Subbullet1': (USBs_data=='Nothing') ? CreateBullet('Host_USBs','blank', USBs_data, iconUSBs) : CreateBullet('Host_USBs','Custom', USBs_data, iconUSBs),
-  'Subbullet2': (Network_data=='Nothing') ? CreateBullet('Host_Nets','blank', Network_data, iconNetwork) : CreateBullet('Host_Nets','Custom', Network_data, iconNetwork),
-  'Subbullet3': (HDDs_data=='Nothing') ? CreateBullet('Host_HDDs','blank', HDDs_data, iconHDDS) : CreateBullet('Host_HDDs','Custom', HDDs_data, iconHDDS),
-  'Subbullet4': (camerasData=='Nothing') ? CreateBullet('Host_Cams','blank', camerasData, icons.webcam) : CreateBullet('Host_Cams','Custom', camerasData, icons.webcam),
-  'Subbullet5': (Inputs_data=='Nothing') ? CreateBullet('Host_Input_Devices','blank', Inputs_data, iconInputs) : CreateBullet('Host_Input_Devices','Custom', Inputs_data, iconInputs),
-  'Subbullet6': (Printers_data=='Nothing') ? CreateBullet('Host_Printers','blank', Printers_data, iconPrinters) : CreateBullet('Host_Printers','Custom', Printers_data, iconPrinters),
-  'Subbullet7': (CCIDs_data=='Nothing') ?CreateBullet('Host_CCIDs','blank', CCIDs_data, iconCCIDS) : CreateBullet('Host_CCIDs','Custom', CCIDs_data, iconCCIDS),
+  let specs_definition = {
+  'Subbullet1': (USBs_data=='Nothing') ? buildNodeBullet('Host_USBs','blank', USBs_data, iconUSBs) : buildNodeBullet('Host_USBs','Custom', USBs_data, iconUSBs),
+  'Subbullet2': (Network_data=='Nothing') ? buildNodeBullet('Host_Nets','blank', Network_data, iconNetwork) : buildNodeBullet('Host_Nets','Custom', Network_data, iconNetwork),
+  'Subbullet3': (HDDs_data=='Nothing') ? buildNodeBullet('Host_HDDs','blank', HDDs_data, iconHDDS) : buildNodeBullet('Host_HDDs','Custom', HDDs_data, iconHDDS),
+  'Subbullet4': (camerasData=='Nothing') ? buildNodeBullet('Host_Cams','blank', camerasData, icons.webcam) : buildNodeBullet('Host_Cams','Custom', camerasData, icons.webcam),
+  'Subbullet5': (Inputs_data=='Nothing') ? buildNodeBullet('Host_Input_Devices','blank', Inputs_data, iconInputs) : buildNodeBullet('Host_Input_Devices','Custom', Inputs_data, iconInputs),
+  'Subbullet6': (Printers_data=='Nothing') ? buildNodeBullet('Host_Printers','blank', Printers_data, iconPrinters) : buildNodeBullet('Host_Printers','Custom', Printers_data, iconPrinters),
+  'Subbullet7': (CCIDs_data=='Nothing') ?buildNodeBullet('Host_CCIDs','blank', CCIDs_data, iconCCIDS) : buildNodeBullet('Host_CCIDs','Custom', CCIDs_data, iconCCIDS),
 
   };
 
   if(item_all_data.match('DisplayLink')){markBullet('HostInfo','DisplayLink device!')}
 
 
-  var all_specs = '';
+  let all_specs = '';
 
-  var specs_to_name = {
+  let specs_to_name = {
     'Lan Adapter':{0: 'Legacy',1 :'RealTek RTL8029AS',2: 'Intel(R) PRO/1000MT',3:'Virtio', 4:'Intel(R) Gigabit CT (82574l)'},
     'Network':{1: 'Shared',2 :'Bridged'},
     'Opt.TimeMachine':{1: 'On',2 :'Off'}
@@ -1013,8 +1074,8 @@ var iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
 
   for (var key in specs_definition) {
      //if (item_all_data.match(specs_regex[key]) == null){continue}
-     var spec
-     var spec_value = specs_definition[key];
+     let spec
+     let spec_value = specs_definition[key];
      if (key in specs_to_name) {
          spec_value = specs_to_name[key][spec_value]
          spec = '<u>'+key+'</u>'+ ': ' + spec_value + '\n';
@@ -1041,8 +1102,8 @@ function parseMoreHostInfo(item_all_data) {
     regex = /(\<More[^$]*dtd\"\>|\<\=|\<\/MoreHostInfo>)/gm
     item_all_data = item_all_data.replace(regex, '');
     
-    var jsonString = PlistParser.parse(item_all_data);
-    var top_el
+    let jsonString = PlistParser.parse(item_all_data);
+    let top_el
     for (var i in jsonString){
     if (jsonString[i]!=null){
         if (jsonString[i]['_SPCommandLineArguments']!=undefined){
@@ -1060,19 +1121,19 @@ function parseMoreHostInfo(item_all_data) {
         }
 
     }
-    var number_of_displays = 0
-    var gpus_bullet = ''
-    var gpuNames=[]
+    let number_of_displays = 0
+    let gpus_bullet = ''
+    let gpuNames=[]
     for (var i in graphics_subel){
         
-        var gpu = graphics_subel[i]
-        var gpu_name = (gpu['sppci_model'])
+        let gpu = graphics_subel[i]
+        let gpu_name = (gpu['sppci_model'])
         if (gpuNames.includes(gpu_name)){gpu_name+="_"+i}
         gpuNames.push(gpu_name)
-        var displays = []
+        let displays = []
         for (var i in gpu['spdisplays_ndrvs']){
             number_of_displays++
-            var display_subel = gpu['spdisplays_ndrvs']
+            let display_subel = gpu['spdisplays_ndrvs']
             display = 
                 "\n<u>Display</u>: "+display_subel[i]['_name']+"\
                 \n<u>Phys resolution</u>: "+display_subel[i]['_spdisplays_pixels']+"\
@@ -1081,14 +1142,14 @@ function parseMoreHostInfo(item_all_data) {
             displays += display
             //CreateBullet(item_name, bullet_type, data = '', icon_url)
         } 
-        var bulletType
+        let bulletType
         if (displays==""){
           bulletType = 'blank'
         }else{bulletType = 'Custom'}
-        var gpu_bullet = CreateBullet(gpu_name, bulletType, displays, icons.gpu,1)
+        let gpu_bullet = buildNodeBullet(gpu_name, bulletType, displays, icons.gpu,1)
         gpus_bullet += gpu_bullet
         }
-        //console.log(gpus_bullet)
+        //mention(gpus_bullet)
 
         if(number_of_displays>0){
         markBullet("MoreHostInfo", 'screens')
@@ -1111,7 +1172,7 @@ function parseLoadedDrivers(item_all_data) {
     url: "https://gist.githubusercontent.com/NickSmet/53b6d6b947372cbf59f791cff0dcc046/raw/kexts.json",
     synchronous:    true,
     onload: function(xhr) {
-      var data = JSON.parse( xhr.responseText)
+      let data = JSON.parse( xhr.responseText)
      bad_kexts = Object.keys(data)
      $('#LoadedDrivers').html(GetDriverList(bad_kexts));
      
@@ -1121,10 +1182,10 @@ function parseLoadedDrivers(item_all_data) {
  
 
     function GetDriverList(bad_kexts){
-    var non_apple_regex = /^((?!com.apple|LoadedDrivers|Linked Against|com.parallels).)+$/gm;//filter out non apple/non parallels kexts+extra lines
-    var prl_arr = item_all_data.match(/com.parallels/gm)
+    let non_apple_regex = /^((?!com.apple|LoadedDrivers|Linked Against|com.parallels).)+$/gm;//filter out non apple/non parallels kexts+extra lines
+    let prl_arr = item_all_data.match(/com.parallels/gm)
 
-    var non_apple_arr = item_all_data.match(non_apple_regex);
+    let non_apple_arr = item_all_data.match(non_apple_regex);
     
     if (non_apple_arr == null && prl_arr != null) {
         $('#LoadedDrivers').text("Only apple+prl");
@@ -1139,14 +1200,14 @@ function parseLoadedDrivers(item_all_data) {
   }
 
 
-    var kext
-    var hasBadKexts = false
-    var drv_name_regex = / (\w+\.[^ ]*)/gm;
+    let kext
+    let hasBadKexts = false
+    let drv_name_regex = / (\w+\.[^ ]*)/gm;
 
 //Don't remember why, but seems to work.
     for (let i = 0; i < non_apple_arr.length; i++) {
         kext = non_apple_arr[i].match(drv_name_regex) || '-----'
-        console.log({kext});
+        mention({kext});
         non_apple_arr[i] = kext
         if (bad_kexts.indexOf(kext[0].trim()) > -1){
           hasBadKexts = true
@@ -1158,7 +1219,7 @@ function parseLoadedDrivers(item_all_data) {
       markBullet('LoadedDrivers','serious warning')
     }
 
-    var non_apple_str = non_apple_arr.join('\r\n');
+    let non_apple_str = non_apple_arr.join('\r\n');
 
     
     
@@ -1174,8 +1235,8 @@ function parseLoadedDrivers(item_all_data) {
 }
 
 function parseAllProcesses(item_all_data) {
-    var bsdtar_regex = /toolbox_report\.xml\.tar\.gz/
-    var bdstar_marker = "<u><b>bdstar</b></u>"
+    let bsdtar_regex = /toolbox_report\.xml\.tar\.gz/
+    let bdstar_marker = "<u><b>bdstar</b></u>"
     if (item_all_data.match(bsdtar_regex)){
       markBullet('AllProcesses','bad')
       markBullet('AllProcesses','Custom',bdstar_marker)
@@ -1183,20 +1244,20 @@ function parseAllProcesses(item_all_data) {
 
     function runningApps(){
 
-      var runningAppsRegex = /\s\/Applications\/((?!Parallels Desktop.app|\/).)*\//gm;/*the \s at the beginning is important, 
+      let runningAppsRegex = /\s\/Applications\/((?!Parallels Desktop.app|\/).)*\//gm;/*the \s at the beginning is important, 
       because we're eliminating apps inside of Apps (mainly Toolbox apps). Maybe should just create an exclusion list. 
       */
-      var appRegex = /\/Applications\/([^\/]+)\//;
-      var runningAppsList = item_all_data.match(runningAppsRegex);
+      let appRegex = /\/Applications\/([^\/]+)\//;
+      let runningAppsList = item_all_data.match(runningAppsRegex);
   
       if (!runningAppsList){
         return "Looks like no apps running (better check)."
       } 
   
-      var runningApps = []
-      var i
+      let runningApps = []
+      let i
       for (i = 0; i < runningAppsList.length; i++) {
-        var app = runningAppsList[i].match(appRegex)[1]
+        let app = runningAppsList[i].match(appRegex)[1]
          if (runningApps.indexOf(app) == -1){
           runningApps.push(app)
       }
@@ -1204,7 +1265,7 @@ function parseAllProcesses(item_all_data) {
   
       }
       runningApps = runningApps.join('\r\n');
-    //console.log (apps_all);
+    //mention (apps_all);
   
     return runningApps
 
@@ -1237,14 +1298,17 @@ function parseAllProcesses(item_all_data) {
 
     }
 
-    let runningAppsSubbullet = CreateBullet('Running Apps','Custom',runningApps(),icons.apps)
+    let runningAppsSubbullet = buildNodeBullet('Running Apps','Custom',runningApps(),icons.apps)
 
-    let topProcessesSubbullet = CreateBullet('Top Processes','Custom',parsePsAux(),icons.hotcpu)
+    let topProcessesSubbullet = buildNodeBullet('Top Processes','Custom',parsePsAux(),icons.hotcpu)
     
     return topProcessesSubbullet+runningAppsSubbullet
 }
 
 function parseMountInfo(item_all_data) {
+
+    let lowStorage = false
+
     let fileSystemRegex = /^(?<id>[\w\/]*) on [^\(]* \((?<filesystem>[^,]+)/
 
     let mountInfoRegex = /(?<id>(map |\/dev|\/\/|devfs)[\w\/\-@\.]*)  +(?<Size>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Used>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Avail>[\d\.]*(Gi|Ti|Bi|Ki|Mi) +)(?<Capacity>\d+\%) +(?<iused>\d+) +(?<ifree>\d+) +(?<iused2>\d+\%) +(?<MountedOn>\/.*)(\n|$)/ 
@@ -1271,7 +1335,21 @@ function parseMountInfo(item_all_data) {
 
       if(identifier.match(/(map|devfs)/)){continue}
 
+      let capacity = parseInt(volumeProperties.Capacity.match(/^(\d+)\%/)[1])
+
+      if(volumeProperties.MountedOn.match(/\/System\/Volumes\//)&&capacity>90){
+        volumeProperties.Capacity = `<a style="color:Tomato;"><b>${volumeProperties.Capacity}</b><a>`
+      }
+
+      if(volumeProperties.MountedOn.match(/\/System\/Volumes\//)&&capacity>90&&!lowStorage){
+        markBullet('MountInfo','Low storage')
+        lowStorage=true
+      }
+
+
       hostinfoObjArray.push({'Identifier':volumeProperties.id, 'Mounted on':volumeProperties.MountedOn,'Size':volumeProperties.Size,'Free':volumeProperties.Avail, 'Capacity':volumeProperties.Capacity, 'File System':fs[volumeProperties.id]})
+
+      
 
       
 
@@ -1300,11 +1378,11 @@ function parseGuestOs(item_all_data) {
 
   $("table.reportList>tbody>tr:nth-child(19)>td:nth-child(2)").append(` (${guestOsVersion})`)
 
-  var ToolsParams = {'Name':'ToolName', 'Version':'ToolVersion','Last updated':'ToolDate','Status':'ToolUpdateStatus'}
-  var ToolsAdjust = {'Last updated':'Time'}
-  var ToolsFilter = {'ToolUpdateStatus':'UpToDate','ToolVersion':'0.0.0.0'}
+  let ToolsParams = {'Name':'ToolName', 'Version':'ToolVersion','Last updated':'ToolDate','Status':'ToolUpdateStatus'}
+  let ToolsAdjust = {'Last updated':'Time'}
+  let ToolsFilter = {'ToolUpdateStatus':'UpToDate','ToolVersion':'0.0.0.0'}
   result = parseXMLItem(item_all_data, 'GuestToolInfo', ToolsParams,ToolsAdjust,ToolsFilter);
-  //console.log(result)
+  //mention(result)
   if (result=='Nothing'){
     markBullet('GuestOs','all good')
     return 'All good!'
@@ -1331,29 +1409,29 @@ function parseGuestCommands(item_all_data) {
   
   if(item_all_data.length<100){return "Nothing"} //instead of matching empty guest commands, just ignoring when it's very small
 
-  var guest_commands_results = []
+  let guest_commands_results = []
 
     function ExtractCommandOutput(command) {
       
-        var command_result_regex = reportus ? new RegExp ('\<CommandName\>\<\!\\\[CDATA\\\['+command+'\\\]\\\]\>\<\/CommandName\>\n +\<CommandResult\>\<\!\\\[CDATA\\\[([^$]*?)\\\]\\\]\>\<\/CommandResult\>') : new RegExp ('\<CommandName\>'+command+'<\/CommandName>\n +\<CommandResult\>([^$]*?)\<\/CommandResult\>')
+        let command_result_regex = reportus ? new RegExp ('\<CommandName\>\<\!\\\[CDATA\\\['+command+'\\\]\\\]\>\<\/CommandName\>\n +\<CommandResult\>\<\!\\\[CDATA\\\[([^$]*?)\\\]\\\]\>\<\/CommandResult\>') : new RegExp ('\<CommandName\>'+command+'<\/CommandName>\n +\<CommandResult\>([^$]*?)\<\/CommandResult\>')
         
         
         if (item_all_data.match(command_result_regex)){
-        var command_result = item_all_data.match(command_result_regex)[1]
+        let command_result = item_all_data.match(command_result_regex)[1]
         
         return command_result}
     }
 
-  var net_use=guestCommandsObj["net use"] || ''
-  var ipconfig = guestCommandsObj["ipconfig \/all"] || ''
-  var cpu_usage = guestCommandsObj["prl_cpuusage --sort-cpu-desc --time 4000"] || ''
+  let net_use=guestCommandsObj["net use"] || ''
+  let ipconfig = guestCommandsObj["ipconfig \/all"] || ''
+  let cpu_usage = guestCommandsObj["prl_cpuusage --sort-cpu-desc --time 4000"] || ''
 
 
 
   function parseNetuse(command_result) {
 
-   var net_volumes_regex = /[A-Z]\: +\\\\Mac\\\w+/g
-   var net_volumes = command_result.match(net_volumes_regex)
+   let net_volumes_regex = /[A-Z]\: +\\\\Mac\\\w+/g
+   let net_volumes = command_result.match(net_volumes_regex)
    if(net_volumes!== null){
    net_volumes.unshift("_Network volumes:_")
    net_volumes = net_volumes.join('\r\n');
@@ -1368,31 +1446,31 @@ function parseGuestCommands(item_all_data) {
 
     if (adapters!== null){
 
-    var adapters_output = ["\n"]
+    let adapters_output = ["\n"]
 
 
-    var i
+    let i
     for (i = 0; i < adapters.length; i++) {
-      var adapter = []
+      let adapter = []
 
     try {
-      var adapter_name = (i+1+".")+adapters[i].match(/\n([ \w][^\n\:]*)\:/)[1]
-      //console.log(adapter_name)
+      let adapter_name = (i+1+".")+adapters[i].match(/\n([ \w][^\n\:]*)\:/)[1]
+      //mention(adapter_name)
       adapter.push(adapter_name)
     } catch(e) {}
 
       try {
-    var adapter_discr = adapters[i].match(/\n[ \w][^\n\:]*\:[^$]*?:[^$]*?:([^\n]*?)\n/)[1]
+    let adapter_discr = adapters[i].match(/\n[ \w][^\n\:]*\:[^$]*?:[^$]*?:([^\n]*?)\n/)[1]
     adapter.push(adapter_discr)
     } catch(e) {} // If func1 throws error, try func2
 
      try {
-      var adapter_ip = "IP: "+adapters[i].match(/IPv4[^$]*?: (\d{1,3}(\.\d{1,3}){3})/)[1]
+      let adapter_ip = "IP: "+adapters[i].match(/IPv4[^$]*?: (\d{1,3}(\.\d{1,3}){3})/)[1]
        adapter.push(adapter_ip)
       } catch(e) {} // If func2 throws error, try func3
 
       adapter = adapter.join('\r\n');
-      //console.log(adapter)
+      //mention(adapter)
       adapters_output.push(adapter)
 
     }
@@ -1402,30 +1480,30 @@ function parseGuestCommands(item_all_data) {
 
   }
   function parseCpuUsage(command_result) {
-    //console.log(command_result)
+    //mention(command_result)
 
-    var cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-\{\} \.\_]+\.exe/g
-    var cpu_usage = command_result.match(cpu_usage_regex) //get cpu usage % and process locations
+    let cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-\{\} \.\_]+\.exe/g
+    let cpu_usage = command_result.match(cpu_usage_regex) //get cpu usage % and process locations
     if (cpu_usage!== null) {
     cpu_usage = cpu_usage.slice(0,5) //get first 3 processes
     cpu_usage.unshift("_Top processes:_")
     cpu_usage = cpu_usage.join('\r\n');
 
-    //console.log(cpu_usage)
+    //mention(cpu_usage)
     return cpu_usage}
 
   }
 
-  var net_use_results = parseNetuse(net_use)
-  var ipconfig_results = parseIpconfig(ipconfig)
-  var cpu_usage_results = parseCpuUsage(cpu_usage)
+  let net_use_results = parseNetuse(net_use)
+  let ipconfig_results = parseIpconfig(ipconfig)
+  let cpu_usage_results = parseCpuUsage(cpu_usage)
 
   guest_commands_results.push(ipconfig_results, net_use_results, cpu_usage_results)
 
   guest_commands_results=guest_commands_results.join('\r\n\n');
 
   return guest_commands_results
-  //console.log(net_use_results)
+  //mention(net_use_results)
 
 }
 
@@ -1445,30 +1523,30 @@ return parseXMLItem(item_all_data, 'VirtualMachine', VMParams);
 
 
 function parseCpuUsage(command_result) {
-    //console.log(command_result)
+    //mention(command_result)
 
-    var cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-]+\.exe/g
-    var cpu_usage = command_result.match(cpu_usage_regex) //get cpu usage % and process locations
+    let cpu_usage_regex = /\d+\.\d\d% +\d+ C:[\\\w \(\)\-]+\.exe/g
+    let cpu_usage = command_result.match(cpu_usage_regex) //get cpu usage % and process locations
     if (cpu_usage!== null) {
     cpu_usage = cpu_usage.slice(0,5) //get first 3 processes
     cpu_usage.unshift("_Top processes:_")
     cpu_usage = cpu_usage.join('\r\n');
 
-    //console.log(cpu_usage)
+    //mention(cpu_usage)
     return cpu_usage}
 
   }
 
-  var net_use_results = parseNetuse(ExtractCommandOutput(net_use))
-  var ipconfig_results = parseIpconfig(ExtractCommandOutput(ipconfig))
-  var cpu_usage_results = parseCpuUsage(ExtractCommandOutput(cpu_usage))
+  let net_use_results = parseNetuse(ExtractCommandOutput(net_use))
+  let ipconfig_results = parseIpconfig(ExtractCommandOutput(ipconfig))
+  let cpu_usage_results = parseCpuUsage(ExtractCommandOutput(cpu_usage))
 
   guest_commands_results.push(ipconfig_results, net_use_results, cpu_usage_results)
 
   guest_commands_results=guest_commands_results.join('\r\n\n');
 
   return guest_commands_results
-  //console.log(net_use_results)
+  //mention(net_use_results)
 
 }
 
@@ -1476,9 +1554,9 @@ function parseTimeZone(item_all_data) {
 //this function is redundant. still keeping it
 
 
-    // var timezone_regex = /<TimeZone>(.*)?<\/TimeZone>/;
-    // var timezone = item_all_data.match(timezone_regex)[1]
-    // var timediff = parseInt(timezone)
+    // let timezone_regex = /<TimeZone>(.*)?<\/TimeZone>/;
+    // let timezone = item_all_data.match(timezone_regex)[1]
+    // let timediff = parseInt(timezone)
 
     return parseInt(item_all_data.match(bigReportObj.ParallelsProblemReport.TimeZone))
 
@@ -1486,7 +1564,7 @@ function parseTimeZone(item_all_data) {
 }
 
 function parsetoolsLog(item_all_data) {
-  var last1000chars = item_all_data.slice(item_all_data.length -1000)
+  let last1000chars = item_all_data.slice(item_all_data.length -1000)
   if(last1000chars.match(/successfully/)){
   markBullet('tools.log','all good')}
   else if(last1000chars.match(/FatalError/)) {markBullet('tools.log','bad')}
@@ -1504,34 +1582,27 @@ function parseLicenseData(item_all_data){
 
 function parseAppConfig(item_all_data){
 
+let externalVmFolder = false
+
 let appConfigContents = ''
 
 let AppConfigJson = strToXmlToJson(item_all_data).ParallelsPreferences
 
 if(!AppConfigJson){return "It's <b>UserDefinedOnDisconnectedServer</b>"}
 
-let prlUsers = AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser
-
-
-console.log(JSON.stringify(prlUsers));
-
-console.log(prlUsers[1]);
-
-console.log(prlUsers.isArray );
-
-
-let defaultVmFolder = (Array.isArray(prlUsers)) ? prlUsers[1].UserWorkspace.UserDefaultVmFolder : prlUsers.UserWorkspace.UserDefaultVmFolder
-//a bit hacky: because ParallelsUser can be an array, when there are multiple users. In that case, usually the first user is @root
-//so I'm skipping it and getting the first normal user. This will be inaccurate in some cases, but noone will care.
-
 let verboseLoggingEnabled = AppConfigJson.ServerSettings.CommonPreferences.Debug.VerboseLogEnabled
 
 if (verboseLoggingEnabled==1){markBullet('AppConfig','verbose logging')}
 appConfigContents += bulletSubItem('Verbose logging', verboseLoggingEnabled)
 
+//there could be many users, and all kinds of situations, so it's easier and more reliable to just locate default VM folders using regex
+let defaultVmFolderRegex = /<UserDefaultVmFolder>([^<]+)<\/UserDefaultVmFolder>/gm
+let defaultVmFolder
+while ((defaultVmFolder = defaultVmFolderRegex.exec(item_all_data)) !== null) {
+  appConfigContents += bulletSubItem('Default VM Folder', defaultVmFolder[1])
+  if(defaultVmFolder[1].match(/^\/Volumes/)&&!externalVmFolder){markBullet('AppConfig', 'External Default VM folder')}//to avoid marking it a second time in case there are multiple such volumes
+}
 
-if(defaultVmFolder){appConfigContents += bulletSubItem('Default VM Folder', defaultVmFolder)}
-if(defaultVmFolder.match(/^\/Volumes/)){markBullet('AppConfig', 'External Default VM folder')}
 
 
 
@@ -1563,7 +1634,7 @@ function parseLaunchdInfo(item_all_data){
   }
 
 function parseAutoStatisticInfo(item_all_data){
-  console.log(item_all_data);
+  mention(item_all_data);
   markBullet('AutoStatisticInfo','install')
 
   let installationHistory = 'PD Installations:\n'
@@ -1584,7 +1655,7 @@ function parseAutoStatisticInfo(item_all_data){
 
 function computerModel(macDatabase){
 
-  // var computer_model = $('td:contains("Computer Model")');
+  // let computer_model = $('td:contains("Computer Model")');
   // if (computer_model == null){return}
 
   let macElement = $('td:contains("Computer Model")').next();
@@ -1598,7 +1669,7 @@ function computerModel(macDatabase){
 
   mac_cpu = mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/) ? mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/)[1] : mac_cpu
   
-  console.log(mac_cpu)
+  mention(mac_cpu)
   
   let mac_url = 'http://everymac.com/ultimate-mac-lookup/?search_keywords='+macModel
 
@@ -1607,9 +1678,9 @@ function computerModel(macDatabase){
 
   let macID = macModel.concat(mac_cpu)
 
-  console.log(macID);
+  mention(macID);
 
-  console.log(macDatabase);
+  mention(macDatabase);
   
   let macSpecs = macDatabase[macID]  
 
@@ -1639,33 +1710,33 @@ function computerModel(macDatabase){
 
 // function googleCsv2JsonMacModels(csv){
 //   //that is a very dumb function, but it works. Won't touch it for now
-// console.log();
+// mention();
 
 // csv = csv.replace(/\"\,\"/gm,";").replace(/(\"\n\")/gm,"$1delimiter").replace(/(\]\n|\}\n)/g,"$1delimiter")
 
 
-// var headers=csv.split("\n")[0].split(";");
+// let headers=csv.split("\n")[0].split(";");
 
 
-// console.log({headers});
+// mention({headers});
 // csv = csv.substring(csv.indexOf("\n") + 1)
 
-// var lines=csv.split('delimiter');
+// let lines=csv.split('delimiter');
 
-// var result = [];
+// let result = [];
 
 // for(var i=1;i<lines.length-1;i++){
 
-//    var obj = {};
+//    let obj = {};
 //    let currentline=lines[i].split(";");
 
-//    //console.log(currentline);
+//    //mention(currentline);
 
 //    result[currentline[1].replace(/\"\n\"/gm,'')]=currentline[0].replace(/(\[[^\<]*|\n +]$)/gm,'').replace(/\"/gm,'').split(/\,\n +/)
    
 
 // }
-// console.log(result);
+// mention(result);
 // //return result; //JavaScript object
 // return result; //JSON
 // }
@@ -1677,15 +1748,15 @@ function googleCsv2JsonMacModels(csv){
 csv = csv.replace(/\"\,\"/gm,";").replace(/\"/gm,"").replace(/(\]\n|\}\n)/g,"$1delimiter")
 
 
-var headers=csv.split("\n")[0].split(";");
+let headers=csv.split("\n")[0].split(";");
 
 
 csv = csv.substring(csv.indexOf("\n") + 1)
 
 
-var lines=csv.split('\n');
+let lines=csv.split('\n');
 
-var result = [];
+let result = [];
 
 
 for(var i=0;i<lines.length-1;i++){
@@ -1695,7 +1766,7 @@ for(var i=0;i<lines.length-1;i++){
 
    let currentline=lines[i].split(";");
    macID = currentline[0]
-   //console.log(currentline);
+   //mention(currentline);
    let specs = {};
    for(var spec=0;spec<headers.length;spec++){
     specs[headers[spec]] = currentline[spec]
@@ -1716,18 +1787,18 @@ function fixTime(timediff, time = '') {
     let gmt_string = $( ".reportList:first tbody:first tr:nth-child(3) script" ).text()
     if (reportus) gmt_string = $("b:contains('Creation Time')").parent().next().text()
     
-    var gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
-    var gmt_substr = gmt_string.match(gmt_regex)[1];
+    let gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
+    let gmt_substr = gmt_string.match(gmt_regex)[1];
   ///if time is not defined 
-    var gmt_time = Date.parse(gmt_substr);
+    let gmt_time = Date.parse(gmt_substr);
     if (time!=''){ 
       gmt_time = parseInt(time)
     }
-    //console.log(gmt_time)
-    var time_seconds = gmt_time/1000;
-    var correct_time = new Date(0);
-   //console.log(correct_time)
-    //console.log(timediff)
+    //mention(gmt_time)
+    let time_seconds = gmt_time/1000;
+    let correct_time = new Date(0);
+   //mention(correct_time)
+    //mention(timediff)
     correct_time.setUTCSeconds(time_seconds+timediff)
     return correct_time.toString().substring(4,24)
 }
@@ -1768,14 +1839,14 @@ return spec_value}
 
 //https://stackoverflow.com/users/65387/mpen
 function humanFileSize(bytes, si) {
-  var thresh = si ? 1000 : 1024;
+  let thresh = si ? 1000 : 1024;
   if(Math.abs(bytes) < thresh) {
       return bytes + ' B';
   }
-  var units = si
+  let units = si
       ? ['kB','MB','GB','TB','PB','EB','ZB','YB']
       : ['KiB','MiB','GiB','TiB','PiB','EiB','ZiB','YiB'];
-  var u = -1;
+  let u = -1;
   do {
       bytes /= thresh;
       ++u;
@@ -1785,20 +1856,20 @@ function humanFileSize(bytes, si) {
 
 /** @description  Converst all links to attached screenshots to clickable thumbnails
  */
-function screenshots(){
+function getScreenshots(){
   function CreateScreenshot(id, url){
     $.get(url, function (data) {
-      var img = ( $('pre > img', data).eq(0).attr('src'))
+      let img = ( $('pre > img', data).eq(0).attr('src'))
       AddScreenshotHtml(id, img)
   })
 }
 
   function AddScreenshotHtml(id, image){
-  var mypiclink =     '<a href="#img'+id+'">\
+  let mypiclink =     '<a href="#img'+id+'">\
     <img src='+image+' class="thumbnail">\
   </a>'
   
-  var mypic =   '<a href="#_" class="lightbox" id="img'+id+'">\
+  let mypic =   '<a href="#_" class="lightbox" id="img'+id+'">\
     <img src='+image+'>\
   </a>'
   $(mypiclink).appendTo('.container')
@@ -1810,9 +1881,9 @@ function screenshots(){
 if(reportus){$('h4:contains("Screenshots")').next().clone().appendTo('.container') 
 return}
 
-var screens_el = $('span:contains("Screenshots")').next()
+let screens_el = $('span:contains("Screenshots")').next()
 screens_el.clone().appendTo('.container') 
-var screenID = 1
+let screenID = 1
 screens_el.find("a").each(function() {
   CreateScreenshot(screenID, this.href)
   screenID++
@@ -1900,10 +1971,13 @@ else
   if(bullet_name=='this'){return img}
   else
   {
-    
-    $('.container > div > a:contains("'+bullet_name+'")').filter(function(){
+    $(`button#btn_${bullet_name}`).next().filter(function(){
       return $(this).text() === bullet_name ? true : false;
   }).prepend($(img));
+    
+  //   $('.container > div > a:contains("'+bullet_name+'")').filter(function(){
+  //     return $(this).text() === bullet_name ? true : false;
+  // }).prepend($(img));
     
     
     //('.container > div > a:contains("'+bullet_name+'")').prepend($(img))
@@ -2015,7 +2089,7 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
   $("#btn_"+nodeID).parent().prepend($(searchIcon))
 
   $("#"+nodeID+"_searchFocus").click(function(){
-    console.log(nodeName)
+    mention(nodeName)
     focusOnSearch(nodeName)
   })
 
@@ -2119,7 +2193,6 @@ let nodeID = nodeName.replaceAll('\.','\\\.')
 
     }
      
-   
 
 
 //all report items for which bullets will be constructed in the bullet container
@@ -2131,9 +2204,9 @@ const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses','Guest
 
 const process_immediately = ['CurrentVm','LoadedDrivers','tools.log','GuestOs','GuestCommands','AllProcesses','AdvancedVmInfo','MoreHostInfo','VmDirectory','ClientProxyInfo','LicenseData', 'system.log', 'MountInfo', 'HostInfo', 'InstalledSoftware', 'LaunchdInfo','AutoStatisticInfo','dmesg.log','parallels-system.log',"vm.log",'NetConfig', 'AppConfig','install.log','panic.log',"system.0.gz.log", "vm.1.gz.log"]
 
-var nodeContents = {}//it't almost raw data. Mostly for the search function.
+let nodeContents = {}//it't almost raw data. Mostly for the search function.
 
-var theBigReportObject = {//this is the Grand Refactoring bit
+let theBigReportObject = {//this is the Grand Refactoring bit
   'customer':{},//email, timezone, LicenseData
   'report':{},// creation time, timezone
   'PD':{
@@ -2147,29 +2220,41 @@ var theBigReportObject = {//this is the Grand Refactoring bit
 }
 
 
-
 //Filling bullet content with appropriate data.
-var tries={"tries":3}//When "get" request fails, BulletData() reruns itself (see $.ajaxSetup). This var stores number of tries left for each item.
+let tries={"tries":3}//When "get" request fails, BulletData() reruns itself (see $.ajaxSetup). This let stores number of tries left for each item.
 // If item is not present in this dict, it's added with counter set to 3 and then goes down with each run of the function. 
 
 //needed for correting times for time zone
-var timediff
+let timediff
 
-var current_url = window.location.href;
-var report_id = current_url.match(/\d{7,9}/);
+let current_url = window.location.href;
+let report_id = current_url.match(/\d{7,9}/);
 let index
 
-function doReportOverview() {
-  
+let getMacSpecsDatabase = new Promise (function(resolve,reject){
   let macDataBaseUrl = "https://docs.google.com/spreadsheets/d/1lmcn0aRxolP5eXfsuaekRFcMl7dAFjxTe9ItQEUOarM/gviz/tq?tqx=out:csv&sheet=Database"
   $.get(macDataBaseUrl, function ldd(data) {
-
-    console.log(data);
-    let macDatabase = googleCsv2JsonMacModels(data)
-   
-    computerModel(macDatabase);
-    
+    resolve(data)
     })
+})
+
+function doReportOverview() {
+
+  getMacSpecsDatabase.then(function(data){
+    let macDatabase = googleCsv2JsonMacModels(data)
+    computerModel(macDatabase);
+  })
+  
+  // changed callback to a promise -- leaving this just in case
+  // let macDataBaseUrl = "https://docs.google.com/spreadsheets/d/1lmcn0aRxolP5eXfsuaekRFcMl7dAFjxTe9ItQEUOarM/gviz/tq?tqx=out:csv&sheet=Database"
+  // $.get(macDataBaseUrl, function ldd(data) {
+
+  //   mention(data);
+  //   let macDatabase = googleCsv2JsonMacModels(data)
+   
+  //   computerModel(macDatabase);
+    
+  //   })
   
   signatureBugs();
   BulletData('TimeZone','time');//should fix it later to get data from the bigJson
@@ -2179,9 +2264,11 @@ function doReportOverview() {
       $("#form1").replaceWith(function(){
         return $("<div />").append($(this).contents());
     });
-      
+    let timeout = 80
     for (let item in process_immediately){
-            BulletData(process_immediately[item])
+      setTimeout(BulletData(process_immediately[item]),timeout)
+      timeout=+80
+            
         
       }
       $(".btn").click(function(){
@@ -2191,8 +2278,8 @@ function doReportOverview() {
   
     //used to be necessary when some items were loaded manually
       // $(".btn").one("click", (function() {
-      //     var item_id = this.id.replace("btn_", "");
-      //     //console.log(item_id)
+      //     let item_id = this.id.replace("btn_", "");
+      //     //mention(item_id)
       //     if(process_immediately.indexOf(item_id) == -1) {BulletData(item_id)} 
       // }));
   }
@@ -2204,17 +2291,12 @@ window.addEventListener("load", function(event) {
 
   let id = curr_url.match(/(\d{9})/)[1]
 
-
   if ($('Title').text().match('Waiting')){
-   $("#form1 > div:nth-child(4) > big > big > b").append('</br></br><div><a href=http://reportus.prls.net/webapp/reports/'+id+'>OPEN AT REPORTUS</a></div>')
+   $("#form1 > div:nth-child(4) > big > big > b").append('</br></br><div><a href=https://reportus.prls.net/webapp/reports/'+id+'>OPEN AT REPORTUS</a></div>')
 
     return
    }
- 
 
-
-
-  
   if (curr_url.match(/Report.aspx\?ReportId=/)){
    reportus = false
   }else if (curr_url.match(/webapp\/reports/)){
@@ -2222,18 +2304,22 @@ window.addEventListener("load", function(event) {
   }
   params = reportus ? reportusPrms : reportsPrms
 
-  let xmlUrl =  reportus ? 'http://reportus.prls.net/webapp/reports/'+id+'/report_xml/download?filepath=Report.xml' : 'https://reports.prls.net/Reports/Xml.aspx?ReportId='+id
+  let xmlUrl =  reportus ? 'https://reportus.prls.net/webapp/reports/'+id+'/report_xml/download?filepath=Report.xml' : 'https://reports.prls.net/Reports/Xml.aspx?ReportId='+id
 
-  upper_menu();
-  screenshots();
+  buildMenu();
+  getScreenshots();
   setupSearch()
 
-  getXmlReport(xmlUrl)
+  getXmlReport(xmlUrl).then(function(xmlData){
+    bigReportObj=xmlData
+    doReportOverview()
+  })
   
 });
 
 //note to self -- start hosting those somewhere (github even?)
 const icons = {
+  'Low storage':'https://uxwing.com/wp-content/themes/uxwing/download/16-business-and-finance/90-percent.svg',
   'DisplayLink device!':'https://image.flaticon.com/icons/png/128/3273/3273973.png',
   'onedrive':'https://image.flaticon.com/icons/png/128/2335/2335410.png',
   'network folder':'https://image.flaticon.com/icons/png/128/1930/1930805.png',
@@ -2269,7 +2355,8 @@ const icons = {
 'cd':'https://image.flaticon.com/icons/png/128/2606/2606574.png',
 'networkAdapter':'https://image.flaticon.com/icons/svg/969/969356.svg',
 'TPM':'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-128.png',
-'network conditioner':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
+'network conditioner fullspeed':'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
+'network conditioner limited':'https://user-images.githubusercontent.com/10322311/118004041-c728e100-b351-11eb-9018-516a78e18a28.png',
 'plain vHDD':'https://cdn0.iconfinder.com/data/icons/computer-93/64/7._hard_disk_hdd_data_information_computer_technology-128.png',
 'external vHDD':'https://1001freedownloads.s3.amazonaws.com/icon/thumb/371132/External-Drive-Red-icon.png',
 'linked clone':'https://cdn4.iconfinder.com/data/icons/materia-flat-design-vol-1/24/034_038_layers_front_copy_clone-128.png',
