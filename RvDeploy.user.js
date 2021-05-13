@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name     Parallels ReportViewer 
-// @version            1.0.4.6
+// @version            1.1.0.0
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/RvDeploy.user.js
 
 // @include     https://reportus.prls.net/webapp/reports/*
-// @include     http://reportus.prls.net/webapp/reports/*
+// @include     httpы://reportus.prls.net/webapp/reports/*
 
 // @include     https://reports.prls.net/*/Report.aspx?ReportId=*
 // @include      https://reports.parallels.com/*/Report.aspx?ReportId=*
