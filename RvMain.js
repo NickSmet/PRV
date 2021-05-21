@@ -7,14 +7,14 @@ let params
 let limitLogging = 'AdvancedVmInfo'
 let currentlyProcessedNode
 
-function mention(whatTosSay, strict) {
-  if (strict) {
+function mention(whatTosSay, force) {
+  if (force) {
     console.log(whatTosSay)
     return
   }
   if (limitLogging) {
     if (currentlyProcessedNode == limitLogging) { console.log(whatTosSay) }
-  }
+  }else{console.log(whatTosSay);}
 
   // if(!silence){
   // }
@@ -24,26 +24,6 @@ function mention(whatTosSay, strict) {
 let reportus
 let reportsPrms = { 'appendTo': '.reportList', 'nodeProperty': 'href' }
 let reportusPrms = { 'appendTo': '.table-striped', 'nodeProperty': 'Onclick' }
-
-function getData(requestLink, tries) {
-
-  return new Promise(function (resolse, reject) {
-
-    $.ajaxSetup({
-
-      error: function (xhr, status, error) {
-        tries[requestLink]--
-        if (tries[requestLink] > 0) { getData(requestLink, tries) }
-      }
-    });
-
-    $.get(requestLink, function ldd(data) {
-      resolve(data)
-    })
-
-  })
-
-}
 
 function getXmlReport(requestLink) {
 
@@ -100,12 +80,6 @@ function parseLsLr(raw) {
             const folder = folderLocationArr[index];
             folderLocation += "\n" + " ".repeat(index * 5) + "└──" + folder
           }
-          // for (let index = 0; index < folderLocation.match(/\//g).length; index++) {
-
-
-          //   folderLocation.replace(RegExp("(" + "\/" + ")"), x => x.replace(RegExp("\/" + "$"), "\n"+index*" "+"└──"));
-          //   //folderLocation.replace(RegExp("\/{" + index + "}","g"),  "\n"+index*" "+"└──")
-          // }
         }
         bundleContents += `\n<b>${folderLocation}</b>:</span>\n`
       }
@@ -145,7 +119,7 @@ function objArrayToTable(jsonArray, colorcolumn) {
 //Constrution of menu with bullets and log links
 function buildMenu() {
 
-  $('.headerMain').eq(1).append($(`<a href='http://reportus.prls.net/webapp/reports/${report_id}'>Open on Reportus</a>`))
+  $('.headerMain').eq(1).append($(`<a href='https://reportus.prls.net/webapp/reports/${report_id}'>Open on Reportus</a>`))
 
   let appendto = params.appendTo//because it's different on reportus
   //Making the main informationpanel occupy half of the screen
@@ -182,8 +156,7 @@ function constructNodeBullets(nodeNamesArray, nodesType, appendNodeBulletsTo) {
     //if the element is not present on page, will create a grayed out bullet (it's better to see that something is missing)
     if ($('a[' + nodeProperty + '*="' + nodeNamesArray[i] + '"]').length === 0 && !reportus) {
       nodeBulletElement = buildNodeBullet(nodeNamesArray[i], 'blank')
-      // if(['GuestCommands','GuestOs','CurrentVm'].includes(nodeNamesArray[i])&&reportus){nodeBulletElement = CreateBullet(nodeNamesArray[i], nodesType)}//reportus
-    }
+          }
     else {
       nodeBulletElement = buildNodeBullet(nodeNamesArray[i], nodesType)
     }
@@ -267,15 +240,15 @@ nothing yet</div>'
   let item_data = data;
   var item_link = type_to_link[bullet_type];
 
-  let item_id = item_name.split(" ").join("");;
-  if (bullet_type == 'log') {
-    item_id = item_name.replace('Log')
-  }
+  let item_id = item_name.split(" ").join("").replace(/\./g,'');
+  // if (bullet_type == 'log') {
+  //   item_id = item_name.replace('Log')
+  // }
 
 
   let button_id = "btn_" + item_id;
   let item_summary = "nothing yet";
-  let item_target = '#' + item_id.replaceAll('\.', '\\\.');
+  let item_target = '#' + item_id
 
 
   let bullet_content = {
@@ -403,70 +376,49 @@ function parseJsonItem(itemObject, parameters = {}, adjustments = {}, exclude = 
 }
 
 
-function BulletData(item_id, option) {
+function BulletData(nodeName, option) {
+
+  let item_id = nodeName.replace(/\./g,"")
+
   let bullet_parsed_data
   let panic
 
-  currentlyProcessedNode = item_id
-  mention({ currentlyProcessedNode })
+  let nodesObj = bigReportObj.ParallelsProblemReport
+  let excludeFromSearch = ['TimeZone']
 
-  let extractedFromReportXml = {
-    'CurrentVm': bigReportObj.ParallelsProblemReport.CurrentVm,
-    'LoadedDrivers': bigReportObj.ParallelsProblemReport.LoadedDrivers,
-    'AllProcesses': bigReportObj.ParallelsProblemReport.AllProcesses,
-    'GuestCommands': bigReportObj.ParallelsProblemReport.GuestCommands,
-    'GuestOs': bigReportObj.ParallelsProblemReport.GuestOs,
-    'MountInfo': bigReportObj.ParallelsProblemReport.MountInfo,
-    'HostInfo': bigReportObj.ParallelsProblemReport.HostInfo,
-    'ClientProxyInfo': bigReportObj.ParallelsProblemReport.ClientProxyInfo,
-    'MoreHostInfo': bigReportObj.ParallelsProblemReport.MoreHostInfo,
-    'VmDirectory': bigReportObj.ParallelsProblemReport.VmDirectory,
-    'InstalledSoftware': bigReportObj.ParallelsProblemReport.InstalledSoftware,
-    // 'AdvancedVmInfo':bigReportObj.ParallelsProblemReport.AdvancedVmInfo,
-    'LaunchdInfo': bigReportObj.ParallelsProblemReport.LaunchdInfo,
-    // 'AutoStatisticInfo':bigReportObj.ParallelsProblemReport.AutoStatisticInfo,
-    'AppConfig': bigReportObj.ParallelsProblemReport.AppConfig,
-    'NetConfig': bigReportObj.ParallelsProblemReport.NetConfig,
-    'LicenseData': bigReportObj.ParallelsProblemReport.LicenseData,
+  if (typeof nodesObj[nodeName] == 'string') {
+  
+    bullet_all_data = nodesObj[nodeName] 
 
-  }
+      eval(`bullet_parsed_data=parse${item_id}(bullet_all_data)`)
 
-
-  let haveJsonFormat = ['GuestCommands']
-
-  if (item_id in extractedFromReportXml) {
-
-    bullet_all_data = extractedFromReportXml[item_id]
-    mention(`Processing ${item_id} the new way. Data is ${typeof bullet_all_data}`);
-
-    if (extractedFromReportXml[item_id]) {
-      if (haveJsonFormat.includes(item_id)) { AddNodeToSearch(bullet_all_data, item_id) } else { AddNodeToSearch(bullet_all_data, item_id) }
-      eval("bullet_parsed_data=parse" + item_id.replace('.log', 'Log') + "(bullet_all_data)")
-    }
+      if (excludeFromSearch.includes(nodeName)) { return }
+    searchNodes.addNodeToSearch(bullet_all_data, nodeName)
+    searchNodes.addSearchButton(nodeName,`#btn_${item_id}`)
 
     if (!bullet_parsed_data) { return }//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
-    $('#' + item_id.replaceAll('\.', '\\\.')).html(bullet_parsed_data);
+    $(`#${item_id}`).html(bullet_parsed_data);
     return
   }
 
   if (tries[item_id]) { tries[item_id]-- } else { tries[item_id] = tries['tries'] }
   bullet_parsed_data = 'nothing yet';
 
-  if (pinned_collapsibles.includes(item_id)) { $('#' + item_id.replaceAll('\.', '\\\.')).text('loading...'); }
+  if (pinned_collapsibles.includes(nodeName)) {$('#' + nodeName.replaceAll('\.', '\\\.')).text('loading...'); }
 
 
-  let request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_id
-  if (reportus) { request_link = 'https://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_id; }
+  let request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + nodeName
+  if (reportus) { request_link = 'https://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + nodeName; }
 
   if (item_id.match('[^c].log')) {
-    request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_id
+    request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + nodeName
   } else if (item_id.match('panic.log')) {
     request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=+' + report_id + '+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
     panic = true
   }
 
   if (reportus && item_id.match('\.log')) {
-    request_link = $('a[href*="' + item_id + '"]').attr('href')
+    request_link = $('a[href*="' + nodeName + '"]').attr('href')
   }
 
 
@@ -474,12 +426,11 @@ function BulletData(item_id, option) {
 
     error: function (xhr, status, error) {
 
-      if (tries[item_id] > 0) { BulletData(item_id, option) }
+      if (tries[item_id] > 0) { BulletData(nodeName, option) }
     }
   });
 
   $.get(request_link, function ldd(data) {
-
 
     let bullet_all_data
     if (panic == true) {
@@ -498,13 +449,17 @@ function BulletData(item_id, option) {
       return
     }
 
-    AddNodeToSearch(bullet_all_data, item_id) // AddNodeToSearch(bullet_all_data, item_id.replace('.log','Log'))
-    eval("bullet_parsed_data=parse" + item_id.replace('.log', 'Log') + "(bullet_all_data)")
-    mention("PARSING " + item_id)
+    searchNodes.addNodeToSearch(bullet_all_data, nodeName)
+    searchNodes.addSearchButton(nodeName,`#btn_${item_id}`)
+    console.log(nodeName,`#btn_${item_id}`);
+  
+    eval("bullet_parsed_data=parse" + nodeName.replace(/\.|\d|gz/g, '') + "(bullet_all_data)")//because there are things like "system.0.gz.log"
+    mention("PARSING " + nodeName)
+  
 
     if (!bullet_parsed_data) { return }//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
     if (typeof option === "undefined") {
-      $('#' + item_id.replaceAll('\.', '\\\.')).html(bullet_parsed_data);
+      $('#' + nodeName.replaceAll('\.', '\\\.')).html(bullet_parsed_data);
       return
     }
     else if (option == 'time') {
@@ -541,7 +496,7 @@ function bulletSubItem(parameter, paramValue) {
   return '<u>' + parameter + '</u>: ' + paramValue + '\n'
 }
 
-function parsepanicLog(item_all_data) {
+function parsepaniclog(item_all_data) {
   let panicDateRegex = /^.*panic-full-(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-(?<hour>\d{2})(?<min>\d{2})(?<sec>\d{2}).*/u
   let panicDateRegex2 = /\/Library\/Logs\/DiagnosticReports\/Kernel.(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-(?<hour>\d{2})(?<min>\d{2})(?<sec>\d{2}).*/u
   let panicCreationString = ""
@@ -589,17 +544,6 @@ let ObjByString = function (o, s) {
 
 
 function parseCurrentVm(CurrentVmData) {
-
-  mention(CurrentVmData)
-
-  // xmlDoc = $.parseXML( item_all_data );
-  // //$xml = $( xmlDoc );
-  // let jsonObj = x2js.xml2json(xmlDoc);
-  // theBigReportObject['vm'] = jsonObj
-
-  //$xml = $(x2js.json2xml(theBigReportObject['vm']['CurrentVm']))
-
-  //var hdds_regex = /\<Hdd[^\>]*\>[^$]*<\/CommandName>/g
 
   let vmObj = strToXmlToJson(CurrentVmData).ParallelsVirtualMachine
 
@@ -861,13 +805,13 @@ function parseCurrentVm(CurrentVmData) {
     }
 
     if (key in keysWithIcons) {
-      icon = markBullet('this', keysWithIcons[key])
+      icon = markBullet('returnIcon', keysWithIcons[key])
       specName = icon.concat(specName)
     }
 
 
     if (key.match('Section')) {
-      spec = '\n<strong>⫸' + specValue + '⫷</strong>\n'
+      spec = `\n<strong>⫸${specValue}⫷</strong>\n`
     } else if (key.match('Subbullet')) {
       spec = specValue
     } else {
@@ -921,7 +865,7 @@ function parseNetConfig(item_all_data) {
   let kextlessMark
 
 
-  switch (kextless) {//NEED TO TAKE INTO ACCOUNT MACOS
+  switch (kextless) {
     case '1':
     case '-1':
     case undefined:
@@ -936,8 +880,6 @@ function parseNetConfig(item_all_data) {
   }
 
   markBullet("NetConfig", kextlessMark)
-
-  //var networkBullet = CreateBullet('Networks', 'Custom', savedStates, 'https://image.flaticon.com/icons/svg/387/387157.svg')
 
   return network;
 }
@@ -960,24 +902,21 @@ function parseAdvancedVmInfo(item_all_data) {
 
   //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
   regex1 = /\<\/AdvancedVmInfo\>\n\<\/AdvancedVmInfo\>/gm,
-    regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
+  regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
   regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
   regex4 = /\<AdvancedVmInfo\>\n\<AdvancedVmInfo[^>]*\>/gm,
-    regex5 = /<\?xml[^>]*>/gm
 
   item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
   item_all_data = item_all_data.replace(regex2, "")
   item_all_data = item_all_data.replace(regex3, "")
   item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
-  //item_all_data = item_all_data.replace(regex5, '')
-  //item_all_data = item_all_data.replace(regex3,"")
 
   mention(item_all_data);
 
   let AdvancedVmInfoContents = ''
 
   if (item_all_data.match(/writeattr/)) {
-    markBullet('AdvancedVmInfo', 'ACL')
+    markBullet('AdvancedVmInfo', icons.ACL)
   }
 
   if (item_all_data.match(/ root |\_unknown/)) {
@@ -992,7 +931,7 @@ function parseAdvancedVmInfo(item_all_data) {
     AdvancedVmInfoContents += "No snapshots\n"
   } else {
     markBullet("AdvancedVmInfo", "snapshots")
-    markBullet("AdvancedVmInfo", "Custom", '<a>' + number_of_snapshots + '* </a>')
+    markBullet("AdvancedVmInfo", "CustomHtml", '<a>' + number_of_snapshots + '* </a>')
     snapshotList = {
       'Name': 'Name',
       'Created on': 'DateTime'
@@ -1155,7 +1094,7 @@ function parseMoreHostInfo(item_all_data) {
 
   if (number_of_displays > 0) {
     markBullet("MoreHostInfo", 'screens')
-    markBullet("MoreHostInfo", "Custom", '<a>' + number_of_displays + '* </a>')
+    markBullet("MoreHostInfo", "CustomHtml", '<a>' + number_of_displays + '* </a>')
   }
   else {
     markBullet("MoreHostInfo", 'no_screens')
@@ -1168,6 +1107,8 @@ function parseMoreHostInfo(item_all_data) {
 }
 
 function parseLoadedDrivers(item_all_data) {
+
+
 
   GM_xmlhttpRequest({
     method: "GET",
@@ -1243,7 +1184,7 @@ function parseAllProcesses(item_all_data) {
   let bdstar_marker = "<u><b>bdstar</b></u>"
   if (item_all_data.match(bsdtar_regex)) {
     markBullet('AllProcesses', 'bad')
-    markBullet('AllProcesses', 'Custom', bdstar_marker)
+    markBullet('AllProcesses', 'CustomHtml', bdstar_marker)
   }
 
   function runningApps() {
@@ -1353,15 +1294,6 @@ function parseMountInfo(item_all_data) {
 
     hostinfoObjArray.push({ 'Identifier': volumeProperties.id, 'Mounted on': volumeProperties.MountedOn, 'Size': volumeProperties.Size, 'Free': volumeProperties.Avail, 'Capacity': volumeProperties.Capacity, 'File System': fs[volumeProperties.id] })
 
-
-
-
-
-    //       return `<div style="overflow-x: scroll; max-width: 70em; max-height: 70em;">
-    // <div style="width: 10000px; ">
-    // <b>TOP CPU USAGE</b>\n${top5cpu}\n\r<b>TOP MEMORY USAGE</b>\n${top5mem}
-    // </div>
-    // </div>`
 
   }
 
@@ -1521,7 +1453,7 @@ function parseVmDirectory(item_all_data) {
   let numberofvms = item_all_data.match(/VmName/g) ? item_all_data.match(/VmName/g).length / 2 : 0
   if (numberofvms > 0) {
     markBullet("VmDirectory", "vms")
-    markBullet("VmDirectory", "Custom", '<a>' + numberofvms + '* </a>')
+    markBullet("VmDirectory", "CustomHtml", '<a>' + numberofvms + '* </a>')
   }
 
   xmlDoc = $.parseXML(item_all_data),
@@ -1546,33 +1478,17 @@ function parseVmDirectory(item_all_data) {
 
   }
 
-  let net_use_results = parseNetuse(ExtractCommandOutput(net_use))
-  let ipconfig_results = parseIpconfig(ExtractCommandOutput(ipconfig))
-  let cpu_usage_results = parseCpuUsage(ExtractCommandOutput(cpu_usage))
-
-  guest_commands_results.push(ipconfig_results, net_use_results, cpu_usage_results)
-
-  guest_commands_results = guest_commands_results.join('\r\n\n');
-
-  return guest_commands_results
-  //mention(net_use_results)
-
 }
 
 function parseTimeZone(item_all_data) {
   //this function is redundant. still keeping it
-
-
-  // let timezone_regex = /<TimeZone>(.*)?<\/TimeZone>/;
-  // let timezone = item_all_data.match(timezone_regex)[1]
-  // let timediff = parseInt(timezone)
 
   return parseInt(item_all_data.match(bigReportObj.ParallelsProblemReport.TimeZone))
 
 
 }
 
-function parsetoolsLog(item_all_data) {
+function parsetoolslog(item_all_data) {
   let last1000chars = item_all_data.slice(item_all_data.length - 1000)
   if (last1000chars.match(/successfully/)) {
     markBullet('tools.log', 'all good')
@@ -1612,14 +1528,6 @@ function parseAppConfig(item_all_data) {
     appConfigContents += bulletSubItem('Default VM Folder', defaultVmFolder[1])
     if (defaultVmFolder[1].match(/^\/Volumes/) && !externalVmFolder) { markBullet('AppConfig', 'External Default VM folder') }//to avoid marking it a second time in case there are multiple such volumes
   }
-
-
-
-
-
-
-
-  //appConfigContents += bulletSubItem('VM Home', AppConfigJson.ServerSettings.UsersPreferences.ParallelsUser.UserWorkspace.UserHomeFolder)
 
   return appConfigContents
 }
@@ -1665,15 +1573,10 @@ function parseAutoStatisticInfo(item_all_data) {
 
 function computerModel(macDatabase) {
 
-  // let computer_model = $('td:contains("Computer Model")');
-  // if (computer_model == null){return}
-
   let macElement = $('td:contains("Computer Model")').next();
   let macModel = bigReportObj.ParallelsProblemReport.ComputerModel
 
   if (!macModel.match(/MacBook|iMac|Macmini|MacPro/)) { return }
-
-  // let cpuElementPath = reportus ? $("body > table:nth-child(7) > tbody > tr:nth-child(11) > td:nth-child(2)") : $('#form1 > table.reportList > tbody > tr:nth-child(14) > td:nth-child(2)')
 
   let mac_cpu = strToXmlToJson(bigReportObj.ParallelsProblemReport.HostInfo).ParallelsHostInfo.Cpu.Model
 
@@ -1687,10 +1590,6 @@ function computerModel(macDatabase) {
   $('td:contains("Computer Model")').next().replaceWith(mac_model_linked)
 
   let macID = macModel.concat(mac_cpu)
-
-  mention(macID);
-
-  mention(macDatabase);
 
   let macSpecs = macDatabase[macID]
 
@@ -1723,37 +1622,26 @@ function googleCsv2JsonMacModels(csv) {
 
   csv = csv.replace(/\"\,\"/gm, ";").replace(/\"/gm, "").replace(/(\]\n|\}\n)/g, "$1delimiter")
 
-
   let headers = csv.split("\n")[0].split(";");
 
-
   csv = csv.substring(csv.indexOf("\n") + 1)
-
 
   let lines = csv.split('\n');
 
   let result = [];
 
+  lines.forEach((line) => {
 
-  for (var i = 0; i < lines.length - 1; i++) {
-
-    let macObj = {};
-
-
-    let currentline = lines[i].split(";");
+    let currentline = line.split(";");
     macID = currentline[0]
-    //mention(currentline);
+
     let specs = {};
-    for (var spec = 0; spec < headers.length; spec++) {
-      specs[headers[spec]] = currentline[spec]
-    }
+    headers.forEach((header, index) => specs[header] = currentline[index])
+
     result[macID] = specs
+    
+  })
 
-    //result.push(macObj);
-
-  }
-
-  //return result; //JavaScript object
   return result; //JSON
 }
 
@@ -1770,12 +1658,12 @@ function fixTime(timediff, time = '') {
   if (time != '') {
     gmt_time = parseInt(time)
   }
-  //mention(gmt_time)
+  mention(gmt_time)
   let time_seconds = gmt_time / 1000;
   let correct_time = new Date(0);
-  //mention(correct_time)
-  //mention(timediff)
-  correct_time.setUTCSeconds(time_seconds + timediff)
+  mention(correct_time)
+  mention(timediff)
+  correct_time.setUTCSeconds(time_seconds + timediff/1000)
   return correct_time.toString().substring(4, 24)
 }
 
@@ -1834,6 +1722,7 @@ function humanFileSize(bytes, si) {
 /** @description  Converst all links to attached screenshots to clickable thumbnails
  */
 function getScreenshots() {
+
   function CreateScreenshot(id, url) {
     $.get(url, function (data) {
       let img = ($('pre > img', data).eq(0).attr('src'))
@@ -1866,7 +1755,6 @@ function getScreenshots() {
   screens_el.find("a").each(function () {
     CreateScreenshot(screenID, this.href)
     screenID++
-
   })
 }
 
@@ -1921,266 +1809,333 @@ function markBullet(bullet_name, icon, html) {
   let icon_url
   let img
 
+  if(typeof icon!='string'){
+    mention(`${{icon}} is not a string. Please check.`)
+    return
+  }
 
-  //if icon is url
-  if (icon.match(/https\:/)) {
-    icon_name = Object.keys(icons).find(key => icons[key] === icon);
+
+  //this means that it's a string name of existing icon from 'icons' object.   
+  //Adding desaturated icon (e.g. 'no_snapshots') 
+  if (icon.match(/^no_/)) {
+    icon_name = icon
+    icon_url = icon.match(/^no_(.*)/) ? icons[icon.match(/^no_(.*)/)[1]] : console.log(`Icon "${icon}" is not present in icons object`)
+    img = `<img src="${icon_url}" title = "${icon_name}" style= "display: linline; height: 1.5em; filter: saturate(0%);">`
+  }else if (icon.match(/https?\:/)) {
+    icon_name = Object.keys(icons).find(key => icons[key] === icon) || '-'
     icon_url = icon
-    img = '<img src="' + icon_url + '" title = "' + icon_name + '" style= "display: linline; height: 1.5em";> '
+    img = `<img src="${icon_url}" title = "${icon_name}" style= "display: linline; height: 1.5em";>`
   }
-  //if icon is name from
-  else if (icon.match(/^no_/)) {
+  
+  //when 'CustomHtml', we manually set HTML for the element.  
+  else if (icon == 'CustomHtml') {
+    img = html ? html : console.log(`HTML for ${icon} not defined`)
+    } else 
+    
+    //rest of cases -- string that must be in 'icons' obj (e.g. 'snapshots')
+    {
     icon_name = icon
-    icon_url = icons[icon.match(/^no_(.*)/)[1]]
-    img = '<img src="' + icon_url + '" title = "' + icon_name + '" style= "display: linline; height: 1.5em; filter: saturate(0%);"> '
-  }
-  else {
-    icon_name = icon
-    icon_url = icons[icon]
-    img = '<img src="' + icons[icon] + '" title = "' + icon_name + '" style= "display: linline; height: 1.5em";> '
+    icon_url = icons[icon]? icons[icon] : console.log(`Icon "${icon}" is not present in icons object`)
+    img = `<img src="${icon_url}" title = "${icon_name}" style= "display: linline; height: 1.5em";>`
   }
 
+  //normally the function adds HTML to bullet, but sometimes we just want it to return the HTML element with the needed icon
+  if (bullet_name == 'returnIcon') { return img }
 
+  
+  $(`button#btn_${bullet_name}`).next().filter(function () {
+    return $(this).text() === bullet_name ? true : false;
+  }).prepend($(img))
 
-  if (icon == 'Custom') {
-    img = html
-  }
-  if (bullet_name == 'this') { return img }
-  else {
-    $(`button#btn_${bullet_name}`).next().filter(function () {
-      return $(this).text() === bullet_name ? true : false;
-    }).prepend($(img));
-
-    //   $('.container > div > a:contains("'+bullet_name+'")').filter(function(){
-    //     return $(this).text() === bullet_name ? true : false;
-    // }).prepend($(img));
-
-
-    //('.container > div > a:contains("'+bullet_name+'")').prepend($(img))
-  }
-}
-
-
-function setupSearch() {
-  $("#doc_top_bar").prepend($(`
-    <div id=nodeSearch style="margin-left:-24em;margin-top:-10%">
-    
-    <div class="button dropdown"> 
-    
-    <select id="nodeselector">
-    </select>
-    
-    </div>
-    
-    <input id="searchField">
-    <button id="previous">Prev.</button><button id="next">Next\></button><a id="resultCounter"style="color:#ff7f50;  font-weight: bold; background-color: unset !important; padding:3px; text-decoration: none;"></a>
-    <span style="*/float: right/*" id="previewBtns">
-    <button id="clearSearch" >clear 🞩</button>
-    <button id="resetPreview" >⟳</button>
-    <button id="expandDown" >expand ▽</button>
-    <button id="expandUp" >expand △</button>
-    </span>
-    <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap; */max-height:90em/*"></pre>
-    </div>
- `))
-
-  $("#searchField").attr('autocomplete', 'off');
-
-  $("#previewBtns").hide()
-
-  $("#expandDown").on('click', function (e) {
-    changePreviewLength(10, 0)
-  });
-
-  $("#expandUp").on('click', function (e) {
-    changePreviewLength(0, 10)
-  });
-
-  $("#resetPreview").on('click', function (e) {
-    changePreviewLength(-1000000000000000, -10000000000)
-  });
-
-  $("#clearSearch").on('click', function (e) {
-    changePreviewLength(-1000000, -100000)
-    $("#searchField").val('')
-    updateResults()
-  });
-
-  $("#next").on('click', function (e) {
-    updateResults(this.id)
-  });
-
-  $("#previous").on('click', function (e) {
-    updateResults(this.id)
-  });
-
-  $("#nodeselector").change(function () {
-    doSearch()
-  })
-
-  $("#searchField").on('keyup', function (e) {
-    if (e.key === 'Enter' || e.keyCode === 13) {
-      updateResults('next')
-    } else { doSearch() }
-  });
-
-
-
-  //  $("#searchField").on('input', function(e) {
-
-  //     doSearch()
-  //  });
-}
-
-function focusOnSearch(nodeName) {
-  $("#nodeselector").val(nodeName)
-  $("#searchField").focus()
-  doSearch()
-}
-
-function AddNodeToSearch(nodeAllData, nodeName) {
-  let excludeFromSearch = ['TimeZone']
-  if (excludeFromSearch.includes(nodeName)) { return }
-  if (nodeContents[nodeName]) { return }
-  $("#nodeselector").append($('<option value="' + nodeName + '">' + nodeName + '</option>'))
-
-
-  if (typeof nodeAllData == "object") { nodeAllData = JSON.stringify(nodeAllData, null, '\t').replace('\\\r\\\n', '\n') };
-  let nodelines = nodeAllData.split("\n")
-
-
-  //if((typeof nodeAllData)!="string"){return}
-  let node = {
-    'lines': nodelines,
-    'curr_index': 0,
-    'curr_indexes': []
-  }
-  nodeContents[nodeName] = node
-
-  let searchIcon = `<img src="${icons.docSearch}" 
-  id=`+ nodeName + `_searchFocus
-  title="search" 
-  style="display: linline; height: 1.5em; margin-left:-1.5em; cursor: pointer; opacity: 0.7;">`
-
-  let nodeID = nodeName.replaceAll('\.', '\\\.')
-
-  $("#btn_" + nodeID).parent().prepend($(searchIcon))
-
-  $("#" + nodeID + "_searchFocus").click(function () {
-    mention(nodeName)
-    focusOnSearch(nodeName)
-  })
-
-
-}
-
-function doSearch() {
-
-  thequery = $("#searchField").val()
-
-  // if (thequery ==''){
-  //   $("#searchResults").html('')
-  //   return
-  // }
-
-  nodeName = $("#nodeselector").val()
-
-  //if (thequery.length<3){return}
-  let lines = nodeContents[nodeName]['lines']
-  nodeContents[nodeName]['curr_index'] = 0
-  nodeContents[nodeName]['curr_indexes'] = []
-
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].match(new RegExp(thequery, 'i'))) { nodeContents[nodeName]['curr_indexes'].push(i) }
-  }
-  updateResults()
-}
-
-function changePreviewLength(down, up) {
-  let currUp = GM_getValue("previewUp", 2)
-  let currDown = GM_getValue("previewDown", 6)
-  let newUp = currUp + up
-  let newDown = currDown + down
-  if (newDown < 6) { newDown = 6 }
-  if (newUp < 2) { newUp = 2 }
-  GM_setValue("previewUp", newUp)
-  GM_setValue("previewDown", newDown)
-  updateResults()
-}
-
-function updateResults(direction) {
-  let previewDown = GM_getValue("previewDown", 6)
-  let previewUp = GM_getValue("previewUp", 2)
-
-
-  if (direction == 'next') {
-    if (nodeContents[nodeName]['curr_index'] == nodeContents[nodeName]['curr_indexes'].length - 1) { nodeContents[nodeName]['curr_index'] = 0 } else { nodeContents[nodeName]['curr_index']++ }
-  } else if (direction == 'previous') {
-    if (nodeContents[nodeName]['curr_index'] == 0) { nodeContents[nodeName]['curr_index'] = nodeContents[nodeName]['curr_indexes'].length - 1 } else { nodeContents[nodeName]['curr_index']-- }
   }
 
-
-  thequery = $("#searchField").val()
-
-
-  if (thequery == '') {
-    $("#previewBtns").hide()
-    $("#searchResults").html('')
-    $("#resultCounter").html('')
-    return
+  //rewrite all that search stuff into a class - DONE
+  class Searchable {
+    constructor (id, prependTo) {
+      this.prependTo = prependTo
+      this.id = id
+  
+      this.thequery
+      this.nodeName
+      this.nodeContents = {}
+      this.previewUp = 2
+      this.previewDown = 6
+  
+      $(this.prependTo).prepend(
+        $(`
+        <div id=${id} style="">
+        <div class="button dropdown"> 
+        <select id="nodeselector">
+        </select>
+        </div>
+        <input id="searchField">
+        <button id="previous">Prev.</button><button id="next">Next\></button><a id="resultCounter"style="color:#ff7f50;  font-weight: bold; background-color: unset !important; padding:3px; text-decoration: none;"></a>
+        <span style="*/float: right/*" id="previewBtns">
+        <button id="clearSearch" >clear 🞩</button>
+        <button id="resetPreview" >⟳</button>
+        <button id="expandDown" >expand ▽</button>
+        <button id="expandUp" >expand △</button>
+        </span>
+        <pre id="searchResults" style="padding:0; border:0px; white-space:pre-wrap; */max-height:90em/*"></pre>
+        </div>
+         `)
+      )
+  
+      this.$el = $(prependTo)
+        .children()
+        .first()
+      this.text = $(this.$el).text()
+  
+      $(this.$el)
+        .find('#searchField')
+        .attr('autocomplete', 'off')
+  
+      $(this.$el)
+        .find('#previewBtns')
+        .hide()
+  
+      $(this.$el)
+        .find('#expandDown')
+        .on('click', e => {
+          this.changePreviewLength(10, 0)
+        })
+  
+      $(this.$el)
+        .find('#expandUp')
+        .on('click', e => {
+          this.changePreviewLength(0, 10)
+        })
+  
+      $(this.$el)
+        .find('#resetPreview')
+        .on('click', e => {
+          this.changePreviewLength(-1000000000000000, -10000000000)
+        })
+  
+      $(this.$el)
+        .find('#clearSearch')
+        .on('click', e => {
+          this.changePreviewLength(-1000000, -100000)
+          $(this.$el)
+            .find('#searchField')
+            .val('')
+          this.updateResults()
+        })
+  
+      $(this.$el)
+        .find('#next')
+        .on('click', e => {
+          this.updateResults('next')
+        })
+  
+      $(this.$el)
+        .find('#previous')
+        .on('click', e => {
+          this.updateResults('previous')
+        })
+  
+      $(this.$el)
+        .find('#nodeselector')
+        .change(() => {
+          this.doSearch()
+        })
+  
+      $(this.$el)
+        .find('#searchField')
+        .on('keyup', e => {
+          if (e.key === 'Enter' || e.keyCode === 13) {
+            this.updateResults('next')
+          } else {
+            this.doSearch()
+          }
+        })
+    }
+  
+    addNodeToSearch (nodeAllData, nodeName) {
+      if (this.nodeContents[nodeName]) {
+        return
+      }
+  
+      $(this.$el)
+        .find('#nodeselector')
+        .append($('<option value="' + nodeName + '">' + nodeName + '</option>'))
+  
+      if (typeof nodeAllData == 'object') {
+        nodeAllData = JSON.stringify(nodeAllData, null, '\t').replace(
+          '\\\r\\\n',
+          '\n'
+        )
+      }
+      let nodelines = nodeAllData.split('\n')
+  
+      //if((typeof nodeAllData)!="string"){return}
+      let node = {
+        lines: nodelines,
+        curr_index: 0,
+        curr_indexes: []
+      }
+      this.nodeContents[nodeName] = node
+  
+     
+    }
+  
+    addSearchButton(nodeName, prependTo) {
+      let searchIcon =
+      `<img src="https://image.flaticon.com/icons/png/128/3126/3126554.png" 
+    id=${this.id}${nodeName}_searchFocus
+    title="search" 
+    style="display: inline; height: 1.5em; margin-left:-1.5em; cursor: pointer; opacity: 0.7;">`
+  
+    let nodeID = nodeName.replaceAll('.', '\\.')
+  
+    $(prependTo).parent().prepend($(searchIcon))
+  
+    $(`#${this.id}${nodeID}_searchFocus`).click(() => {
+        this.focusOnSearch(nodeName)
+      })
+    }
+  
+    focusOnSearch (nodeName) {
+      $(this.$el).find('#nodeselector').val(nodeName)
+      $(this.$el).find('#searchField').focus()
+      this.doSearch()
+    }
+  
+    doSearch () {
+      //if(!this.thequery){return}
+      this.thequery = $(this.$el)
+        .find('#searchField')
+        .val()
+      this.nodeName = $(this.$el).find('#nodeselector').val()
+  
+      let lines = this.nodeContents[this.nodeName]['lines']
+      this.nodeContents[this.nodeName]['curr_index'] = 0
+      this.nodeContents[this.nodeName]['curr_indexes'] = []
+  
+      lines.forEach((line, index) => {
+        if (line.match(new RegExp(this.thequery, 'i'))) {
+          this.nodeContents[this.nodeName]['curr_indexes'].push(index)
+        }
+      })
+  
+      this.updateResults()
+    }
+  
+    changePreviewLength (down, up) {
+      let currUp = this.previewUp
+      let currDown = this.previewDown
+      let newUp = currUp + up
+      let newDown = currDown + down
+      if (newDown < 6) {
+        newDown = 6
+      }
+      if (newUp < 2) {
+        newUp = 2
+      }
+      this.previewUp = newUp
+      this.previewDown = newDown
+      this.updateResults()
+    }
+  
+    updateResults (direction) {
+      let previewDown = this.previewDown
+      let previewUp = this.previewUp
+  
+      if (direction == 'next') {
+        if (
+          this.nodeContents[this.nodeName]['curr_index'] ==
+          this.nodeContents[this.nodeName]['curr_indexes'].length - 1
+        ) {
+          this.nodeContents[this.nodeName]['curr_index'] = 0
+        } else {
+          this.nodeContents[this.nodeName]['curr_index']++
+        }
+      } else if (direction == 'previous') {
+        if (this.nodeContents[this.nodeName]['curr_index'] == 0) {
+          this.nodeContents[this.nodeName]['curr_index'] =
+            this.nodeContents[this.nodeName]['curr_indexes'].length - 1
+        } else {
+          this.nodeContents[this.nodeName]['curr_index']--
+        }
+      }
+  
+      this.thequery = $(this.$el)
+        .find('#searchField')
+        .val()
+  
+      if (this.thequery == '') {
+        $(this.$el).find('#previewBtns').hide()
+        $(this.$el).find('#searchResults').html('')
+        $(this.$el).find('#resultCounter').html('')
+        return
+      }
+      $(this.$el).find('#previewBtns').show()
+  
+      this.nodeName = $(this.$el).find('#nodeselector').val()
+  
+      let lines = this.nodeContents[this.nodeName]['lines']
+      let curr_index = this.nodeContents[this.nodeName]['curr_index']
+      let curr_indexes = this.nodeContents[this.nodeName]['curr_indexes']
+  
+      let result_line = curr_indexes[curr_index]
+  
+      let searchCounterCurrent = parseInt([curr_index]) + 1
+      let searchCounterTotal = curr_indexes.length
+  
+      $(this.$el).find('#resultCounter').html(searchCounterCurrent + '/' + searchCounterTotal)
+  
+      if (searchCounterTotal == 0) {
+        $(this.$el).find('#searchResults').html(
+          '<a style="color:red; font-width:600">Nothing.</a>'
+        )
+        $(this.$el).find('#resultCounter').html('-/-')
+        return
+      }
+  
+      let match = lines[result_line].match(new RegExp(this.thequery, 'i'))[0]
+  
+      let startLine
+      let endLine
+  
+      if (result_line - previewUp < 0) {
+        startLine = result_line
+      } else {
+        startLine = result_line - previewUp
+      }
+      if (result_line + previewDown > lines.length) {
+        endLine = lines.length
+      } else {
+        endLine = result_line + previewDown
+      }
+  
+      //I will clean this up, honestly
+  
+      let resultPreview = []
+        .concat(
+          lines.slice(startLine, result_line),
+          lines[result_line].replaceAll(match, '<u>' + match + '</u>'),
+          lines.slice(result_line + 1, endLine)
+        )
+        .join('\r\n')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll(
+          '&lt;u&gt;' + match + '&lt;/u&gt;',
+          '<u style="color:red; font-weigh:600">' + match + '</u>'
+        )
+        .replaceAll(match, '<mark>' + match + '</mark>')
+  
+      $(this.$el).find('#searchResults').html(resultPreview)
+    }
   }
-  $("#previewBtns").show()
 
-  nodeName = $("#nodeselector").val()
-
-  let lines = nodeContents[nodeName]['lines']
-  let curr_index = nodeContents[nodeName]['curr_index']
-  let curr_indexes = nodeContents[nodeName]['curr_indexes']
-
-
-
-  let result_line = curr_indexes[curr_index]
-
-  let searchCounterCurrent = parseInt([curr_index]) + 1
-  let searchCounterTotal = curr_indexes.length
-
-  $("#resultCounter").html(searchCounterCurrent + "/" + searchCounterTotal)
-
-  if (searchCounterTotal == 0) {
-    $("#searchResults").html('<a style="color:red; font-width:600">Nothing.</a>')
-    $("#resultCounter").html('-/-')
-    return
-  }
-
-  let match = lines[result_line].match(new RegExp(thequery, 'i'))[0];
-
-  let startLine
-  let endLine
-
-  if (result_line - previewUp < 0) { startLine = result_line } else { startLine = result_line - previewUp }
-  if (result_line + previewDown > lines.length) { endLine = lines.length } else { endLine = result_line + previewDown }
-
-
-  //I will clean this up, honestly
-
-
-  let resultPreview = [].concat(lines.slice(startLine, result_line), lines[result_line].replaceAll(match, '<u>' + match + "</u>"), lines.slice(result_line + 1, endLine)).join("\r\n").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('&lt;u&gt;' + match + '&lt;/u&gt;', '<u style="color:red; font-weigh:600">' + match + '</u>').replaceAll(match, "<mark>" + match + "</mark>")
-
-  //$("#header").text(nodeName)
-  $("#searchResults").html(resultPreview)
-
-}
-
-
-
-//all report items for which bullets will be constructed in the bullet container
 const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses', 'GuestCommands', 'GuestOs', "MountInfo", 'HostInfo', 'ClientProxyInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig', 'AppConfig', 'LicenseData', 'InstalledSoftware', 'LaunchdInfo', 'AutoStatisticInfo'];
 //report log links that will be cloned to the bullet container
 const pinned_logs = ["parallels-system.log", "system.log", "system.0.gz.log", "vm.log", "vm.1.gz.log", "dmesg.log", 'install.log', 'tools.log', 'panic.log',];
 //pinned_items that will have a collapsible with parsed info
 const pinned_collapsibles = ["CurrentVm", "LoadedDrivers", 'AllProcesses', 'GuestCommands', 'GuestOs', 'MountInfo', 'HostInfo', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig', 'AppConfig', 'LicenseData', 'InstalledSoftware', 'AutoStatisticInfo', 'LaunchdInfo', 'panic.log'];
 
-const process_immediately = ['CurrentVm', 'LoadedDrivers', 'tools.log', 'GuestOs', 'GuestCommands', 'AllProcesses', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'ClientProxyInfo', 'LicenseData', 'system.log', 'MountInfo', 'HostInfo', 'InstalledSoftware', 'LaunchdInfo', 'AutoStatisticInfo', 'dmesg.log', 'parallels-system.log', "vm.log", 'NetConfig', 'AppConfig', 'install.log', 'panic.log', "system.0.gz.log", "vm.1.gz.log"]
+const process_immediately = ['CurrentVm', 'LoadedDrivers', 'tools.log', 'GuestOs', 'GuestCommands', 'AllProcesses', 'AdvancedVmInfo', 'MoreHostInfo', 'VmDirectory', 'ClientProxyInfo', 'LicenseData', "vm.log", "vm.1.gz.log",'system.log', "system.0.gz.log", 'MountInfo', 'HostInfo', 'InstalledSoftware', 'LaunchdInfo', 'AutoStatisticInfo', 'dmesg.log', 'parallels-system.log', 'NetConfig', 'AppConfig', 'install.log', 'panic.log']
 
 let nodeContents = {}//it't almost raw data. Mostly for the search function.
 
@@ -2209,35 +2164,19 @@ let current_url = window.location.href;
 let report_id = current_url.match(/\d{7,9}/);
 let index
 
-let getMacSpecsDatabase = new Promise(function (resolve, reject) {
-  let macDataBaseUrl = "https://docs.google.com/spreadsheets/d/1lmcn0aRxolP5eXfsuaekRFcMl7dAFjxTe9ItQEUOarM/gviz/tq?tqx=out:csv&sheet=Database"
-  $.get(macDataBaseUrl, function ldd(data) {
-    resolve(data)
-  })
-})
+let macDataBaseUrl = "https://docs.google.com/spreadsheets/d/1lmcn0aRxolP5eXfsuaekRFcMl7dAFjxTe9ItQEUOarM/gviz/tq?tqx=out:csv&sheet=Database"
+
+//let getMacSpecsDatabase = $.get(macDataBaseUrl, () => {})
 
 function doReportOverview() {
-
-  getMacSpecsDatabase.then(function (data) {
+  //console.log(getMacSpecsDatabase);
+  $.get(macDataBaseUrl).then(function (data) {
     let macDatabase = googleCsv2JsonMacModels(data)
     computerModel(macDatabase);
   })
 
-  // changed callback to a promise -- leaving this just in case
-  // let macDataBaseUrl = "https://docs.google.com/spreadsheets/d/1lmcn0aRxolP5eXfsuaekRFcMl7dAFjxTe9ItQEUOarM/gviz/tq?tqx=out:csv&sheet=Database"
-  // $.get(macDataBaseUrl, function ldd(data) {
-
-  //   mention(data);
-  //   let macDatabase = googleCsv2JsonMacModels(data)
-
-  //   computerModel(macDatabase);
-
-  //   })
-
   signatureBugs();
   BulletData('TimeZone', 'time');//should fix it later to get data from the bigJson
-
-  //$("#form1").replaceWith("<div>" + $("#form1").html() + "</div>"); //it's a form that messes up my forms (I don't understand why it's needed. Nothing breaks when replacing it with div)
 
   $("#form1").replaceWith(function () {
     return $("<div />").append($(this).contents());
@@ -2255,12 +2194,6 @@ function doReportOverview() {
     })
   })
 
-  //used to be necessary when some items were loaded manually
-  // $(".btn").one("click", (function() {
-  //     let item_id = this.id.replace("btn_", "");
-  //     //mention(item_id)
-  //     if(process_immediately.indexOf(item_id) == -1) {BulletData(item_id)} 
-  // }));
 }
 
 window.addEventListener("load", function (event) {
@@ -2287,7 +2220,9 @@ window.addEventListener("load", function (event) {
 
   buildMenu();
   getScreenshots();
-  setupSearch()
+  //setupSearch()
+
+  searchNodes = new Searchable('searchNodes', '#doc_top_bar')
 
   getXmlReport(xmlUrl).then(function (xmlData) {
     bigReportObj = xmlData
