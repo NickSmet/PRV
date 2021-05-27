@@ -1,171 +1,395 @@
-<AdvancedVmInfo><AdvancedVmInfo dyn_lists="Hdd 1" id="-1">
-   
-      <Index>0</Index>
-<Parallels_disk_image Version="1.0">
-    <Disk_Parameters>
-        <Disk_size>536870912</Disk_size>
-        <Cylinders>1048576</Cylinders>
-        <PhysicalSectorSize>4096</PhysicalSectorSize>
-        <LogicSectorSize>512</LogicSectorSize>
-        <Heads>16</Heads>
-        <Sectors>32</Sectors>
-        <Padding>0</Padding>
-        <Encryption>
-            <Engine>{00000000-0000-0000-0000-000000000000}</Engine>
-            <Data></Data>
-        </Encryption>
-        <UID>{7f637ea3-4aab-41ff-83d7-b3616179e173}</UID>
-        <Name>Win10 x64 16.1.2 ParHV-0 SSD</Name>
-        <Miscellaneous>
-            <CompatLevel>level2</CompatLevel>
-            <SuspendState>0</SuspendState>
-            <DupBlocksCnt>0</DupBlocksCnt>
-            <CorruptBlocksCnt>0</CorruptBlocksCnt>
-            <UnrefBlocksCnt>0</UnrefBlocksCnt>
-            <OutOfDiskBlocksCnt>0</OutOfDiskBlocksCnt>
-            <BatOverlapBlocksCnt>0</BatOverlapBlocksCnt>
-            <BlocksCnt>0</BlocksCnt>
-            <TruncatedBlocksCnt>0</TruncatedBlocksCnt>
-            <ReferencedBlocksCnt>0</ReferencedBlocksCnt>
-            <Bootable>1</Bootable>
-            <ChangeState>0</ChangeState>
-            <GuestToolsVersion>17.0.0-51235</GuestToolsVersion>
-            <ShutdownState>2</ShutdownState>
-            <FragmentationRatio>:blocksTotal=3627:contigGroups=10</FragmentationRatio>
-        </Miscellaneous>
-    </Disk_Parameters>
-    <StorageData>
-        <Storage>
-            <Start>0</Start>
-            <End>536870912</End>
-            <Blocksize>2048</Blocksize>
-            <Image>
-                <GUID>{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}</GUID>
-                <Type>Compressed</Type>
-                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}.hds</File>
-            </Image>
-            <Image>
-                <GUID>{5fbaabe3-6958-40ff-92a7-860e329aab41}</GUID>
-                <Type>Compressed</Type>
-                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{5fbaabe3-6958-40ff-92a7-860e329aab41}.hds</File>
-            </Image>
-            <Image>
-                <GUID>{6340a12e-90d5-42c1-a520-6d80b241268f}</GUID>
-                <Type>Compressed</Type>
-                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{6340a12e-90d5-42c1-a520-6d80b241268f}.hds</File>
-            </Image>
-            <Image>
-                <GUID>{98146cec-5992-44e9-82a4-9c0a323d8a93}</GUID>
-                <Type>Compressed</Type>
-                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{98146cec-5992-44e9-82a4-9c0a323d8a93}.hds</File>
-            </Image>
-            <Image>
-                <GUID>{ac570b0c-483e-42c6-b997-4a16546842c2}</GUID>
-                <Type>Compressed</Type>
-                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{ac570b0c-483e-42c6-b997-4a16546842c2}.hds</File>
-            </Image>
-            <Image>
-                <GUID>{e90a5b2d-789b-4f5e-a09b-2175a7767900}</GUID>
-                <Type>Compressed</Type>
-                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{e90a5b2d-789b-4f5e-a09b-2175a7767900}.hds</File>
-            </Image>
-            <Image>
-                <GUID>{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}</GUID>
-                <Type>Compressed</Type>
-                <File>Win10 x64 16.1.2 ParHV-0.hdd.0.{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}.hds</File>
-            </Image>
-        </Storage>
-    </StorageData>
-    <Snapshots>
-        <Shot>
-            <GUID>{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}</GUID>
-            <ParentGUID>{6340a12e-90d5-42c1-a520-6d80b241268f}</ParentGUID>
-        </Shot>
-        <Shot>
-            <GUID>{5fbaabe3-6958-40ff-92a7-860e329aab41}</GUID>
-            <ParentGUID>{98146cec-5992-44e9-82a4-9c0a323d8a93}</ParentGUID>
-        </Shot>
-        <Shot>
-            <GUID>{6340a12e-90d5-42c1-a520-6d80b241268f}</GUID>
-            <ParentGUID>{00000000-0000-0000-0000-000000000000}</ParentGUID>
-        </Shot>
-        <Shot>
-            <GUID>{98146cec-5992-44e9-82a4-9c0a323d8a93}</GUID>
-            <ParentGUID>{e90a5b2d-789b-4f5e-a09b-2175a7767900}</ParentGUID>
-        </Shot>
-        <Shot>
-            <GUID>{ac570b0c-483e-42c6-b997-4a16546842c2}</GUID>
-            <ParentGUID>{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}</ParentGUID>
-        </Shot>
-        <Shot>
-            <GUID>{e90a5b2d-789b-4f5e-a09b-2175a7767900}</GUID>
-            <ParentGUID>{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}</ParentGUID>
-        </Shot>
-        <Shot>
-            <GUID>{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}</GUID>
-            <ParentGUID>{00000000-0000-0000-0000-000000000000}</ParentGUID>
-        </Shot>
-    </Snapshots>
-</Parallels_disk_image>
-
-   
-   <NameInArchive/>
-   <Snapshots>
-
-    <SavedStateItem guid="" state="poweroff"></SavedStateItem>
-        <Name></Name>
-        <DateTime></DateTime>
-        <Creator></Creator>
-        <ScreenShot></ScreenShot>
-        <Description><![CDATA[]]></Description>
-        </Snapshots>
-        <AutoCreatedForLinkedClone>-1</AutoCreatedForLinkedClone>
-        <SavedStateItem guid="{edac1a7e-7ba1-4acd-8a00-668fbf7fbe72}" state="poweron">
-            <Name>win20H2 16.1.2 (49151)</Name>
-            <DateTime>2021-02-01 17:04:06</DateTime>
-            <Creator/>
-            <ScreenShot/>
-            <Description><![CDATA[PRL_LEN=0]]></Description>
-            <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
-            <SavedStateItem guid="{e90a5b2d-789b-4f5e-a09b-2175a7767900}" state="suspend">
-                <Name>16.1.3 (49160)</Name>
-                <DateTime>2021-02-01 17:38:10</DateTime>
-                <Creator/>
-                <ScreenShot/>
-                <Description><![CDATA[PRL_LEN=0]]></Description>
-                <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
-                <SavedStateItem guid="{98146cec-5992-44e9-82a4-9c0a323d8a93}" state="suspend" current="yes">
-                    <Name> 16.5.0 (49183)</Name>
-                    <DateTime>2021-04-08 12:17:53</DateTime>
-                    <Creator/>
-                    <ScreenShot/>
-                    <Description><![CDATA[PRL_LEN=0]]></Description>
-                    <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
-                </SavedStateItem>
-            </SavedStateItem>
-        </SavedStateItem>
-        <SavedStateItem guid="{6340a12e-90d5-42c1-a520-6d80b241268f}" state="suspend">
-            <Name>win2004 16.1.2 (49151)</Name>
-            <DateTime>2020-12-24 12:38:00</DateTime>
-            <Creator/>
-            <ScreenShot/>
-            <Description><![CDATA[PRL_LEN=0]]></Description>
-            <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
-            <SavedStateItem guid="{2f5403f9-ae18-46e8-a970-b0e0dc4dfee3}" state="poweron">
-                <Name>16.1.3 (49160)</Name>
-                <DateTime>2021-02-01 16:47:19</DateTime>
-                <Creator/>
-                <ScreenShot/>
-                <Description><![CDATA[PRL_LEN=0]]></Description>
-                <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
-                <SavedStateItem guid="{ac570b0c-483e-42c6-b997-4a16546842c2}" state="suspend">
-                    <Name>17.0.0 (51157) TP4</Name>
-                    <DateTime>2021-05-04 11:39:19</DateTime>
-                    <Creator/>
-                    <ScreenShot/>
-                    <Description><![CDATA[PRL_LEN=0]]></Description>
-                    <AutoCreatedForLinkedClone>0</AutoCreatedForLinkedClone>
-                </SavedStateItem>
-            </SavedStateItem>
-        </SavedStateItem>
-    </AdvancedVmInfo></AdvancedVmInfo>
+<?xml version="1.0" encoding="UTF-8"?>
+<GuestOsInformation dyn_lists="GuestToolsList 1" id="-1">
+   <Started>1</Started>
+   <ConfOsType>Windows</ConfOsType>
+   <ConfOsVersion>Windows 10</ConfOsVersion>
+   <RealOsType>Microsoft Windows, 64bit, 4 cpu(s), page: 4096b</RealOsType>
+   <RealOsVersion>10.0.19042, </RealOsVersion>
+   <RealOsDetails>ServicePack: 0.0; SuiteMask: 0x100; ProductType: 1; ProductEdition: 48</RealOsDetails>
+   <RealOsTypeId>8</RealOsTypeId>
+   <GuestToolsList dyn_lists="GuestToolInfo 32" id="0">
+      <GuestToolInfo dyn_lists="" id="0">
+         <ToolId>parallels.toolgate.guest.win</ToolId>
+         <ToolName>PCI Toolgate device driver</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-04-08T09:57:32Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="1">
+         <ToolId>parallels.ToolsInstallStage.guest.cross</ToolId>
+         <ToolName>Parallels Tools Installation stage</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:31Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData>02000000000000000000000000000000</ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="2">
+         <ToolId>parallels.UsbMouse.guest.win</ToolId>
+         <ToolName>Usb Mouse Synchronization Tool</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:14Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="3">
+         <ToolId>parallels.VideoDevicesInfo.guest.cross</ToolId>
+         <ToolName>Guest video device detection</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:36Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData>02000000000000000000000000000000</ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="4">
+         <ToolId>parallels.ToolsInstallation.guest.win</ToolId>
+         <ToolName>ToolsInstallation</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData>0300000011000000000000000000000025c80000</ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="5">
+         <ToolId>parallels.GracefulShutdown.guest.win</ToolId>
+         <ToolName>Graceful Shutdown tool</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.1</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData>0f000000</ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="6">
+         <ToolId>parallels.DesktopUtilitiesService.guest.win</ToolId>
+         <ToolName>Guest desktop utilities (service-side tool)</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="7">
+         <ToolId>parallels.Toolbox.guest.win</ToolId>
+         <ToolName>Toolbox</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData>01000000ffffffff00000000000000000000000000000000</ToolData>
+         <ToolStringData>1.0</ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="8">
+         <ToolId>parallels.GuestOSInfo.guest.cross</ToolId>
+         <ToolName>Guest OS Information</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.1</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:21Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData>3c01000008000000400000000400000000100000000000000000000000000000180100000a00000000000000624a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001010030000000</ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="9">
+         <ToolId>parallels.PrintingTool.guest.win.service</ToolId>
+         <ToolName>Printing Tool Service</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>Loaded</ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="10">
+         <ToolId>parallels.TimeSynchronization.guest.win</ToolId>
+         <ToolName>Parallels Time Synchronization Tool</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>2.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="11">
+         <ToolId>parallels.UserInputEmulation.guest.cross.TextInput</ToolId>
+         <ToolName>User Input Emulation: TextInput</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="12">
+         <ToolId>parallels.UserInputEmulation.guest.cross.PointScroll</ToolId>
+         <ToolName>User Input Emulation: PointScroll</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="13">
+         <ToolId>parallels.WindowsUpdate.guest.win</ToolId>
+         <ToolName>Windows Update service state</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData>00000000000000000000000000000000</ToolData>
+         <ToolStringData>(service idle)</ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="14">
+         <ToolId>parallels.VmExec.guest.cross</ToolId>
+         <ToolName>VmExec</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="15">
+         <ToolId>parallels.CpuUsage.guest.win</ToolId>
+         <ToolName>prl_cpuusage tool</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="16">
+         <ToolId>parallels.UserInputEmulation.guest.win.plugin</ToolId>
+         <ToolName>User Input Emulation prl_cc plugin</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>2.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="17">
+         <ToolId>parallels.UserInputEmulation.guest.cross.Pax</ToolId>
+         <ToolName>User Input Emulation PAX support</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:51Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="18">
+         <ToolId>parallels.OSEvaluation.guest.win</ToolId>
+         <ToolName></ToolName>
+         <ToolVersion>0.0.0.0</ToolVersion>
+         <ToolInternalVersion>0.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:27Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>N/A</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="19">
+         <ToolId>parallels.SharedHostApps.guest.win.ShellExt2</ToolId>
+         <ToolName>Shared Host Applications Shell Extension</ToolName>
+         <ToolVersion>17.0.0-51237</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:57:23Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="20">
+         <ToolId>parallels.SharedHostApps.guest.win.shellext</ToolId>
+         <ToolName>Shared Host Applications shell extension</ToolName>
+         <ToolVersion>16.1.2-49151</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2020-12-24T08:50:03Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>Unloaded</ToolStringData>
+         <ToolUpdateStatus>UpToDate</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="21">
+         <ToolId>parallels.SFilter.guest.win</ToolId>
+         <ToolName>SFilter driver</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>0.3</ToolInternalVersion>
+         <ToolDate>2021-04-08T09:57:33Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>Loaded</ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="22">
+         <ToolId>parallels.SFilter.guest.win.0x0</ToolId>
+         <ToolName>SFilter driver</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>0.3</ToolInternalVersion>
+         <ToolDate>2021-04-08T09:57:33Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>Connected</ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="23">
+         <ToolId>parallels.SharedFolders.guest.win</ToolId>
+         <ToolName>Shared Folders file system driver</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>4.4</ToolInternalVersion>
+         <ToolDate>2021-04-08T09:57:34Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>psfhost:Mac;</ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="24">
+         <ToolId>parallels.SlidingMouse.guest.win</ToolId>
+         <ToolName>Mouse Synchronization Tool</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-04-08T09:57:35Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="25">
+         <ToolId>parallels.Coherence.guest.win</ToolId>
+         <ToolName>Parallels Coherence Service</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:56:44Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="26">
+         <ToolId>parallels.UserProfileHelper.guest.win</ToolId>
+         <ToolName>User Profile Helper</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-04-08T09:58:30Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="27">
+         <ToolId>parallels.ControlCenter.guest.win</ToolId>
+         <ToolName>Control Center</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:56:31Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>Process 6628(19e4)
+CopyPasteTool.dll(00007FF8BAD50000) started in 00.000 sec
+DesktopUtilities.dll(00007FF89FED0000) started in 00.000 sec
+DragAndDrop.dll(00007FF8B7ED0000) started in 00.031 sec
+FileSharing.dll(00007FF8B6DE0000) started in 00.000 sec
+FullscreenMonitor.dll(00007FF8B6DA0000) started in 00.000 sec
+LayoutSync.dll(00007FF8BAD30000) started in 00.000 sec
+PrintingTool.dll(00007FF8B3640000) started in 00.000 sec
+SharedGuestApps.dll(00007FF8B2590000) started in 00.000 sec
+SharedHostApps.dll(00007FF8B3300000) started in 00.015 sec
+SharedIntApp.dll(00007FF8B1AF0000) started in 00.000 sec
+SharedProfile.dll(00007FF8B2730000) started in 00.000 sec
+ShellInt.dll(00007FF8BA3F0000) started in 00.032 sec
+TouchBar.dll(00007FF8AB970000) started in 00.000 sec
+VSDebug.dll(00007FF8B2580000) started in 00.000 sec
+VSDebug.dll stopped in 00.000 sec with 0 status
+TouchBar.dll stopped in 00.016 sec with 0 status
+ShellInt.dll stopped in 00.093 sec with 0 status
+SharedProfile.dll stopped in 00.016 sec with 0 status
+SharedIntApp.dll stopped in 00.000 sec with 0 status
+SharedHostApps.dll stopped in 00.000 sec with 0 status
+SharedGuestApps.dll stopped in 00.031 sec with 0 status
+PrintingTool.dll stopped in 00.000 sec with 0 status
+LayoutSync.dll stopped in 00.000 sec with 0 status
+FullscreenMonitor.dll stopped in 00.000 sec with 0 status
+FileSharing.dll stopped in 00.110 sec with 0 status
+DragAndDrop.dll stopped in 00.015 sec with 0 status
+DesktopUtilities.dll stopped in 00.047 sec with 0 status
+CopyPasteTool.dll stopped in 00.016 sec with 0 status
+last action: finished, uptime: 55 min 17.562 sec
+</ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="28">
+         <ToolId>parallels.CopyPasteTool.guest.win</ToolId>
+         <ToolName>Copy-paste tool</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:56:31Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="29">
+         <ToolId>parallels.DesktopUtilitiesUser.guest.win</ToolId>
+         <ToolName>Guest desktop utilities (user-side tool)</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:56:31Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData>00000000</ToolData>
+         <ToolStringData></ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="30">
+         <ToolId>parallels.ShellIntHelper.guest.win</ToolId>
+         <ToolName>Shell Integration Helper</ToolName>
+         <ToolVersion>16.5.0-49183</ToolVersion>
+         <ToolInternalVersion>1.0</ToolInternalVersion>
+         <ToolDate>2021-05-13T11:56:31Z</ToolDate>
+         <ToolState>2</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>ProcessId: 5688
+</ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+      <GuestToolInfo dyn_lists="" id="31">
+         <ToolId>parallels.SFilter.guest.win.0x0</ToolId>
+         <ToolName>SFilter driver</ToolName>
+         <ToolVersion>17.0.0-51114</ToolVersion>
+         <ToolInternalVersion>0.3</ToolInternalVersion>
+         <ToolDate>2021-04-08T09:18:12Z</ToolDate>
+         <ToolState>1</ToolState>
+         <ToolData></ToolData>
+         <ToolStringData>Connected</ToolStringData>
+         <ToolUpdateStatus>Mismatched</ToolUpdateStatus>
+      </GuestToolInfo>
+   </GuestToolsList>
+</GuestOsInformation>

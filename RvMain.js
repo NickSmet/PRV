@@ -28,8 +28,9 @@ let reportusPrms = { 'appendTo': '.table-striped', 'nodeProperty': 'Onclick' }
 function getXmlReport(requestLink) {
 
   function sanitizeStringForXML(theString) {
-    let NOT_SAFE_IN_XML_1_0 = /[^\x09\x0A\x0D\x20-\xFF\x85\xA0-\uD7FF\uE000-\uFDCF\uFDE0-\uFFFD]/gm;
-    return theString.replace(NOT_SAFE_IN_XML_1_0, '');
+    let NOT_SAFE_IN_XML_1_0 = /[^\x09\x0A\x0D\x20-\xFF\x85\xA0-\uD7FF\uE000-\uFDCF\uFDE0-\uFFFD];/gm;
+    let otherStuff = /&#x0/gm
+    return theString.replace(NOT_SAFE_IN_XML_1_0, '').replace(otherStuff, '');
   }
 
   return new Promise(function (resolve, reject) {
@@ -44,7 +45,11 @@ function getXmlReport(requestLink) {
 
 function strToXmlToJson(data) {
   if (!data) { return }
-  xmlDoc = $.parseXML(data);
+  try{
+  xmlDoc = $.parseXML(data);}
+  catch{
+    console.log('XML Parsing error');
+    return 'XML Parsing error'}
   jsonObj = x2js.xml2json(xmlDoc);
   return jsonObj
 }
@@ -287,8 +292,13 @@ function parseXMLItem(data, elementName, parameters, adjustments = {}, exclude =
   data = data.replace(/[&]]/g, "")
 
 
-  xmlDoc = $.parseXML(data),
-    $xml = $(xmlDoc);
+  
+
+  try {xmlDoc = $.parseXML(data)}catch{
+    return("XML parsing error.")
+    }
+
+    $xml = $(xmlDoc)
 
   let subBullet = ''
 
@@ -378,25 +388,65 @@ function parseJsonItem(itemObject, parameters = {}, adjustments = {}, exclude = 
 
 function BulletData(nodeName, option) {
 
+  //should totally get rid of this
+  function fixDiapleyedTime(timediff){
+      //need to rewrite the bit below (and maybe FitTime to aligh with it)
+      correcttime = fixTime(timediff)
+
+
+      let timeElementPath = reportus ? "b:contains('Creation Time')" : "table.reportList>tbody:nth-child(1)>tr:nth-child(3)>td:nth-child(3)"
+      let gmtElement = reportus ? $(timeElementPath).parent().next() : $(timeElementPath)
+
+
+      let gmt_string = reportus ? gmtElement.text() : $(".reportList:first tbody:first tr:nth-child(3) script").text()
+
+
+      let gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
+      let gmt_substr = gmt_string.match(gmt_regex)[1];
+      let gmt_time = Date.parse(gmt_substr);
+      //mention(gmt_time)
+      let time_seconds = gmt_time / 1000;
+      //mention(time_seconds)
+      let correct_time1 = new Date(0);
+      //mention(correct_time)
+      //mention(timediff)
+      correct_time1.setUTCSeconds(time_seconds + 10800)
+      gmt_time = correct_time1.toString().substring(4, 24)
+
+      
+
+      
+
+      $(gmtElement).html("Customer: " + correcttime + "</br> Moscow:&nbsp;&nbsp;&thinsp;&thinsp;" + gmt_time)
+
+  }
+
   let item_id = nodeName.replace(/\./g,"")
 
   let bullet_parsed_data
   let panic
 
   let nodesObj = bigReportObj.ParallelsProblemReport
-  let excludeFromSearch = ['TimeZone']
 
-  if (typeof nodesObj[nodeName] == 'string') {
+  let excludeFromSearch = ['TimeZone']
+  let process
+
+
+  if (typeof nodesObj[nodeName] == 'string' || typeof nodesObj[nodeName] == 'object') {
   
     bullet_all_data = nodesObj[nodeName] 
 
       eval(`bullet_parsed_data=parse${item_id}(bullet_all_data)`)
 
-      if (excludeFromSearch.includes(nodeName)) { return }
+      if (!excludeFromSearch.includes(nodeName)){
     searchNodes.addNodeToSearch(bullet_all_data, nodeName)
-    searchNodes.addSearchButton(nodeName,`#btn_${item_id}`)
+    searchNodes.addSearchButton(nodeName,`#btn_${item_id}`)}
 
     if (!bullet_parsed_data) { return }//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
+    if (option == 'time') {
+ 
+      fixDiapleyedTime(bullet_parsed_data)
+    }
     $(`#${item_id}`).html(bullet_parsed_data);
     return
   }
@@ -451,7 +501,7 @@ function BulletData(nodeName, option) {
 
     searchNodes.addNodeToSearch(bullet_all_data, nodeName)
     searchNodes.addSearchButton(nodeName,`#btn_${item_id}`)
-    console.log(nodeName,`#btn_${item_id}`);
+
   
     eval("bullet_parsed_data=parse" + nodeName.replace(/\.|\d|gz/g, '') + "(bullet_all_data)")//because there are things like "system.0.gz.log"
     mention("PARSING " + nodeName)
@@ -898,21 +948,25 @@ function parseClientProxyInfo(item_all_data) {
 }
 
 function parseAdvancedVmInfo(item_all_data) {
+  if(!item_all_data){return}
 
+  let snapshots
 
   //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
   regex1 = /\<\/AdvancedVmInfo\>\n\<\/AdvancedVmInfo\>/gm,
   regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
   regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
   regex4 = /\<AdvancedVmInfo\>\n\<AdvancedVmInfo[^>]*\>/gm,
+  regex5 = /<\?xml version\=\'1\.0\' encoding\=\'UTF\-8\'\?>/
 
   item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
   item_all_data = item_all_data.replace(regex2, "")
   item_all_data = item_all_data.replace(regex3, "")
   item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
+  item_all_data = item_all_data.replace(regex5, '')
+  item_all_data = "<AdvancedVmInfo>"+item_all_data
 
-  mention(item_all_data);
-
+  
   let AdvancedVmInfoContents = ''
 
   if (item_all_data.match(/writeattr/)) {
@@ -936,7 +990,12 @@ function parseAdvancedVmInfo(item_all_data) {
       'Name': 'Name',
       'Created on': 'DateTime'
     }
-    let snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
+
+
+
+    snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
+
+
     let snapshotBullet = buildNodeBullet('Snapshots', 'Custom', snapshots, 'https://image.flaticon.com/icons/svg/387/387157.svg')
     AdvancedVmInfoContents += snapshotBullet
   }
@@ -1308,6 +1367,7 @@ function parseMountInfo(item_all_data) {
 
 function parseGuestOs(item_all_data) {
 
+console.log(item_all_data);
 
   let guestOsVersion = strToXmlToJson(item_all_data).GuestOsInformation.RealOsVersion.replace(/(,$)/g, "") || '--' //removing trailing comma
 
@@ -1331,7 +1391,9 @@ function parseGuestOs(item_all_data) {
 
 function parseGuestCommands(item_all_data) {
 
-  if (!item_all_data['GuestCommand']) { return }
+  if (!item_all_data['GuestCommand']||item_all_data.length < 100) { 
+    markBullet('GuestCommands',icons.warning)
+    return 'GuestCommands empty'}
 
   guestCommandsObj = {}
 
@@ -1342,8 +1404,6 @@ function parseGuestCommands(item_all_data) {
     let commandValue = value['CommandResult']
     guestCommandsObj[command] = commandValue
   }
-
-  if (item_all_data.length < 100) { return "Nothing" } //instead of matching empty guest commands, just ignoring when it's very small
 
   let guest_commands_results = []
 
@@ -1481,7 +1541,6 @@ function parseVmDirectory(item_all_data) {
 }
 
 function parseTimeZone(item_all_data) {
-  //this function is redundant. still keeping it
 
   return parseInt(item_all_data.match(bigReportObj.ParallelsProblemReport.TimeZone))
 
@@ -1552,16 +1611,21 @@ function parseLaunchdInfo(item_all_data) {
 }
 
 function parseAutoStatisticInfo(item_all_data) {
-  mention(item_all_data);
   markBullet('AutoStatisticInfo', 'install')
 
-  let installationHistory = 'PD Installations:\n'
 
-  $(item_all_data).find('PDInstallationHistory').each(function () {
-    installationHistory += `<u>${$(this).find("installedversionname").text()}</u>  ${$(this).find("installedversiondate").text()}\n`
+
+  let installationHistory = item_all_data.InstallationsData.PDInstallationHistoryes.PDInstallationHistory
+
+  let installationHistoryParsed = 'PD Installations:\n'
+
+  if(!Array.isArray(installationHistory)){installationHistory = [installationHistory]} //because it's either an array of objects or a single object
+
+  installationHistory.forEach(installationEntry => {
+  installationHistoryParsed += `<u>${installationEntry.InstalledVersionName}</u>  ${installationEntry.InstalledVersionDate}\n`
   })
 
-  return installationHistory
+  return installationHistoryParsed
 
 }
 
