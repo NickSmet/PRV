@@ -26,11 +26,36 @@ let reportsPrms = { 'appendTo': '.reportList', 'nodeProperty': 'href' }
 let reportusPrms = { 'appendTo': '.table-striped', 'nodeProperty': 'Onclick' }
 
 function getXmlReport(requestLink) {
+  //https://gist.github.com/john-doherty/b9195065884cdbfd2017a4756e6409cc
+  function sanitizeStringForXML(str, removeDiscouragedChars=true) {
+    // let NOT_SAFE_IN_XML_1_0 = /[^\x09\x0A\x0D\x20-\xFF\x85\xA0-\uD7FF\uE000-\uFDCF\uFDE0-\uFFFD];/gm;
+    // let otherStuff = /[\0x1d]/gm
+    // return theString.replace(NOT_SAFE_IN_XML_1_0, '').replace(otherStuff, '');
 
-  function sanitizeStringForXML(theString) {
-    let NOT_SAFE_IN_XML_1_0 = /[^\x09\x0A\x0D\x20-\xFF\x85\xA0-\uD7FF\uE000-\uFDCF\uFDE0-\uFFFD];/gm;
-    let otherStuff = /&#x0/gm
-    return theString.replace(NOT_SAFE_IN_XML_1_0, '').replace(otherStuff, '');
+      // remove everything forbidden by XML 1.0 specifications, plus the unicode replacement character U+FFFD
+      var regex = /((?:[\0-\x08\x0B\f\x0E-\x1F\uFFFD\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]))/g;
+  
+      // ensure we have a string
+      str = String(str || '').replace(regex, '');
+  
+      if (removeDiscouragedChars) {
+  
+          // remove everything discouraged by XML 1.0 specifications
+          regex = new RegExp(
+              '([\\x7F-\\x84]|[\\x86-\\x9F]|[\\uFDD0-\\uFDEF]|(?:\\uD83F[\\uDFFE\\uDFFF])|(?:\\uD87F[\\uDF' +
+              'FE\\uDFFF])|(?:\\uD8BF[\\uDFFE\\uDFFF])|(?:\\uD8FF[\\uDFFE\\uDFFF])|(?:\\uD93F[\\uDFFE\\uD' +
+              'FFF])|(?:\\uD97F[\\uDFFE\\uDFFF])|(?:\\uD9BF[\\uDFFE\\uDFFF])|(?:\\uD9FF[\\uDFFE\\uDFFF])' +
+              '|(?:\\uDA3F[\\uDFFE\\uDFFF])|(?:\\uDA7F[\\uDFFE\\uDFFF])|(?:\\uDABF[\\uDFFE\\uDFFF])|(?:\\' +
+              'uDAFF[\\uDFFE\\uDFFF])|(?:\\uDB3F[\\uDFFE\\uDFFF])|(?:\\uDB7F[\\uDFFE\\uDFFF])|(?:\\uDBBF' +
+              '[\\uDFFE\\uDFFF])|(?:\\uDBFF[\\uDFFE\\uDFFF])(?:[\\0-\\t\\x0B\\f\\x0E-\\u2027\\u202A-\\uD7FF\\' +
+              'uE000-\\uFFFF]|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF]|[\\uD800-\\uDBFF](?![\\uDC00-\\uDFFF])|' +
+              '(?:[^\\uD800-\\uDBFF]|^)[\\uDC00-\\uDFFF]))', 'g');
+  
+          str = str.replace(regex, '');
+      }
+  
+      return str;
+  
   }
 
   return new Promise(function (resolve, reject) {
