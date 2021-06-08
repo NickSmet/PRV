@@ -415,6 +415,7 @@ function BulletData(nodeName, option) {
 
   //should totally get rid of this
   function fixDiapleyedTime(timediff){
+    
       //need to rewrite the bit below (and maybe FitTime to aligh with it)
       correcttime = fixTime(timediff)
 
@@ -973,8 +974,8 @@ function parseClientProxyInfo(item_all_data) {
 }
 
 function parseAdvancedVmInfo(item_all_data) {
-  if(!item_all_data){return}
-
+  if(typeof item_all_data!='string'){return}
+ 
   let snapshots
 
   //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
@@ -1583,6 +1584,9 @@ function parsetoolslog(item_all_data) {
 }
 
 function parseLicenseData(item_all_data) {
+ try{JSON.parse(item_all_data)}catch(e){
+   console.log(e);
+  return}
   let licenseData = JSON.parse(item_all_data)
   let expirationDate = Date.parse(licenseData['license']['main_period_ends_at'])
   if (expirationDate - Date.now() > 5 * 365 * 24 * 3600 * 1000) { markBullet('LicenseData', 'pirated') }
@@ -1602,6 +1606,22 @@ function parseAppConfig(item_all_data) {
 
   let verboseLoggingEnabled = AppConfigJson.ServerSettings.CommonPreferences.Debug.VerboseLogEnabled
 
+
+  let permanentAssignments = ''
+
+  let usbDevices = AppConfigJson.ServerSettings.CommonPreferences.UsbPreferences.UsbIdentity
+ 
+
+  usbDevices.forEach(usbDevice => {
+    if (usbDevice.AssociationsNew.Association){
+      permanentAssignments += `<u>Name</u>: ${usbDevice.FriendlyName}\n<u>ID</u>: ${usbDevice.SystemName}\n<u>Connect to</u>: ${usbDevice.AssociationsNew.Association.VmUuid}\n\n`
+    };
+    })
+
+  if(permanentAssignments.length>10){permanentAssignments = buildNodeBullet('Perm. Assignments', 'Custom', permanentAssignments, icons.usb)}
+  else{permanentAssignments = buildNodeBullet('Perm. Assignments', 'blank', permanentAssignments, icons.usb)}
+  
+
   if (verboseLoggingEnabled == 1) { markBullet('AppConfig', 'verbose logging') }
   appConfigContents += bulletSubItem('Verbose logging', verboseLoggingEnabled)
 
@@ -1612,6 +1632,8 @@ function parseAppConfig(item_all_data) {
     appConfigContents += bulletSubItem('Default VM Folder', defaultVmFolder[1])
     if (defaultVmFolder[1].match(/^\/Volumes/) && !externalVmFolder) { markBullet('AppConfig', 'External Default VM folder') }//to avoid marking it a second time in case there are multiple such volumes
   }
+
+  appConfigContents += permanentAssignments
 
   return appConfigContents
 }
@@ -1638,7 +1660,7 @@ function parseLaunchdInfo(item_all_data) {
 function parseAutoStatisticInfo(item_all_data) {
   markBullet('AutoStatisticInfo', 'install')
 
-
+  if(!item_all_data.InstallationsData){return "Looks like empty xml."}
 
   let installationHistory = item_all_data.InstallationsData.PDInstallationHistoryes.PDInstallationHistory
 
@@ -1752,7 +1774,7 @@ function fixTime(timediff, time = '') {
   let correct_time = new Date(0);
   mention(correct_time)
   mention(timediff)
-  correct_time.setUTCSeconds(time_seconds + timediff/1000)
+  correct_time.setUTCSeconds(time_seconds + timediff)
   return correct_time.toString().substring(4, 24)
 }
 
