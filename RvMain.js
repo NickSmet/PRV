@@ -1618,7 +1618,8 @@ function parseAppConfig(item_all_data) {
     };
     })
 
-  if(permanentAssignments.length>10){permanentAssignments = buildNodeBullet('Perm. Assignments', 'Custom', permanentAssignments, icons.usb)}
+  if(permanentAssignments.length>10){permanentAssignments = buildNodeBullet('Perm. Assignments', 'Custom', permanentAssignments, icons.usb)
+markBullet('AppConfig','usb', '','Perm. Assignments')}
   else{permanentAssignments = buildNodeBullet('Perm. Assignments', 'blank', permanentAssignments, icons.usb)}
   
 
@@ -1911,14 +1912,17 @@ function signatureBugs() {
  * semi-ok (e.g. when some extra kexts are loaded) 
  * or bad (e.g. LittleSnitch or Hackintosh)
  * @param {string} bullet_name Actual name (text in <div></div> ) of the bullet.
- * @param {string} color What icon to mark the aforementioned bullet. For now it's 'all good', 'warning','bad'
- * if icon is set to 'custom, then the appended element is defined by
+ * @param {string} icon 
  * @param {string} html if icon is 'custom', this defines element to be appended as a mark
  */
-function markBullet(bullet_name, icon, html) {
-  let icon_name
+function markBullet(bullet_name, icon, html, title) {
+  console.log(title);
   let icon_url
   let img
+
+  //heluva spaghetti by now. Need to rethink. Probably.
+
+  if(!title&&!icon.match(/https?\:/)){title = icon}else if(!title&&icon.match(/https?\:/)){title = Object.keys(icons).find(key => icons[key] === icon) || '-'}
 
   if(typeof icon!='string'){
     mention(`${{icon}} is not a string. Please check.`)
@@ -1929,13 +1933,11 @@ function markBullet(bullet_name, icon, html) {
   //this means that it's a string name of existing icon from 'icons' object.   
   //Adding desaturated icon (e.g. 'no_snapshots') 
   if (icon.match(/^no_/)) {
-    icon_name = icon
     icon_url = icon.match(/^no_(.*)/) ? icons[icon.match(/^no_(.*)/)[1]] : console.log(`Icon "${icon}" is not present in icons object`)
-    img = `<img src="${icon_url}" title = "${icon_name}" style= "display: linline; height: 1.5em; filter: saturate(0%);">`
+    img = `<img src="${icon_url}" title = "${title}" style= "display: linline; height: 1.5em; filter: saturate(0%);">`
   }else if (icon.match(/https?\:/)) {
-    icon_name = Object.keys(icons).find(key => icons[key] === icon) || '-'
     icon_url = icon
-    img = `<img src="${icon_url}" title = "${icon_name}" style= "display: linline; height: 1.5em";>`
+    img = `<img src="${icon_url}" title = "${title}" style= "display: linline; height: 1.5em";>`
   }
   
   //when 'CustomHtml', we manually set HTML for the element.  
@@ -1945,9 +1947,8 @@ function markBullet(bullet_name, icon, html) {
     
     //rest of cases -- string that must be in 'icons' obj (e.g. 'snapshots')
     {
-    icon_name = icon
     icon_url = icons[icon]? icons[icon] : console.log(`Icon "${icon}" is not present in icons object`)
-    img = `<img src="${icon_url}" title = "${icon_name}" style= "display: linline; height: 1.5em";>`
+    img = `<img src="${icon_url}" title = "${title}" style= "display: linline; height: 1.5em";>`
   }
 
   //normally the function adds HTML to bullet, but sometimes we just want it to return the HTML element with the needed icon
