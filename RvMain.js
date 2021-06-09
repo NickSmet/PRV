@@ -1221,7 +1221,12 @@ function parseLoadedDrivers(item_all_data) {
       return;
     }
 
-    if (non_apple_arr == null && prl_arr == null) {
+    
+    //need to make some object to put all this into
+    let HostInfo = strToXmlToJson(bigReportObj['ParallelsProblemReport']['HostInfo'])
+    let CPU = HostInfo.ParallelsHostInfo.Cpu.Model
+
+    if (non_apple_arr == null && prl_arr == null && CPU!='Apple M1') {
       $('#LoadedDrivers').html('Only apple, <b style="color:red">no prl(!)</b>');
       markBullet('LoadedDrivers', 'serious warning')
       return;
@@ -1242,7 +1247,7 @@ function parseLoadedDrivers(item_all_data) {
       }
     }
 
-    if (prl_arr == null) {
+    if (prl_arr == null&&CPU!='Apple M1') {
       non_apple_arr.unshift('<b style="color:red"> no prl(!)</b>');
       markBullet('LoadedDrivers', 'serious warning')
     }
@@ -1614,7 +1619,9 @@ function parseAppConfig(item_all_data) {
 
   usbDevices.forEach(usbDevice => {
     if (usbDevice.AssociationsNew.Association){
-      permanentAssignments += `<u>Name</u>: ${usbDevice.FriendlyName}\n<u>ID</u>: ${usbDevice.SystemName}\n<u>Connect to</u>: ${usbDevice.AssociationsNew.Association.VmUuid}\n\n`
+      let connectTo
+      if (usbDevice.AssociationsNew.Association.Action==1){connectTo=usbDevice.AssociationsNew.Association.VmUuid}else{connectTo='This Mac'}
+      permanentAssignments += `<u>Name</u>: ${usbDevice.FriendlyName}\n<u>ID</u>: ${usbDevice.SystemName}\n<u>Connect to</u>: ${connectTo}\n\n`
     };
     })
 
@@ -1692,9 +1699,9 @@ function computerModel(macDatabase) {
 
   let mac_cpu = strToXmlToJson(bigReportObj.ParallelsProblemReport.HostInfo).ParallelsHostInfo.Cpu.Model
 
-  mac_cpu = mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/) ? mac_cpu.toUpperCase().match(/ ([^(CPU)]*) CPU/)[1] : mac_cpu
+  mac_cpu = mac_cpu.toUpperCase().match(/ ([^ ]*) CPU/) ? mac_cpu.toUpperCase().match(/ ([^ ]*) CPU/)[1] : mac_cpu
 
-  mention(mac_cpu)
+  console.log(mac_cpu)
 
   let mac_url = 'http://everymac.com/ultimate-mac-lookup/?search_keywords=' + macModel
 
