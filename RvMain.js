@@ -3,6 +3,19 @@
 let x2js = new X2JS();
 let bigReportObj
 let params
+let niceReportObj = {
+report:{},
+pd:{
+  netConfig:[]
+},
+host:{},
+virtHw:{},
+guestOS:{
+  adapters:[],
+  networkDrives:[],
+  networkAdapters:[]
+},
+}
 
 let limitLogging = 'AdvancedVmInfo'
 let currentlyProcessedNode
@@ -203,6 +216,8 @@ function constructNodeBullets(nodeNamesArray, nodesType, appendNodeBulletsTo) {
  * @param {Object} icon_url  
  */
 function buildNodeBullet(item_name, bullet_type, data, icon_url, sublevel = 0) {
+
+  if(icon_url){icon_url=markBullet('returnIconUrl',icon_url)}
   //if(!data){return}
   let sublevel_space = "    "
 
@@ -374,26 +389,27 @@ function parseXMLItem(data, elementName, parameters, adjustments = {}, exclude =
 }
 
 
-function parseJsonItem(itemObject, parameters = {}, adjustments = {}, exclude = {}) {
+function parseJsonItem(itemObject, parameters = {}, adjustments = {}, exclude = {}, addToNiceReportObj) {
   if (!itemObject) { return }
+  
   let subBullet = ''
-
   //it's either "CdRom:{Enabled:0,Connected:1...}" or CdRom:{0:{Enabled:0,Connected:1...},1:{Enabled:0,Connected:1...}}
-  if (itemObject[0]) {
+  if (Array.isArray(itemObject)) {
     loopItems:
     for (const item in itemObject) {
       loopSubItems:
       for (const property in exclude) {
         if (itemObject[item][property] == exclude[property]) { continue loopItems }
       }
-
       let subItem = CreateSubItem(itemObject[item])
-      subBullet = subItem ? subBullet + CreateSubItem(itemObject[item]) + '\n' : subBullet;
+      subBullet = subItem ? subBullet + subItem + '\n' : subBullet;
     }
   } else {
     subBullet = CreateSubItem(itemObject) + '\n'
   }
+
   function CreateSubItem(itemObject) {
+    niceReportSubObject = {}
     let subItem = ''
     for (const property in parameters) {
       let id = parameters[property]
@@ -402,7 +418,11 @@ function parseJsonItem(itemObject, parameters = {}, adjustments = {}, exclude = 
 
       if (hName in adjustments) { value = adjustSpec(value, adjustments[hName]) }
       subItem += '<u>' + hName + '</u>: ' + value + '\n'
+      if(addToNiceReportObj){niceReportSubObject[hName]=value}
       //mention(`${hName}: ${value}`);
+    }
+    if(addToNiceReportObj){
+      ObjByString(niceReportObj,addToNiceReportObj).push(niceReportSubObject)
     }
     return subItem
   }
@@ -414,7 +434,7 @@ function parseJsonItem(itemObject, parameters = {}, adjustments = {}, exclude = 
 function BulletData(nodeName, option) {
 
   //should totally get rid of this
-  function fixDiapleyedTime(timediff){
+  function fixDisplayedTime(timediff){
     
       //need to rewrite the bit below (and maybe FitTime to aligh with it)
       correcttime = fixTime(timediff)
@@ -471,7 +491,7 @@ function BulletData(nodeName, option) {
     if (!bullet_parsed_data) { return }//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
     if (option == 'time') {
  
-      fixDiapleyedTime(bullet_parsed_data)
+      fixDisplayedTime(bullet_parsed_data)
     }
     $(`#${item_id}`).html(bullet_parsed_data);
     return
@@ -618,7 +638,6 @@ let ObjByString = function (o, s) {
 }
 
 
-
 function parseCurrentVm(CurrentVmData) {
 
   let vmObj = strToXmlToJson(CurrentVmData).ParallelsVirtualMachine
@@ -643,13 +662,16 @@ function parseCurrentVm(CurrentVmData) {
 
   let VMCDs = buildNodeBullet('CDs', 'Custom', VMCDs_data, iconVMCDs)
 
-  let ParamVMNETWORKs = { 'Type': 'AdapterType', 'Mode': 'EmulatedType', 'Adapter name': 'AdapterName', "Mac": 'MAC', 'Conditioner': 'LinkRateLimit.Enable' }
-  let AdjustsVMNETWORKs = { 'Type': 'networkAdapter', 'Mode': 'networkMode', 'Mac': 'networkMac' }
+  let ParamVMNETWORKs = { 'Type': 'AdapterType', 'Connected':'Connected' , 'Mode': 'EmulatedType', 'Adapter name': 'AdapterName', "Mac": 'MAC', 'Conditioner': 'LinkRateLimit.Enable'}
+  let AdjustsVMNETWORKs = { 'Type': 'networkAdapter', 'Mode': 'networkMode', 'Mac': 'networkMac','Connected':'networkConnected' }
   let iconVMNETWORKs = icons.networkAdapter
 
   //var VMNETWORKs_data = parseXMLItem (item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
   networkAdapters = vmObj.Hardware.NetworkAdapter
   let VMNETWORKs_data = parseJsonItem(networkAdapters, ParamVMNETWORKs, AdjustsVMNETWORKs)
+
+  if(VMNETWORKs_data.match(/<u>Connected<\/u> <b><u style="color:red">0!<\/u><\/b>/)){iconVMNETWORKs=icons.adapterNotConnected}
+ 
   let VMNETWORKs = buildNodeBullet('Networks', 'Custom', VMNETWORKs_data, iconVMNETWORKs)
 
 
@@ -670,6 +692,7 @@ function parseCurrentVm(CurrentVmData) {
     'AutoStart': vmObj.Settings.Startup.AutoStart,
     'OnVmWindowClose': vmObj.Settings.Shutdown.OnVmWindowClose,
     'Pause When Possible': vmObj.Settings.Tools.Coherence.PauseIdleVM,
+    'Rollback Mode': vmObj.Settings.Runtime.UndoDisks,
 
     'Section0': 'General',
 
@@ -745,6 +768,7 @@ function parseCurrentVm(CurrentVmData) {
 
   if (VMHDDs.match(externalVhddRegex) && bigReportObj.ParallelsProblemReport.ProductName != 'Parallels Desktop for Chrome OS') { markBullet('CurrentVm', icons["external vHDD"]) }
 
+  if(vmObj.Settings.Runtime.UndoDisks=='1'){markBullet('CurrentVm', icons.rollbackMode, '','Rollback Mode')}
 
   function markConditioner(adapter) {
 
@@ -932,7 +956,10 @@ function parseNetConfig(item_all_data) {
     'IPv6 DHCP Ehabled': 'HostOnlyNetwork.DHCPv6Server.Enabled'
   }
   let networkExclude = { 'NetworkType': 0 }
-  let network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams, {}, networkExclude)
+  let network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams, {}, networkExclude, 'pd.netConfig')
+
+  console.log(niceReportObj);
+  if(!network.match('Host Only Networking')||!network.match('Shared Networking')){markBullet('NetConfig','noNetwork','','Something missing!')}//good enough
 
   if (macOS < 11) { return network }
 
@@ -1438,17 +1465,6 @@ function parseGuestCommands(item_all_data) {
 
   let guest_commands_results = []
 
-  function ExtractCommandOutput(command) {
-
-    let command_result_regex = reportus ? new RegExp('\<CommandName\>\<\!\\\[CDATA\\\[' + command + '\\\]\\\]\>\<\/CommandName\>\n +\<CommandResult\>\<\!\\\[CDATA\\\[([^$]*?)\\\]\\\]\>\<\/CommandResult\>') : new RegExp('\<CommandName\>' + command + '<\/CommandName>\n +\<CommandResult\>([^$]*?)\<\/CommandResult\>')
-
-
-    if (item_all_data.match(command_result_regex)) {
-      let command_result = item_all_data.match(command_result_regex)[1]
-
-      return command_result
-    }
-  }
 
   let net_use = guestCommandsObj["net use"] || ''
   let ipconfig = guestCommandsObj["ipconfig \/all"] || ''
@@ -1481,26 +1497,31 @@ function parseGuestCommands(item_all_data) {
       let i
       for (i = 0; i < adapters.length; i++) {
         let adapter = []
+        let adapterObj = {}
 
         try {
           let adapter_name = (i + 1 + ".") + adapters[i].match(/\n([ \w][^\n\:]*)\:/)[1]
-          //mention(adapter_name)
           adapter.push(adapter_name)
+          adapterObj['name'] = adapters[i].match(/\n([ \w][^\n\:]*)\:/)[1]
         } catch (e) { }
 
         try {
           let adapter_discr = adapters[i].match(/\n[ \w][^\n\:]*\:[^$]*?:[^$]*?:([^\n]*?)\n/)[1]
           adapter.push(adapter_discr)
-        } catch (e) { } // If func1 throws error, try func2
-
+          adapterObj['discriptor'] = adapter_discr
+        } catch (e) { } 
         try {
           let adapter_ip = "IP: " + adapters[i].match(/IPv4[^$]*?: (\d{1,3}(\.\d{1,3}){3})/)[1]
           adapter.push(adapter_ip)
-        } catch (e) { } // If func2 throws error, try func3
+          adapterObj['ip'] = adapters[i].match(/IPv4[^$]*?: (\d{1,3}(\.\d{1,3}){3})/)[1]
+        } catch (e) { } 
 
         adapter = adapter.join('\r\n');
         //mention(adapter)
+
         adapters_output.push(adapter)
+
+        niceReportObj.guestOS.adapters.push(adapterObj)
 
       }
       adapters_output.unshift("_Netw. Adapters:_")
@@ -1816,6 +1837,9 @@ function adjustSpec(spec_value, adjustment) {
       break;
     case 'networkMac':
       spec_value = spec_value.replace(/(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)/, '$1:$2:$3:$4:$5:$6')
+    case 'networkConnected':
+      if(spec_value=='0'){spec_value=`<b><u style="color:red">0!</u></b>`}
+      markBullet('Networks','warning','','Disconnected adapter!')
     // // break;
   }
   return spec_value
@@ -1923,7 +1947,10 @@ function signatureBugs() {
  * @param {string} html if icon is 'custom', this defines element to be appended as a mark
  */
 function markBullet(bullet_name, icon, html, title) {
+
   console.log(title);
+  console.log(icon)
+  console.log(bullet_name)
   let icon_url
   let img
 
@@ -1960,6 +1987,7 @@ function markBullet(bullet_name, icon, html, title) {
 
   //normally the function adds HTML to bullet, but sometimes we just want it to return the HTML element with the needed icon
   if (bullet_name == 'returnIcon') { return img }
+  if (bullet_name == 'returnIconUrl') { return icon_url }
 
   
   $(`button#btn_${bullet_name}`).next().filter(function () {
@@ -2304,9 +2332,10 @@ function doReportOverview() {
   for (let item in process_immediately) {
     setTimeout(BulletData(process_immediately[item]), timeout)
     timeout = +80
-
-
   }
+
+  performChecks()
+
   $(".btn").click(function () {
     $(this).text(function (i, old) {
       return old == '➤' ? '▼' : '➤';//took it here: https://stackoverflow.com/questions/16224636/twitter-bootstrap-collapse-change-display-of-toggle-button
@@ -2352,6 +2381,10 @@ window.addEventListener("load", function (event) {
 
 //note to self -- start hosting those somewhere (github even?)
 const icons = {
+  'rollbackMode':'https://user-images.githubusercontent.com/10322311/121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png',
+  'adapterNotConnected':'https://image.flaticon.com/icons/png/128/2183/2183366.png',
+  'noNetwork':'https://image.flaticon.com/icons/png/128/2313/2313811.png',
+  'apipa':'https://image.flaticon.com/icons/png/128/2333/2333550.png',
   'Low storage': 'https://uxwing.com/wp-content/themes/uxwing/download/16-business-and-finance/90-percent.svg',
   'DisplayLink device!': 'https://image.flaticon.com/icons/png/128/3273/3273973.png',
   'onedrive': 'https://image.flaticon.com/icons/png/128/2335/2335410.png',
@@ -2412,5 +2445,12 @@ const icons = {
   'docSearch': 'https://image.flaticon.com/icons/png/128/3126/3126554.png',
   'External Default VM folder': 'https://image.flaticon.com/icons/png/128/3637/3637372.png',
   'not PvmDefault': 'https://image.flaticon.com/icons/png/128/983/983874.png'
+
+}
+
+
+
+function performChecks(){
+  //if(niceReportObj.guestOS.adapters[0].ip='192.168.1.159'){markBullet('GuestCommands','warning','','sobaaaaaad!')}
 
 }
