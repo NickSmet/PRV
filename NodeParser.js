@@ -465,7 +465,7 @@ function parseClientProxyInfo(item_all_data) {
 
 function parseAdvancedVmInfo(item_all_data) {
     if(typeof item_all_data!='string'){return}
-
+    console.log(item_all_data)
     let snapshots
 
     //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
@@ -480,7 +480,7 @@ function parseAdvancedVmInfo(item_all_data) {
     item_all_data = item_all_data.replace(regex3, "")
     item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
     item_all_data = item_all_data.replace(regex5, '')
-    //item_all_data = "<AdvancedVmInfo>"+item_all_data
+    if(!item_all_data.match(/^<AdvancedVmInfo>/)) {item_all_data = '<AdvancedVmInfo>'+item_all_data}
 
     let AdvancedVmInfoContents = ''
 

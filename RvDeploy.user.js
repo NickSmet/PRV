@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels ReportViewer 
-// @version            1.2.0.0
+// @version            1.2.0.1
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/RvDeploy.user.js

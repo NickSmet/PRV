@@ -98,6 +98,7 @@ function strToXmlToJson(data) {
   catch(e){
     console.log('XML Parsing error');
     console.log(e)
+    console.log(data)
     return 'XML Parsing error'}
   jsonObj = x2js.xml2json(xmlDoc);
   return jsonObj
@@ -309,6 +310,7 @@ function parseXMLItem(data, elementName, parameters, adjustments = {}, exclude =
   
 
   try {xmlDoc = $.parseXML(data)}catch{
+    console.log(data)
     return("XML parsing error.")
     }
 
