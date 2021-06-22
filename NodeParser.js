@@ -107,11 +107,15 @@ function parseCurrentVm(CurrentVmData) {
     let VMUSBs = buildNodeBullet('USBs', 'Custom', VMUSBs_data, iconVMUSBs)
 
     let currentVmSpecs = {
-        'Section5': 'Startup',
-        'AutoStart': vmObj.Settings.Startup.AutoStart,
-        'OnVmWindowClose': vmObj.Settings.Shutdown.OnVmWindowClose,
+        'Section5': 'Startup/Shutdown',
+        'Start Automatically': vmObj.Settings.Startup.AutoStart,
+        'Startup View' : vmObj.Settings.Startup.WindowMode,
         'Pause When Possible': vmObj.Settings.Tools.Coherence.PauseIdleVM,
         'Rollback Mode': vmObj.Settings.Runtime.UndoDisks,
+        'On Mac Shutdown': vmObj.Settings.Shutdown.AutoStop,
+        'On VM Shutdown': vmObj.Settings.Runtime.ActionOnStop,
+        'On Window close': vmObj.Settings.Shutdown.OnVmWindowClose,
+        'Reclaim disk space on shutdown': vmObj.Settings.Shutdown.ReclaimDiskSpace,
 
         'Section0': 'General',
 
@@ -140,6 +144,7 @@ function parseCurrentVm(CurrentVmData) {
         'Hypervisor': vmObj.Settings.Runtime.HypervisorType,
         'Adaptive Hypervisor': vmObj.Settings.Runtime.EnableAdaptiveHypervisor,
         'Nested Virtualization': vmObj.Hardware.Cpu.VirtualizedHV,
+
         'Section2': 'Sharing',
         'Isolated': vmObj.Settings.Tools.IsolatedVm,
         'Shared profile': vmObj.Settings.Tools.SharedProfile.Enabled,
@@ -175,6 +180,29 @@ function parseCurrentVm(CurrentVmData) {
         'TPM': vmObj.Hardware.TpmChip?.Type,
         'Subbullet1': VMUSBs
     };
+
+    let specs_to_name = {
+        'Lan Adapter': { 0: 'Legacy', 1: 'RealTek RTL8029AS', 2: 'Intel(R) PRO/1000MT', 3: 'Virtio', 4: 'Intel(R) Gigabit CT (82574l)' },
+        'Network': { 1: 'Shared', 2: 'Bridged' },
+        'Opt.TimeMachine': { 1: 'On', 2: 'Off' },
+        'Graphic Switching': { 1: 'Off', 0: 'On' },
+        'Hypervisor': { 0: 'Parallels', 1: 'Apple' },
+        'Video Mode': { 0: 'Scaled', 1: 'Best for Retina', 2: 'Best for external displays' },
+        'Scale To Fit Screen': { 0: 'Off', 1: 'Auto', 2: 'Keep ratio', 3: 'Stretch' },
+        'Keyboard': { 0: 'Don\'t optimize for games', 1: 'Optimize for games', 2: 'WTF?', 3: 'Auto' },
+        'Mouse': { 0: 'Optimize for games', 1: 'Don\'t optimize for games', 2: 'Auto', 3: 'WTF?' },
+        'On Window close' : {1 : 'Suspend', 4 : 'ShutDown', 0 : 'Force to stop', 5 : 'Keep running in background', 2 : 'Ask me what to do' },
+        'On Mac Shutdown' : {0 : 'Stop', 1 : 'Suspend', 3 : 'Shut down'},
+        'On VM Shutdown' : {0 : 'Keep window open', 1 : 'Close window', 3 : 'Quit Parallels Desktop'},
+        'Startup View' : {0 : 'Same as last time', 1 : 'Window', 2 : 'Full Screen', 3 : 'Cohrence', 4 : 'Picture in Picture', 5 : 'Headless'},
+        'Start Automatically' : {0 : 'Never', 1 : 'When Mac Starts', 2 : '' ,
+            3 : `When Parallels Desktop starts, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`,
+            4 : `When window opens, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`,
+            5: `When user logs in, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`},
+
+
+
+    }
 
     if (VMHDDs.match(/<u>Expanding<\/u>: 0/) && VMHDDs.match(/<u>Actual Size<\/u>: 0 B/)) { markBullet('CurrentVm', 'Boot Camp') }
     else {//if it's Boot Camp, we don't care about the rest of vHDD info.
@@ -263,7 +291,7 @@ function parseCurrentVm(CurrentVmData) {
     if (currentVmSpecs['Nested Virtualization'] == 1) { markBullet("CurrentVm", "Nested") }
 
     //Identifying if headless and marking bullet accordingly
-    if (currentVmSpecs['AutoStart'] == 5 || currentVmSpecs['AutoStart'] == 1 || currentVmSpecs['OnVmWindowClose'] == 5) { markBullet("CurrentVm", "headless") }
+    if (currentVmSpecs['Start Automatically'] == 5 || currentVmSpecs['Start Automatically'] == 1 || currentVmSpecs['On Window close'] == 5) { markBullet("CurrentVm", "headless") }
     else {//markBullet("CurrentVm",'not headless')
     }
 
@@ -275,18 +303,7 @@ function parseCurrentVm(CurrentVmData) {
 
     //Identifying if has bootflags and marking bullet accordingly
     if (currentVmSpecs['<b>Boot Flags</b>'] != '') { markBullet("CurrentVm", "flags") }
-    let specs_to_name = {
-        'Lan Adapter': { 0: 'Legacy', 1: 'RealTek RTL8029AS', 2: 'Intel(R) PRO/1000MT', 3: 'Virtio', 4: 'Intel(R) Gigabit CT (82574l)' },
-        'Network': { 1: 'Shared', 2: 'Bridged' },
-        'Opt.TimeMachine': { 1: 'On', 2: 'Off' },
-        'Graphic Switching': { 1: 'Off', 0: 'On' },
-        'Hypervisor': { 0: 'Parallels', 1: 'Apple' },
-        'Video Mode': { 0: 'Scaled', 1: 'Best for Retina', 2: 'Best for external displays' },
-        'Scale To Fit Screen': { 0: 'Off', 1: 'Auto', 2: 'Keep ratio', 3: 'Stretch' },
-        'Keyboard': { 0: 'Don\'t optimize for games', 1: 'Optimize for games', 2: 'WTF?', 3: 'Auto' },
-        'Mouse': { 0: 'Optimize for games', 1: 'Don\'t optimize for games', 2: 'Auto', 3: 'WTF?' }
 
-    }
 
 
     if (currentVmSpecs['TPM'] != 0 && currentVmSpecs['TPM']) {

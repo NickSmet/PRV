@@ -849,7 +849,7 @@ function signatureBugs() {
       let loadingMessage = $('</br><span id="loadingBug">Loading bug info...</span></br>')
 
       loadingMessage.insertAfter(this)
-
+      console.log(signatureObject)
       $.get(signatureObject.href, function (data) {
         bugJiraId = $('div.headerMain > h2:nth-child(6) > span > a', data).text()
 
