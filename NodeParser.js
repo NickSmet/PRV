@@ -110,7 +110,7 @@ function parseCurrentVm(CurrentVmData) {
         'Section5': 'Startup/Shutdown',
         'Start Automatically': vmObj.Settings.Startup.AutoStart,
         'Startup View' : vmObj.Settings.Startup.WindowMode,
-        'Pause When Possible': vmObj.Settings.Tools.Coherence.PauseIdleVM,
+        'Pause After...': vmObj.Settings.Tools.Coherence.PauseIdleVM,
         'Rollback Mode': vmObj.Settings.Runtime.UndoDisks,
         'On Mac Shutdown': vmObj.Settings.Shutdown.AutoStop,
         'On VM Shutdown': vmObj.Settings.Runtime.ActionOnStop,
@@ -199,6 +199,8 @@ function parseCurrentVm(CurrentVmData) {
             3 : `When Parallels Desktop starts, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`,
             4 : `When window opens, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`,
             5: `When user logs in, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`},
+
+        'Pause After...':{0:'Disabled', 1: (vmObj.Settings.Tools.Coherence.PauseIdleVMTimeout) ? `After ${vmObj.Settings.Tools.Coherence.PauseIdleVMTimeout} sec.` : 'Yes'}
 
 
 
