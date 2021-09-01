@@ -1299,7 +1299,7 @@ window.addEventListener("load", function (event) {
 
   let xmlUrl = reportus ? 'https://reportus.prls.net/webapp/reports/' + id + '/report_xml/download?filepath=Report.xml' : 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + id
 
-  if(devenv){xmlUrl = "http://localhost:63342/PRV/testPage/reportxml.xml"}
+  if(devenv){xmlUrl = "http://127.0.0.1:5500/testPage/reportxml.xml"}
 
   buildMenu();
   getScreenshots();

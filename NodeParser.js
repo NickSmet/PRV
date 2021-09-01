@@ -904,7 +904,7 @@ function parseMountInfo(item_all_data) {
 
 function parseGuestOs(item_all_data) {
 
-    let guestOsVersion = strToXmlToJson(item_all_data).GuestOsInformation.RealOsVersion.replace(/(,$)/g, "") || '--' //removing trailing comma
+    let guestOsVersion = strToXmlToJson(item_all_data).GuestOsInformation?.RealOsVersion?.replace(/(,$)/g, "") || '--' //removing trailing comma
 
 
     $("table.reportList>tbody>tr:nth-child(19)>td:nth-child(2)").append(` (${guestOsVersion})`)
