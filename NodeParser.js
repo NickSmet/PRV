@@ -42,6 +42,8 @@ function parseCurrentVm(CurrentVmData) {
 
     let vmObj = strToXmlToJson(CurrentVmData).ParallelsVirtualMachine
 
+    niceReportObj.currentVM = vmObj
+
 
     let ParamVMHDDs = { 'Location': 'SystemName', 'Virtual Size': 'Size', 'Actual Size': 'SizeOnDisk', 'Interface': 'InterfaceType', 'Splitted': 'Splitted', 'Trim': 'OnlineCompactMode', 'Expanding': 'DiskType' }
     let AdjustsVMHDDs = { 'Interface': 'hddtype', 'Actual Size': 'appleMbytes', 'Virtual Size': 'mbytes' }
@@ -70,9 +72,9 @@ function parseCurrentVm(CurrentVmData) {
     let networkAdapters = vmObj.Hardware.NetworkAdapter
     let VMNETWORKs_data = parseJsonItem(networkAdapters, ParamVMNETWORKs, AdjustsVMNETWORKs)
 
-    console.log(VMNETWORKs_data)
 
-    if(VMNETWORKs_data.match(/<u>Connected<\/u>: <b><u style="color:red">0!<\/u><\/b>/)){iconVMNETWORKs=icons.adapterNotConnected}
+    if(VMNETWORKs_data){
+    if(VMNETWORKs_data.match(/<u>Connected<\/u>: <b><u style="color:red">0!<\/u><\/b>/)){iconVMNETWORKs=icons.adapterNotConnected}}
 
     let VMNETWORKs = buildNodeBullet('Networks', 'Custom', VMNETWORKs_data, iconVMNETWORKs)
 
@@ -99,7 +101,7 @@ function parseCurrentVm(CurrentVmData) {
 
     let ParamVMUSBs = { 'Name': 'SystemName', 'Last connected': 'Timestamp' }
     let AdjustsVMUSBs = { 'Last connected': 'time' }
-    let iconVMUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
+    let iconVMUSBs = icons['usb']
 
     usbObj = vmObj.Hardware.UsbConnectHistory?.USBPort
     let VMUSBs_data = parseJsonItem(usbObj, ParamVMUSBs, AdjustsVMUSBs)
@@ -244,7 +246,7 @@ function parseCurrentVm(CurrentVmData) {
     }
 
 
-
+if(networkAdapters) {
     if (Array.isArray(networkAdapters)) {
         for (key in networkAdapters) {
             let adapter = networkAdapters[key]
@@ -252,7 +254,7 @@ function parseCurrentVm(CurrentVmData) {
         }
     }
     else { markConditioner(networkAdapters) }
-
+}
     // if(VMNETWORKs.match(/<u>Conditioner<\/u>: 1/)){
 
     //   markBullet('CurrentVm', icons["network conditioner"])
@@ -534,14 +536,14 @@ function parseAdvancedVmInfo(item_all_data) {
         snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
 
 
-        let snapshotBullet = buildNodeBullet('Snapshots', 'Custom', snapshots, 'https://image.flaticon.com/icons/svg/387/387157.svg')
+        let snapshotBullet = buildNodeBullet('Snapshots', 'Custom', snapshots, icons['snapshots'])
         AdvancedVmInfoContents += snapshotBullet
     }
 
 
     let bundleData = parseLsLr(item_all_data)
 
-    let bundleBullet = buildNodeBullet('PVM Bundle', 'Custom', bundleData, 'https://fileinfo.com/img/icons/files/128/pvm-3807.png')
+    let bundleBullet = buildNodeBullet('PVM Bundle', 'Custom', bundleData, icons['pvm'])
     AdvancedVmInfoContents += bundleBullet
 
     return AdvancedVmInfoContents;
@@ -554,27 +556,27 @@ function parseHostInfo(item_all_data) {
 
 
     let ParamUSBs = { 'Name': 'Name', 'UUID': 'Uuid' }
-    let iconUSBs = "https://image.flaticon.com/icons/svg/1689/1689028.svg"
+    let iconUSBs = icons['usb']
 
     let ParamHDDs = { 'Name': 'Name', 'UUID': 'Uuid', "Size": "Size" }
     let AdjustsHdd = { "Size": "bytes" }
     let HddFilter = { 'Name': 'AppleAPFSMedia' }
-    let iconHDDS = 'https://image.flaticon.com/icons/svg/1689/1689016.svg'
+    let iconHDDS = icons['hdds']
 
     let paramCameras = { 'Name': 'Name', 'UUID': 'Uuid' }
 
     let ParamNetwork = { 'Name': 'Name', 'UUID': 'Uuid', "MAC": "MacAddress", "IP": 'NetAddress' }
-    let iconNetwork = "https://image.flaticon.com/icons/svg/969/969345.svg"
+    let iconNetwork = icons['networkAdapter']
     let networkFilter = {}
 
     let ParamInputs = { 'Name': 'Name', 'UUID': 'Uuid' }
-    let iconInputs = "https://image.flaticon.com/icons/svg/1689/1689025.svg"
-
+    let iconInputs = icons['inputDevice']
+    
     let ParamPrinters = { 'Name': 'Name', 'UUID': 'Uuid' }
-    let iconPrinters = "https://image.flaticon.com/icons/svg/2489/2489670.svg"
+    let iconPrinters = icons['printers']
 
     let ParamCCIDs = { 'Name': 'Name', 'UUID': 'Uuid' }
-    let iconCCIDS = "https://image.flaticon.com/icons/svg/908/908765.svg"
+    let iconCCIDS = icons['CCID']
 
     let USBs_data = parseXMLItem(item_all_data, element = "UsbDevice", ParamUSBs)
     let Network_data = parseXMLItem(item_all_data, element = "NetworkAdapter", ParamNetwork, {}, networkFilter)
@@ -904,8 +906,13 @@ function parseMountInfo(item_all_data) {
 
 function parseGuestOs(item_all_data) {
 
-    let guestOsVersion = strToXmlToJson(item_all_data).GuestOsInformation?.RealOsVersion?.replace(/(,$)/g, "") || '--' //removing trailing comma
+    let guestOsJson = strToXmlToJson(item_all_data)
 
+    const guestOsVersion = guestOsJson.GuestOsInformation?.RealOsVersion?.replace(/(,$)/g, "") || '--' //removing trailing comma
+    const guestOsType = guestOsJson.GuestOsInformation?.ConfOsType
+
+    niceReportObj.guestOS.version = guestOsVersion
+    niceReportObj.guestOS.type = guestOsType
 
     $("table.reportList>tbody>tr:nth-child(19)>td:nth-child(2)").append(` (${guestOsVersion})`)
 

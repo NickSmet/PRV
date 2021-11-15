@@ -17,10 +17,12 @@ pd:{
 host:{},
 virtHw:{},
 guestOS:{
+  version:undefined,
   adapters:[],
   networkDrives:[],
   networkAdapters:[]
-}
+},
+currentVM:undefined
 
 }
 
@@ -1315,46 +1317,50 @@ window.addEventListener("load", function (event) {
 });
 
 //note to self -- start hosting those somewhere (github even?)
+
+const icons_Url = "https://fe.parallels.com/1f8605fe770fb2a774d8cc981eaef9d2/"
+
 const icons = {
-  'rollbackMode':'https://user-images.githubusercontent.com/10322311/121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png',
-  'adapterNotConnected':'https://image.flaticon.com/icons/png/128/2183/2183366.png',
-  'noNetwork':'https://image.flaticon.com/icons/png/128/2313/2313811.png',
-  'apipa':'https://image.flaticon.com/icons/png/128/2333/2333550.png',
-  'Low storage': 'https://uxwing.com/wp-content/themes/uxwing/download/16-business-and-finance/90-percent.svg',
+  'legacyBios': icons_Url+'legacyBios.png',
+  'rollbackMode': icons_Url+'121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png',
+  'adapterNotConnected' : icons_Url+'https://image.flaticon.com/icons/png/128/2183/2183366.png',
+  'noNetwork': 'https://image.flaticon.com/icons/png/128/2313/2313811.png',
+  'apipa': 'https://image.flaticon.com/icons/png/128/2333/2333550.png',
+  'Low storage': icons_Url+'lowStorage.png',
   'DisplayLink device!': 'https://image.flaticon.com/icons/png/128/3273/3273973.png',
   'onedrive': 'https://image.flaticon.com/icons/png/128/2335/2335410.png',
   'network folder': 'https://image.flaticon.com/icons/png/128/1930/1930805.png',
-  'usb': 'https://image.flaticon.com/icons/svg/1689/1689028.svg',
+  'usb': icons_Url+'usb.png',
   'keyboard': 'https://image.flaticon.com/icons/png/128/2293/2293934.png',
   'mouse': 'https://image.flaticon.com/icons/png/128/2817/2817912.png',
-  'printers': 'https://image.flaticon.com/icons/svg/2489/2489670.svg',
+  'printers': icons_Url+'printer.png',
   'all good': 'https://image.flaticon.com/icons/png/128/1828/1828520.png',
-  'warning': 'https://image.flaticon.com/icons/svg/497/497738.svg',
+  'warning': 'https://fe.parallels.com/1f8605fe770fb2a774d8cc981eaef9d2/warning.png',
   'serious warning': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/OOjs_UI_icon_alert-warning.svg/1200px-OOjs_UI_icon_alert-warning.svg.png',
-  'bad': 'https://image.flaticon.com/icons/svg/1672/1672451.svg',
+  'bad': icons_Url+'bad.png',
   'headless': 'https://image.flaticon.com/icons/png/128/1089/1089503.png',
   'not headless': 'https://cdn0.iconfinder.com/data/icons/people-and-lifestyle-1/64/people-male-man-head-128.png',
   'isolated': 'https://cdn4.iconfinder.com/data/icons/real-estate-1/512/prison-128.png',
   'flags': 'https://cdn3.iconfinder.com/data/icons/seo-and-digital-marketing-5-3/48/211-128.png',
-  'nosnapshots': 'https://image.flaticon.com/icons/svg/2803/2803253.svg',
-  'snapshots': 'https://image.flaticon.com/icons/svg/502/502559.svg',
+  'nosnapshots': icons_Url+'snapshot.png',
+  'snapshots': icons_Url+'snapshot.png',
   'screens': 'https://user-images.githubusercontent.com/10322311/96313515-5cf7ca00-1016-11eb-87d7-4eb1784e6eab.png',
   'vms': 'https://insmac.org/uploads/posts/2017-08/1503641514_parallels.png',
   'vpn': 'https://image.flaticon.com/icons/png/128/1451/1451546.png',
-  'external drive': "https://cdn4.iconfinder.com/data/icons/computer-58/64/external-hard-disk-drive-storage-64.png",
+  'external drive': 'https://cdn4.iconfinder.com/data/icons/computer-58/64/external-hard-disk-drive-storage-64.png',
   'copied vm': 'https://cdn2.iconfinder.com/data/icons/small-color-v5/512/clone_copy_document_duplicate_files-128.png',
   'AppleHV': 'https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/OS_Apple.png',
   'Nested': 'https://cdn2.iconfinder.com/data/icons/russia-8/64/matryoshka-doll-russian-mother-russia-128.png',
   'splitted': 'https://cdn4.iconfinder.com/data/icons/web-and-mobile-ui/24/UI-03-32.png',
   'trim': 'https://i.ibb.co/XpVhPZ9/unnamed.png',
   'webcam': 'https://image.flaticon.com/icons/png/128/179/179879.png',
-  'gpu': "https://image.flaticon.com/icons/svg/2302/2302939.svg",
+  'gpu': icons_Url+'gpu2.png',
   'ACL': 'https://findicons.com/files/icons/2796/metro_uinvert_dock/128/security_denied.png',
   'fullscreen': 'https://cdn3.iconfinder.com/data/icons/mos-basic-user-interface-pack/24/aspect_rasio-128.png',
   'noTimeSync': 'https://cdn2.iconfinder.com/data/icons/watch-4/64/death_clock-broken-breakdown-fail-128.png',
-  'hdds': "https://image.flaticon.com/icons/svg/1689/1689016.svg",
+  'hdds': icons_Url+'hdd.png',
   'cd': 'https://image.flaticon.com/icons/png/128/2606/2606574.png',
-  'networkAdapter': 'https://image.flaticon.com/icons/svg/969/969356.svg',
+  'networkAdapter':  icons_Url+'networkAdapter.png',
   'TPM': 'https://cdn3.iconfinder.com/data/icons/imageres-dll/512/imageres-dll_TPM-ship-128.png',
   'network conditioner fullspeed': 'https://icon-library.com/images/data-funnel-icon/data-funnel-icon-5.jpg',
   'network conditioner limited': 'https://user-images.githubusercontent.com/10322311/118004041-c728e100-b351-11eb-9018-516a78e18a28.png',
@@ -1369,9 +1375,9 @@ const icons = {
   'kext': 'https://cdn2.iconfinder.com/data/icons/gaming-color-icons/104/17-gaming-puzzle-piece-lego-128.png',
   'kextless': 'https://cdn3.iconfinder.com/data/icons/internet-2-10/48/54-128.png',
   'verbose logging': 'https://cdn3.iconfinder.com/data/icons/information-notification-black/3/17-128.png',
-  'pvm': 'https://fileinfo.com/img/icons/files/128/pvm-3807.png',
+  'pvm': icons_Url+'pvm.png',
   'shared': 'https://cdn2.iconfinder.com/data/icons/handcraft-1px/16/lan-connection-128.png',
-  'bridged': 'https://cdn3.iconfinder.com/data/icons/flat-design-hardware-network-set-2/24/ethernet-plug-64.png',
+  'bridged': icons_Url+'ethernet.png',
   'install': 'https://static.thenounproject.com/png/2756717-200.png',
   'service': 'https://i.pinimg.com/originals/71/d1/77/71d177d628bca6aff2813176cba0c18f.png',
   'apps': 'https://cdn2.iconfinder.com/data/icons/engineering-butterscotch-vol-1/512/Applications-128.png',
@@ -1380,13 +1386,86 @@ const icons = {
   'docSearch': 'https://image.flaticon.com/icons/png/128/3126/3126554.png',
   'External Default VM folder': 'https://image.flaticon.com/icons/png/128/3637/3637372.png',
   'not PvmDefault': 'https://image.flaticon.com/icons/png/128/983/983874.png',
-  'travelMode':'https://user-images.githubusercontent.com/10322311/121824353-5ceabf80-ccb4-11eb-9120-b5cbd15e31e9.png'
+  'travelMode': 'https://user-images.githubusercontent.com/10322311/121824353-5ceabf80-ccb4-11eb-9120-b5cbd15e31e9.png',
+  'inputDevice': icons_Url+'input.png',
+  'CCID':icons_Url+'CCID.png'
 
 }
 
 
+// const icons = {
+//   'rollbackMode': icons_Url+'121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png',
+//   'adapterNotConnected' : icons_Url+'2183366.png',
+//   'noNetwork': icons_Url+'2313811.png',
+//   'apipa': icons_Url+'2333550.png',
+//   'Low storage': icons_Url+'lowStorage.png',
+//   'DisplayLink device!': icons_Url+'3273973.png',
+//   'onedrive': icons_Url+'2335410.png',
+//   'network folder': icons_Url+'1930805.png',
+//   'usb': icons_Url+'1689028.svg',
+//   'keyboard': icons_Url+'2293934.png',
+//   'mouse': icons_Url+'2817912.png',
+//   'printers': icons_Url+'2489670.svg',
+//   'all good': icons_Url+'1828520.png',
+//   'warning': icons_Url+'warning.png',
+//   'serious warning': icons_Url+'OOjs_UI_icon_alert-warning.svg/1200px-OOjs_UI_icon_alert-warning.svg.png',
+//   'bad': icons_Url+'1672451.svg',
+//   'headless': icons_Url+'1089503.png',
+//   'not headless': icons_Url+'people-male-man-head-128.png',
+//   'isolated': icons_Url+'prison-128.png',
+//   'flags': icons_Url+'211-128.png',
+//   'nosnapshots': icons_Url+'snapshots.svg',
+//   'snapshots': icons_Url+'snapshots.svg',
+//   'screens': icons_Url+'96313515-5cf7ca00-1016-11eb-87d7-4eb1784e6eab.png',
+//   'vms': icons_Url+'1503641514_parallels.png',
+//   'vpn': icons_Url+'1451546.png',
+//   'external drive': icons_Url+'external-hard-disk-drive-storage-64.png',
+//   'copied vm': icons_Url+'clone_copy_document_duplicate_files-128.png',
+//   'AppleHV': icons_Url+'256/OS_Apple.png',
+//   'Nested': icons_Url+'matryoshka-doll-russian-mother-russia-128.png',
+//   'splitted': icons_Url+'24/UI-03-32.png',
+//   'trim': icons_Url+'unnamed.png',
+//   'webcam': icons_Url+'179879.png',
+//   'gpu': icons_Url+'gpu2.png',
+//   'ACL': icons_Url+'security_denied.png',
+//   'fullscreen': icons_Url+'aspect_rasio-128.png',
+//   'noTimeSync': icons_Url+'death_clock-broken-breakdown-fail-128.png',
+//   'hdds': icons_Url+'1689016.svg',
+//   'cd': icons_Url+'2606574.png',
+//   'networkAdapter': icons_Url+'969356.svg',
+//   'TPM': icons_Url+'imageres-dll_TPM-ship-128.png',
+//   'network conditioner fullspeed': icons_Url+'data-funnel-icon-5.jpg',
+//   'network conditioner limited': icons_Url+'118004041-c728e100-b351-11eb-9018-516a78e18a28.png',
+//   'plain vHDD': icons_Url+'4528584.png',
+//   'external vHDD': icons_Url+'External-Drive-Red-icon.png',
+//   'linked clone': icons_Url+'034_038_layers_front_copy_clone-128.png',
+//   'smart guard': icons_Url+'595-5952790_download-svg-download-png-shield-icon-png.png',
+//   'Boot Camp': icons_Url+'96314275-97616700-1016-11eb-9990-8b2e92d49052.png',
+//   'root or unknown owner': icons_Url+'100492918-868e3000-3142-11eb-9ee6-44826cd637c7.png',
+//   'resource quota': icons_Url+'Gauge-128.png',
+//   'pirated': icons_Url+'death2-circle-red-64.png',
+//   'kext': icons_Url+'17-gaming-puzzle-piece-lego-128.png',
+//   'kextless': icons_Url+'54-128.png',
+//   'verbose logging': icons_Url+'information-notification-black/3/17-128.png',
+//   'pvm': icons_Url+'pvm-3807.png',
+//   'shared': icons_Url+'5693296.png.png',
+//   'bridged': icons_Url+'3613445.png',
+//   'install': icons_Url+'2756717-200.png',
+//   'service': icons_Url+'71d177d628bca6aff2813176cba0c18f.png',
+//   'apps': icons_Url+'Applications-128.png',
+//   'installedApps': icons_Url+'Applications-Folder-Blue-icon.png',
+//   'hotcpu': icons_Url+'microchip_processor_chip_cpu_hot_burn-128.png',
+//   'docSearch': icons_Url+'3126554.png',
+//   'External Default VM folder': icons_Url+'3637372.png',
+//   'not PvmDefault': icons_Url+'983874.png',
+//   'travelMode': icons_Url+'10322311/121824353-5ceabf80-ccb4-11eb-9120-b5cbd15e31e9.png'
+
+// }
+
 
 function performChecks(){
+
+  if(niceReportObj.currentVM.Settings.Startup.Bios.EfiEnabled == '0' && niceReportObj.guestOS.type.match("Windows")){markBullet('CurrentVm', icons.legacyBios, '','Legacy Bios')}
   //if(niceReportObj.guestOS.adapters[0].ip='192.168.1.159'){markBullet('GuestCommands','warning','','sobaaaaaad!')}
 
 }
