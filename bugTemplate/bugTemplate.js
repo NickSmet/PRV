@@ -38,7 +38,7 @@ var bugTemplate = `*Description of problem:*
 
 *How reproducible:*
 Frequency: ?/3
-Local reproduction: reproducable/not reproducable/haven't tried.
+Local reproduction: reproducible/not reproducible/haven't tried.
 
 
 *Steps to Reproduce:*
