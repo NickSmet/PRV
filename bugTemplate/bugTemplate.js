@@ -35,6 +35,7 @@ let hostOS = $("#form1 > table.reportList > tbody > tr:nth-child(13) > td:nth-ch
 
 var bugTemplate = `*Description of problem:*
 
+
 *How reproducible:*
 Frequency: ?/3
 Local reproduction: reproducable/not reproducable/haven't tried.
