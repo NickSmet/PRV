@@ -122,7 +122,7 @@ function parseCurrentVm(CurrentVmData) {
         'Section0': 'General',
 
         'VM Name': vmObj.Identification.VmName,
-        'PVM Location': vmObj.Identification.VmHome.replace(/\/config.pvsp?/, ''),
+        'PVM Location': vmObj.Identification.VmHome?.replace(/\/config.pvsp?/, ''),
         'Creation date': vmObj.Identification.VmCreationDate,
         'This VM UUID': vmObj.Identification.VmUuid,
         'Source   UUID': vmObj.Identification.SourceVmUuid,
@@ -215,7 +215,7 @@ function parseCurrentVm(CurrentVmData) {
         if (VMHDDs.match(/<u>Expanding<\/u>: 0/)) { markBullet('CurrentVm', icons["plain vHDD"]) }
     }
 
-    let externalVhddRegex = RegExp('(<u>Location</u>: ((?!' + currentVmSpecs['PVM Location'].replace(/\(/g, "\\(").replace(/\)/g, "\\)") + ').)+)', 'gm') //chckse if there are vHDDs with "Location" outside of PVM
+    let externalVhddRegex = RegExp('(<u>Location</u>: ((?!' + currentVmSpecs['PVM Location']?.replace(/\(/g, "\\(").replace(/\)/g, "\\)") + ').)+)', 'gm') //chckse if there are vHDDs with "Location" outside of PVM
 
     if (VMHDDs.match(externalVhddRegex) && bigReportObj.ParallelsProblemReport.ProductName != 'Parallels Desktop for Chrome OS') { markBullet('CurrentVm', icons["external vHDD"]) }
 

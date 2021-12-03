@@ -1323,7 +1323,7 @@ const icons_Url = "https://fe.parallels.com/1f8605fe770fb2a774d8cc981eaef9d2/"
 const icons = {
   'legacyBios': icons_Url+'legacyBios.png',
   'rollbackMode': icons_Url+'121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png',
-  'adapterNotConnected' : icons_Url+'https://image.flaticon.com/icons/png/128/2183/2183366.png',
+  'adapterNotConnected' : icons_Url+'2183366.png',
   'noNetwork': 'https://image.flaticon.com/icons/png/128/2313/2313811.png',
   'apipa': 'https://image.flaticon.com/icons/png/128/2333/2333550.png',
   'Low storage': icons_Url+'lowStorage.png',
