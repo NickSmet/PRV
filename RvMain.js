@@ -261,7 +261,7 @@ nothing yet</div>'
 
   let item_data = data;
   var item_link = type_to_link[bullet_type];
-
+console.log(item_name)
   let item_id = item_name.split(" ").join("").replace(/\./g,'');
   // if (bullet_type == 'log') {
   //   item_id = item_name.replace('Log')
@@ -1303,8 +1303,10 @@ window.addEventListener("load", function (event) {
 
   if(devenv){xmlUrl = "http://127.0.0.1:5500/testPage/reportxml.xml"}
 
+  checkVmState()
   buildMenu();
   getScreenshots();
+  
   //setupSearch()
 
   searchNodes = new Searchable('searchNodes', '#doc_top_bar')
@@ -1462,6 +1464,10 @@ const icons = {
 
 // }
 
+function checkVmState(){
+  let reportType = $( "td:contains('UserDefined')" ).text()
+  if(reportType.match("Stoped")) {$( "td:contains('UserDefined')" ).css( "font-weight", "bold" );}
+}
 
 function performChecks(){
 
