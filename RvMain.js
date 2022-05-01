@@ -261,8 +261,7 @@ nothing yet</div>'
 
   let item_data = data;
   var item_link = type_to_link[bullet_type];
-console.log(item_name)
-  let item_id = item_name.split(" ").join("").replace(/\./g,'');
+  let item_id = item_name?.split(" ").join("").replace(/\./g,'');
   // if (bullet_type == 'log') {
   //   item_id = item_name.replace('Log')
   // }
@@ -312,7 +311,6 @@ function parseXMLItem(data, elementName, parameters, adjustments = {}, exclude =
   
 
   try {xmlDoc = $.parseXML(data)}catch{
-    console.log(data)
     return("XML parsing error.")
     }
 
@@ -463,13 +461,16 @@ function BulletData(nodeName, option) {
 
   let excludeFromSearch = ['TimeZone']
   let process
-
-
-  if (typeof nodesObj[nodeName] == 'string' || typeof nodesObj[nodeName] == 'object') {
+  console.log(nodeName);
+  console.log(typeof nodesObj[nodeName]);
+  if (typeof nodesObj[nodeName] == 'string' || typeof nodesObj[nodeName] == 'object' && nodeName!="AdvancedVmInfo") {
   
     bullet_all_data = nodesObj[nodeName] 
 
       eval(`bullet_parsed_data=parse${item_id}(bullet_all_data)`)
+
+      //console.log(item_id);
+      if(item_id=="toolslog"){console.log(bullet_parsed_data);}
 
       if (!excludeFromSearch.includes(nodeName)){
     searchNodes.addNodeToSearch(bullet_all_data, nodeName)
@@ -526,6 +527,7 @@ function BulletData(nodeName, option) {
       data = JSON.parse(data)
       bullet_all_data = data["log_path"] + "\n\n" + data["panic_string"]
     }
+
     else {
       if (!reportus) { bullet_all_data = $('pre', data).eq(0).text().replace('<?xml version="1.0" encoding="UTF-8"?>', '') }
       else {
@@ -544,11 +546,12 @@ function BulletData(nodeName, option) {
   
     eval("bullet_parsed_data=parse" + nodeName.replace(/\.|\d|gz/g, '') + "(bullet_all_data)")//because there are things like "system.0.gz.log"
     mention("PARSING " + nodeName)
-  
+    
 
     if (!bullet_parsed_data) { return }//if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
     if (typeof option === "undefined") {
-      $('#' + nodeName.replaceAll('\.', '\\\.')).html(bullet_parsed_data);
+      console.log(nodeName);
+      $('#' + nodeName.replaceAll('\.', '')).html(bullet_parsed_data);
       return
     }
     else if (option == 'time') {
@@ -851,7 +854,7 @@ function signatureBugs() {
       let loadingMessage = $('</br><span id="loadingBug">Loading bug info...</span></br>')
 
       loadingMessage.insertAfter(this)
-      console.log(signatureObject)
+      
       $.get(signatureObject.href, function (data) {
         bugJiraId = $('div.headerMain > h2:nth-child(6) > span > a', data).text()
 
@@ -1208,7 +1211,7 @@ const pinned_items = ["CurrentVm", "LoadedDrivers", 'AllProcesses', 'GuestComman
 //report log links that will be cloned to the bullet container
 const pinned_logs = ["parallels-system.log", "system.log", "system.0.gz.log", "vm.log", "vm.1.gz.log", "dmesg.log", 'install.log', 'tools.log', 'panic.log',];
 //pinned_items that will have a collapsible with parsed info
-const pinned_collapsable = ["CurrentVm", "LoadedDrivers", 'AllProcesses', 'GuestCommands', 'GuestOs', 'MountInfo', 'HostInfo', 'AdvancedVmInfo','ClientInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig', 'AppConfig', 'LicenseData', 'InstalledSoftware', 'AutoStatisticInfo', 'LaunchdInfo', 'panic.log'];
+const pinned_collapsable = ["CurrentVm", "LoadedDrivers", 'AllProcesses', 'GuestCommands', 'GuestOs', 'MountInfo', 'HostInfo', 'AdvancedVmInfo','ClientInfo', 'MoreHostInfo', 'VmDirectory', 'NetConfig', 'AppConfig', 'LicenseData', 'InstalledSoftware', 'AutoStatisticInfo', 'LaunchdInfo', 'tools.log', 'panic.log'];
 
 const process_immediately = ['VmDirectory', 'CurrentVm', 'LoadedDrivers', 'tools.log', 'GuestOs', 'GuestCommands', 'AllProcesses', 'AdvancedVmInfo', 'MoreHostInfo', 'ClientInfo', 'ClientProxyInfo', 'LicenseData', "vm.log", "vm.1.gz.log",'system.log', "system.0.gz.log", 'MountInfo', 'HostInfo', 'InstalledSoftware', 'LaunchdInfo', 'AutoStatisticInfo', 'dmesg.log', 'parallels-system.log', 'NetConfig', 'AppConfig', 'install.log', 'panic.log']
 
@@ -1241,6 +1244,10 @@ let index
 
 let macDataBaseUrl = "https://docs.google.com/spreadsheets/d/1lmcn0aRxolP5eXfsuaekRFcMl7dAFjxTe9ItQEUOarM/gviz/tq?tqx=out:csv&sheet=Database"
 
+
+let devenv = false
+let reports = true
+let xmlUrl
 //let getMacSpecsDatabase = $.get(macDataBaseUrl, () => {})
 
 function doReportOverview() {
@@ -1250,7 +1257,7 @@ function doReportOverview() {
     computerModel(macDatabase);
   })
 
-  signatureBugs();
+  
   BulletData('TimeZone', 'time');//should fix it later to get data from the bigJson
 
   $("#form1").replaceWith(function () {
@@ -1262,52 +1269,18 @@ function doReportOverview() {
     timeout = +80
   }
 
-  performChecks()
-
-  $(".btn").click(function () {
-    $(this).text(function (i, old) {
-      return old === '➤' ? '▼' : '➤';//took it here: https://stackoverflow.com/questions/16224636/twitter-bootstrap-collapse-change-display-of-toggle-button
-    })
-  })
+  laterChecksAndSetups()
 
 }
 
-devenv = false
-
 window.addEventListener("load", function (event) {
 
-  let curr_url = window.location.href
 
-  if(curr_url.match('localhost')){devenv=true}
+initialChecks()
 
-  if(devenv){id='348939757'}else
+if (!reports){return}
 
-  {if (!curr_url.match(/Report.aspx\?ReportId=|webapp\/reports/)) { return }
-
-  id = curr_url.match(/(\d{9})/)[1]}
-
-  if ($('Title').text().match('Waiting')) {
-    $("#form1 > div:nth-child(4) > big > big > b").append('</br></br><div><a href=https://reportus.prls.net/webapp/reports/' + id + '>OPEN AT REPORTUS</a></div>')
-
-    return
-  }
-
-  if (curr_url.match(/Report.aspx\?ReportId=/)) {
-    reportus = false
-  } else if (curr_url.match(/webapp\/reports/)) {
-    reportus = true
-  }
-  params = reportus ? reportusPrms : reportsPrms
-
-  let xmlUrl = reportus ? 'https://reportus.prls.net/webapp/reports/' + id + '/report_xml/download?filepath=Report.xml' : 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + id
-
-  if(devenv){xmlUrl = "http://127.0.0.1:5500/testPage/reportxml.xml"}
-
-  checkVmState()
-  buildMenu();
-  getScreenshots();
-  
-  //setupSearch()
+initialSetup()
 
   searchNodes = new Searchable('searchNodes', '#doc_top_bar')
 
@@ -1394,84 +1367,59 @@ const icons = {
 
 }
 
-
-// const icons = {
-//   'rollbackMode': icons_Url+'121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png',
-//   'adapterNotConnected' : icons_Url+'2183366.png',
-//   'noNetwork': icons_Url+'2313811.png',
-//   'apipa': icons_Url+'2333550.png',
-//   'Low storage': icons_Url+'lowStorage.png',
-//   'DisplayLink device!': icons_Url+'3273973.png',
-//   'onedrive': icons_Url+'2335410.png',
-//   'network folder': icons_Url+'1930805.png',
-//   'usb': icons_Url+'1689028.svg',
-//   'keyboard': icons_Url+'2293934.png',
-//   'mouse': icons_Url+'2817912.png',
-//   'printers': icons_Url+'2489670.svg',
-//   'all good': icons_Url+'1828520.png',
-//   'warning': icons_Url+'warning.png',
-//   'serious warning': icons_Url+'OOjs_UI_icon_alert-warning.svg/1200px-OOjs_UI_icon_alert-warning.svg.png',
-//   'bad': icons_Url+'1672451.svg',
-//   'headless': icons_Url+'1089503.png',
-//   'not headless': icons_Url+'people-male-man-head-128.png',
-//   'isolated': icons_Url+'prison-128.png',
-//   'flags': icons_Url+'211-128.png',
-//   'nosnapshots': icons_Url+'snapshots.svg',
-//   'snapshots': icons_Url+'snapshots.svg',
-//   'screens': icons_Url+'96313515-5cf7ca00-1016-11eb-87d7-4eb1784e6eab.png',
-//   'vms': icons_Url+'1503641514_parallels.png',
-//   'vpn': icons_Url+'1451546.png',
-//   'external drive': icons_Url+'external-hard-disk-drive-storage-64.png',
-//   'copied vm': icons_Url+'clone_copy_document_duplicate_files-128.png',
-//   'AppleHV': icons_Url+'256/OS_Apple.png',
-//   'Nested': icons_Url+'matryoshka-doll-russian-mother-russia-128.png',
-//   'splitted': icons_Url+'24/UI-03-32.png',
-//   'trim': icons_Url+'unnamed.png',
-//   'webcam': icons_Url+'179879.png',
-//   'gpu': icons_Url+'gpu2.png',
-//   'ACL': icons_Url+'security_denied.png',
-//   'fullscreen': icons_Url+'aspect_rasio-128.png',
-//   'noTimeSync': icons_Url+'death_clock-broken-breakdown-fail-128.png',
-//   'hdds': icons_Url+'1689016.svg',
-//   'cd': icons_Url+'2606574.png',
-//   'networkAdapter': icons_Url+'969356.svg',
-//   'TPM': icons_Url+'imageres-dll_TPM-ship-128.png',
-//   'network conditioner fullspeed': icons_Url+'data-funnel-icon-5.jpg',
-//   'network conditioner limited': icons_Url+'118004041-c728e100-b351-11eb-9018-516a78e18a28.png',
-//   'plain vHDD': icons_Url+'4528584.png',
-//   'external vHDD': icons_Url+'External-Drive-Red-icon.png',
-//   'linked clone': icons_Url+'034_038_layers_front_copy_clone-128.png',
-//   'smart guard': icons_Url+'595-5952790_download-svg-download-png-shield-icon-png.png',
-//   'Boot Camp': icons_Url+'96314275-97616700-1016-11eb-9990-8b2e92d49052.png',
-//   'root or unknown owner': icons_Url+'100492918-868e3000-3142-11eb-9ee6-44826cd637c7.png',
-//   'resource quota': icons_Url+'Gauge-128.png',
-//   'pirated': icons_Url+'death2-circle-red-64.png',
-//   'kext': icons_Url+'17-gaming-puzzle-piece-lego-128.png',
-//   'kextless': icons_Url+'54-128.png',
-//   'verbose logging': icons_Url+'information-notification-black/3/17-128.png',
-//   'pvm': icons_Url+'pvm-3807.png',
-//   'shared': icons_Url+'5693296.png.png',
-//   'bridged': icons_Url+'3613445.png',
-//   'install': icons_Url+'2756717-200.png',
-//   'service': icons_Url+'71d177d628bca6aff2813176cba0c18f.png',
-//   'apps': icons_Url+'Applications-128.png',
-//   'installedApps': icons_Url+'Applications-Folder-Blue-icon.png',
-//   'hotcpu': icons_Url+'microchip_processor_chip_cpu_hot_burn-128.png',
-//   'docSearch': icons_Url+'3126554.png',
-//   'External Default VM folder': icons_Url+'3637372.png',
-//   'not PvmDefault': icons_Url+'983874.png',
-//   'travelMode': icons_Url+'10322311/121824353-5ceabf80-ccb4-11eb-9120-b5cbd15e31e9.png'
-
-// }
-
 function checkVmState(){
   let reportType = $( "td:contains('UserDefined')" ).text()
   if(reportType.match("Stoped")) {$( "td:contains('UserDefined')" ).css( "font-weight", "bold" );}
 }
 
-function performChecks(){
+function laterChecksAndSetups(){
 
   if(niceReportObj.currentVM.Settings.Startup.Bios.EfiEnabled == '0' && niceReportObj.guestOS.type.match("Windows")){markBullet('CurrentVm', icons.legacyBios, '','Legacy Bios')}
   //if(niceReportObj.guestOS.adapters[0].ip='192.168.1.159'){markBullet('GuestCommands','warning','','sobaaaaaad!')}
 
+  $(".btn").click(function () {
+    $(this).text(function (i, old) {
+      return old === '➤' ? '▼' : '➤';//took it here: https://stackoverflow.com/questions/16224636/twitter-bootstrap-collapse-change-display-of-toggle-button
+    })
+  })
+
+}
+
+function initialChecks()
+{
+  let curr_url = window.location.href
+
+  if(curr_url.match('localhost')){devenv=true}
+
+  if(devenv){id='348939757'}else
+
+  {if (!curr_url.match(/Report.aspx\?ReportId=|webapp\/reports/)) { 
+    reports = false
+    return }
+
+  id = curr_url.match(/(\d{9})/)[1]}
+
+  if ($('Title').text().match('Waiting')) {
+    $("#form1 > div:nth-child(4) > big > big > b").append('</br></br><div><a href=https://reportus.prls.net/webapp/reports/' + id + '>OPEN AT REPORTUS</a></div>')
+
+    return
+  }
+
+  if (curr_url.match(/Report.aspx\?ReportId=/)) {
+    reportus = false
+  } else if (curr_url.match(/webapp\/reports/)) {
+    reportus = true
+  }
+  params = reportus ? reportusPrms : reportsPrms
+
+  xmlUrl = reportus ? 'https://reportus.prls.net/webapp/reports/' + id + '/report_xml/download?filepath=Report.xml' : 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + id
+
+  if(devenv){xmlUrl = "http://127.0.0.1:5500/testPage/reportxml.xml"}
+
+}
+
+function initialSetup(){
+  checkVmState()
+  buildMenu();
+  getScreenshots();
 }

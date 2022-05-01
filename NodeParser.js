@@ -49,6 +49,8 @@ function parseCurrentVm(CurrentVmData) {
     let AdjustsVMHDDs = { 'Interface': 'hddtype', 'Actual Size': 'appleMbytes', 'Virtual Size': 'mbytes' }
     let iconVMHDDs = icons.hdds
 
+    if(!vmObj.Hardware.Hdd){markBullet('CurrentVm','bad','','No HDD attached to VM!')}
+
     let VMHDDs_data = parseJsonItem(vmObj.Hardware.Hdd, ParamVMHDDs, AdjustsVMHDDs)
     //var VMHDDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMHDDs,AdjustsVMHDDs)
 
@@ -399,7 +401,8 @@ function parseNetConfig(item_all_data) {
     let networkExclude = { 'NetworkType': 0 }
     let network = parseJsonItem(netCfgObj.VirtualNetworks.VirtualNetwork, networkParams, {}, networkExclude, 'pd.netConfig')
 
-    console.log(niceReportObj);
+    
+
     if(!network.match('Host Only Networking')||!network.match('Shared Networking')){markBullet('NetConfig','noNetwork','','Something missing!')}//good enough
 
     if (macOS < 11) { return network }
@@ -461,9 +464,6 @@ function parseClientInfo(item_all_data) {
     })
 
 
-    console.log(account)
-    console.log(pdPrefs)
-    console.log(sharedAppsPrefs)
 
 
    return `<u><b>Account</b></u>: ${account}\n\n<u><b>PD Preferences</b></u>:\n${pdPrefs}\n<u><b>Shared Apps Prefs</b></u>:\n${sharedAppsPrefs}`
@@ -485,8 +485,14 @@ function parseClientProxyInfo(item_all_data) {
 }
 
 function parseAdvancedVmInfo(item_all_data) {
-    if(typeof item_all_data!='string'){return}
-    console.log(item_all_data)
+
+    
+    if(typeof item_all_data!='string'){
+        snapshotsString = item_all_data.AdvancedVmInfo['Snapshots']
+        
+        item_all_data=JSON.stringify(item_all_data).escapeSpecialChars()
+    }
+   
     let snapshots
 
     //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
@@ -495,12 +501,21 @@ function parseAdvancedVmInfo(item_all_data) {
     regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
     regex4 = /<AdvancedVmInfo[^>]*>\n *<AdvancedVmInfo[^>]*>/gm
     regex5 = /<\?xml version='1\.0' encoding='UTF-8'\?>/
+    regex6 = /<Description><\!\[CDATA\[\]\]>/
+    regex7 = /<SavedStateItem[^>]*?guid=""[^>]*?>/
+    regex8 = /<\n/
 
     item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
     item_all_data = item_all_data.replace(regex2, "")
     item_all_data = item_all_data.replace(regex3, "")
     item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
     item_all_data = item_all_data.replace(regex5, '')
+    item_all_data = item_all_data.replace(regex6, '')
+    item_all_data = item_all_data.replace(regex7, '')
+    item_all_data = item_all_data.replace(regex8, '')
+
+
+
     if(!item_all_data.match(/^<AdvancedVmInfo>/)) {item_all_data = '<AdvancedVmInfo>'+item_all_data}
 
     let AdvancedVmInfoContents = ''
@@ -517,9 +532,9 @@ function parseAdvancedVmInfo(item_all_data) {
         markBullet('AdvancedVmInfo', 'root or unknown owner')
     }
 
-    let number_of_snapshots = item_all_data.match(/SavedStateItem/g) ? item_all_data.match(/SavedStateItem/g).length / 2 - 1 : 0;
-
-
+    
+    let number_of_snapshots = !item_all_data.match(/SavedStateItem/g) ? 0 : reportus ? (item_all_data.match(/SavedStateItem/g).length / 2 ) : item_all_data.match(/SavedStateItem/g).length / 2 - 1;
+    
     if (number_of_snapshots < 1) {
         markBullet("AdvancedVmInfo", "no_snapshots")
         AdvancedVmInfoContents += "No snapshots\n"
@@ -534,8 +549,6 @@ function parseAdvancedVmInfo(item_all_data) {
 
 
         snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
-
-
         let snapshotBullet = buildNodeBullet('Snapshots', 'Custom', snapshots, icons['snapshots'])
         AdvancedVmInfoContents += snapshotBullet
     }
@@ -881,11 +894,14 @@ function parseMountInfo(item_all_data) {
         let capacity = parseInt(volumeProperties.Capacity.match(/^(\d+)\%/)[1])
 
         if (volumeProperties.MountedOn.match(/\/System\/Volumes\//) && capacity > 90) {
-            volumeProperties.Capacity = `<a style="color:Tomato;"><b>${volumeProperties.Capacity}</b><a>`
+            if(capacity > 99){volumeProperties.Capacity = `<u><a style="color:Red;"><b>${volumeProperties.Capacity}</b></a></u>`}else{
+            volumeProperties.Capacity = `<a style="color:Tomato;"><b>${volumeProperties.Capacity}</b><a>`}
         }
 
-        if (volumeProperties.MountedOn.match(/\/System\/Volumes\//) && capacity > 90 && !lowStorage) {
-            markBullet('MountInfo', 'Low storage')
+        if (volumeProperties.MountedOn.match(/\/System\/Volumes\//) && capacity > 90) {
+            
+            if(capacity > 99){markBullet('MountInfo', 'bad',"","HDD FULL!")}
+            if(!lowStorage)markBullet('MountInfo', 'Low storage')
             lowStorage = true
         }
 
@@ -910,25 +926,33 @@ function parseGuestOs(item_all_data) {
 
     const guestOsVersion = guestOsJson.GuestOsInformation?.RealOsVersion?.replace(/(,$)/g, "") || '--' //removing trailing comma
     const guestOsType = guestOsJson.GuestOsInformation?.ConfOsType
+    const kernelVersion = guestOsJson.GuestOsInformation?.OsKernelVersion
 
     niceReportObj.guestOS.version = guestOsVersion
     niceReportObj.guestOS.type = guestOsType
+    niceReportObj.guestOS.kernel = kernelVersion
 
     $("table.reportList>tbody>tr:nth-child(19)>td:nth-child(2)").append(` (${guestOsVersion})`)
 
-    let ToolsParams = { 'Name': 'ToolName', 'Version': 'ToolVersion', 'Last updated': 'ToolDate', 'Status': 'ToolUpdateStatus' }
-    let ToolsAdjust = { 'Last updated': 'Time' }
-    let ToolsFilter = { 'ToolUpdateStatus': 'UpToDate', 'ToolVersion': '0.0.0.0' }
-    result = parseXMLItem(item_all_data, 'GuestToolInfo', ToolsParams, ToolsAdjust, ToolsFilter);
-    //mention(result)
-    if (result == 'Nothing') {
-        markBullet('GuestOs', 'all good')
-        return 'All good!'
-    }
-    else {
-        markBullet('GuestOs', 'warning')
-        return result
-    }
+    // let ToolsParams = { 'Name': 'ToolName', 'Version': 'ToolVersion', 'Last updated': 'ToolDate', 'Status': 'ToolUpdateStatus' }
+    // let ToolsAdjust = { 'Last updated': 'Time' }
+    // let ToolsFilter = { 'ToolUpdateStatus': 'UpToDate', 'ToolVersion': '0.0.0.0' }
+    //result = parseXMLItem(item_all_data, 'GuestToolInfo', ToolsParams, ToolsAdjust, ToolsFilter);
+
+    let result = `${guestOsType} ${guestOsVersion}`
+
+
+    if (kernelVersion){result += `\nKernel: ${kernelVersion}`}
+
+    return result
+    // if (result == 'Nothing') {
+    //     markBullet('GuestOs', 'all good')
+    //     return 'All good!'
+    // }
+    // else {
+    //     markBullet('GuestOs', 'warning')
+    //     return result
+    // }
 }
 
 function parseGuestCommands(item_all_data) {
@@ -1085,6 +1109,8 @@ function parseTimeZone(item_all_data) {
 }
 
 function parsetoolslog(item_all_data) {
+    //console.log(item_all_data);
+    let result = ""
     let last1000chars = item_all_data.slice(item_all_data.length - 1000)
     if (last1000chars.match(/successfully/)) {
         markBullet('tools.log', 'all good')
@@ -1092,17 +1118,105 @@ function parsetoolslog(item_all_data) {
     else if (last1000chars.match(/FatalError/)) { markBullet('tools.log', 'bad') }
 
     else { markBullet('tools.log', 'warning') }
+
+    var lines = item_all_data.split("\n")
+
+    let lineRegex = /(?<dateString>\d\d-\d\d \d\d:\d\d:\d\d).*WIN_TOOLS_SETUP\](?<message>.*)/
+    let successfulInstallRegex = /Setup finished with code 3010 \(0xbc2\)/
+    let linesInterpreter = {
+        " Setup finished with code 3010 \\(0xbc2\\)":"Installation successful!",
+        " Setup finished with code 0 \\(0x0\\)":"Installation successful!",
+        " Setup finished with code 1641 \\(0x669\\)":"Installation successful!",
+        " \\*{14} Setup mode: UPDATE from version (\\d\\d\\.\\d\\.\\d\\.\\d{5})":"Updating from <b>$1</b>",
+        " \\*{14} Setup mode: EXPRESS INSTALL.":"Original installation.",
+        " \\*{14} Setup mode: INSTALL.":"Manual installation.",
+        " \\*{14} Setup mode: REINSTALL":"Reinstalling.",
+        " Setup completed with code 1603":"Installation failed."
+        
+    }
+
+ 
+    for (let i = 0; i < lines.length; i++) {
+
+        const line = lines[i];
+        if(line.match(/(\w{3,4} \d\d \d\d:\d\d:\d\d|\d\d\-\d\d \d\d:\d\d:\d\d)(.*)/)){
+
+            let lineMatch = lineRegex.exec(line);
+            
+            var lineDateTime = getLineDate(line)
+            var lineTimeString = lineMatch.groups.dateString
+            var line_message = lineMatch.groups.message
+
+            
+            for (const regEx in linesInterpreter) {
+                const re = new RegExp(regEx)
+                const replaceWith = linesInterpreter[regEx]
+
+                if(line_message.match(re)){
+                    console.log(line_message);
+                    line_message=line_message.replace(re, replaceWith);
+                    result += `${lineTimeString}: ${line_message}\n`
+                }
+              }
+        }
+
+    }
+    
+    return result
+
+
+
 }
 
 function parseLicenseData(item_all_data) {
+    const licType = {
+        1:"STD",
+        2:"PDB",
+        3:"Pro"
+    }
+
+    
+
     try{JSON.parse(item_all_data)}catch(e){
         console.log(e);
         return}
+
     let licenseData = JSON.parse(item_all_data)
     let expirationDate = Date.parse(licenseData['license']['main_period_ends_at'])
     if (expirationDate - Date.now() > 5 * 365 * 24 * 3600 * 1000) { markBullet('LicenseData', 'pirated') }
-    return "Expires: " + licenseData['license']['main_period_ends_at']
 
+
+    let result = `<u>Type</u>: ${licType[licenseData['license']['edition']]}
+<u>Expires</u>: ${licenseData['license']['main_period_ends_at']}`
+
+
+    const other_properties_ref = {
+        'is_auto_renewable': false,
+        'is_beta': false,
+        'is_bytebot': false,
+        'is_china': false,
+        'is_expired': false,
+        'is_grace_period': false,
+        'is_nfr': false,
+        'is_purchased_online': true,
+        'is_sublicense': false,
+        'is_suspended': false,
+        'is_trial': false,
+        'is_upgrade': false}
+    
+    const other_properties = Object.keys(other_properties_ref)
+
+        result += "\n\n<u>Other properties:</u>"
+    
+    for (let i = 0; i < other_properties.length; i++) {
+        const property = other_properties[i];
+
+        const prop_value = licenseData['license'][property] == other_properties_ref[property] ? `${property}: ${licenseData['license'][property]}`: `<u><b>${property}: ${licenseData['license'][property]}</b></u>`;
+
+        result += `\n${prop_value}`
+    }
+
+    return result
 }
 
 function parseAppConfig(item_all_data) {
@@ -1121,8 +1235,9 @@ function parseAppConfig(item_all_data) {
     let permanentAssignments = ''
 
     let usbDevices = AppConfigJson.ServerSettings.CommonPreferences.UsbPreferences.UsbIdentity
-
-    if(usbDevices){usbDevices.forEach(usbDevice => {
+    if(usbDevices){
+        if(!Array.isArray(usbDevices)){usbDevices=[usbDevices]}
+        usbDevices.forEach(usbDevice => {
         if (usbDevice.AssociationsNew?.Association){
             let connectTo
             if (usbDevice.AssociationsNew.Association.Action==1){connectTo=niceReportObj.getVmName(usbDevice.AssociationsNew.Association.VmUuid)}else{connectTo='This Mac'}
