@@ -136,6 +136,7 @@ function parseCurrentVm(CurrentVmData) {
         'Resource Quota': vmObj.Settings.Runtime.ResourceQuota,
         'Video Mode': parseInt(vmObj.Hardware.Video.EnableHiResDrawing) + parseInt(vmObj.Hardware.Video.NativeScalingInGuest),
         'Scale To Fit Screen': vmObj.Settings.Runtime.FullScreen.ScaleViewMode,
+        'All Disaplays in Full Screen': vmObj.Settings.Runtime.FullScreen.UseAllDisplays,
         '3D Acceleration': vmObj.Hardware.Video.Enable3DAcceleration,
         'Keyboard': vmObj.Settings.Runtime.OptimizeModifiers,
         'Mouse': parseInt(vmObj.Settings.Tools.SmartMouse.Enabled) + parseInt(vmObj.Settings.Tools.MouseSync.Enabled),
@@ -198,7 +199,7 @@ function parseCurrentVm(CurrentVmData) {
         'On Window close' : {1 : 'Suspend', 4 : 'ShutDown', 0 : 'Force to stop', 5 : 'Keep running in background', 2 : 'Ask me what to do' },
         'On Mac Shutdown' : {0 : 'Stop', 1 : 'Suspend', 3 : 'Shut down'},
         'On VM Shutdown' : {0 : 'Keep window open', 1 : 'Close window', 3 : 'Quit Parallels Desktop'},
-        'Startup View' : {0 : 'Same as last time', 1 : 'Window', 2 : 'Full Screen', 3 : 'Cohrence', 4 : 'Picture in Picture', 5 : 'Headless'},
+        'Startup View' : {0 : 'Same as last time', 1 : 'Window', 2 : 'Full Screen', 3 : 'Coherence', 4 : 'Picture in Picture', 5 : 'Headless'},
         'Start Automatically' : {0 : 'Never', 1 : 'When Mac Starts', 2 : '' ,
             3 : `When Parallels Desktop starts, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`,
             4 : `When window opens, after ${vmObj.Settings.Startup.AutoStartDelay} sec.`,
@@ -217,10 +218,11 @@ function parseCurrentVm(CurrentVmData) {
         if (VMHDDs.match(/<u>Expanding<\/u>: 0/)) { markBullet('CurrentVm', icons["plain vHDD"]) }
     }
 
-    let externalVhddRegex = RegExp('(<u>Location</u>: ((?!' + currentVmSpecs['PVM Location']?.replace(/\(/g, "\\(").replace(/\)/g, "\\)") + ').)+)', 'gm') //chckse if there are vHDDs with "Location" outside of PVM
+    let externalVhddRegex = RegExp('(<u>Location</u>: ((?!' + currentVmSpecs['PVM Location']?.replace(/\(/g, "\\(").replace(/\)/g, "\\)") + ').)+)', 'gmi') //checks if there are vHDDs with "Location" outside of PVM
 
     if (VMHDDs.match(externalVhddRegex) && bigReportObj.ParallelsProblemReport.ProductName != 'Parallels Desktop for Chrome OS') { markBullet('CurrentVm', icons["external vHDD"]) }
-
+    console.log(externalVhddRegex);
+    console.log(VMHDDs);
     if(vmObj.Settings.Runtime.UndoDisks=='1'){markBullet('CurrentVm', icons.rollbackMode, '','Rollback Mode')}
 
     function markConditioner(adapter) {
@@ -486,6 +488,7 @@ function parseClientProxyInfo(item_all_data) {
 
 function parseAdvancedVmInfo(item_all_data) {
 
+
     
     if(typeof item_all_data!='string'){
         snapshotsString = item_all_data.AdvancedVmInfo['Snapshots']
@@ -502,7 +505,7 @@ function parseAdvancedVmInfo(item_all_data) {
     regex4 = /<AdvancedVmInfo[^>]*>\n *<AdvancedVmInfo[^>]*>/gm
     regex5 = /<\?xml version='1\.0' encoding='UTF-8'\?>/
     regex6 = /<Description><\!\[CDATA\[\]\]>/
-    regex7 = /<SavedStateItem[^>]*?guid=""[^>]*?>/
+    regex7 = /<SavedStateItem[^>]*?guid=\"\"[^>]*?>/
     regex8 = /<\n/
 
     item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
@@ -511,12 +514,14 @@ function parseAdvancedVmInfo(item_all_data) {
     item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
     item_all_data = item_all_data.replace(regex5, '')
     item_all_data = item_all_data.replace(regex6, '')
-    item_all_data = item_all_data.replace(regex7, '')
+    if(reportus){item_all_data = item_all_data.replace(regex7, '')}
     item_all_data = item_all_data.replace(regex8, '')
 
-
+    var bundleData = parseLsLr(item_all_data)
 
     if(!item_all_data.match(/^<AdvancedVmInfo>/)) {item_all_data = '<AdvancedVmInfo>'+item_all_data}
+
+    //console.log(item_all_data);
 
     let AdvancedVmInfoContents = ''
 
@@ -532,9 +537,16 @@ function parseAdvancedVmInfo(item_all_data) {
         markBullet('AdvancedVmInfo', 'root or unknown owner')
     }
 
+
+    console.log(bundleData);
+    
+    if (bundleData.length>1 && bundleData.match(/860e329aab41}\.hds/)==null) {
+        console.log("WHAAAAA");
+        markBullet('AdvancedVmInfo', 'bad',"","Main '860e329aab41}.hds' snapshot missing!")
+    }
     
     let number_of_snapshots = !item_all_data.match(/SavedStateItem/g) ? 0 : reportus ? (item_all_data.match(/SavedStateItem/g).length / 2 ) : item_all_data.match(/SavedStateItem/g).length / 2 - 1;
-    
+   
     if (number_of_snapshots < 1) {
         markBullet("AdvancedVmInfo", "no_snapshots")
         AdvancedVmInfoContents += "No snapshots\n"
@@ -549,12 +561,13 @@ function parseAdvancedVmInfo(item_all_data) {
 
 
         snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
+
+        
         let snapshotBullet = buildNodeBullet('Snapshots', 'Custom', snapshots, icons['snapshots'])
         AdvancedVmInfoContents += snapshotBullet
     }
 
 
-    let bundleData = parseLsLr(item_all_data)
 
     let bundleBullet = buildNodeBullet('PVM Bundle', 'Custom', bundleData, icons['pvm'])
     AdvancedVmInfoContents += bundleBullet
@@ -1131,7 +1144,7 @@ function parsetoolslog(item_all_data) {
         " \\*{14} Setup mode: EXPRESS INSTALL.":"Original installation.",
         " \\*{14} Setup mode: INSTALL.":"Manual installation.",
         " \\*{14} Setup mode: REINSTALL":"Reinstalling.",
-        " Setup completed with code 1603":"Installation failed."
+        " Setup completed with code 1603":"<b>Installation failed.</b>"
         
     }
 
