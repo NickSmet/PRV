@@ -197,7 +197,7 @@ function parseCurrentVm(CurrentVmData) {
         'Keyboard': { 0: 'Don\'t optimize for games', 1: 'Optimize for games', 2: 'WTF?', 3: 'Auto' },
         'Mouse': { 0: 'Optimize for games', 1: 'Don\'t optimize for games', 2: 'Auto', 3: 'WTF?' },
         'On Window close' : {1 : 'Suspend', 4 : 'ShutDown', 0 : 'Force to stop', 5 : 'Keep running in background', 2 : 'Ask me what to do' },
-        'On Mac Shutdown' : {0 : 'Stop', 1 : 'Suspend', 3 : 'Shut down'},
+        'On Mac Shutdown' : {0 : 'Stop', 1 : 'Suspend', 2 : 'Shut down'},
         'On VM Shutdown' : {0 : 'Keep window open', 1 : 'Close window', 3 : 'Quit Parallels Desktop'},
         'Startup View' : {0 : 'Same as last time', 1 : 'Window', 2 : 'Full Screen', 3 : 'Coherence', 4 : 'Picture in Picture', 5 : 'Headless'},
         'Start Automatically' : {0 : 'Never', 1 : 'When Mac Starts', 2 : '' ,
@@ -439,7 +439,7 @@ function parseClientInfo(item_all_data) {
 
     if(!clientSettings){return "Nothing."}
 
-    let accountRegex = /(AccountConsentGroup|AccountLocaleUpdated)(\/| -- )(?<email>[\w @.]+)/
+    let accountRegex = /(AccountConsentGroup|AccountLocaleUpdated)(\/| -- )(?<email>\w[^@]+@[.\w]+)/
     let pdPreferencesRegex = /Application preferences\/(?<prefName>[\w ]+) \-\- (?<prefValue>[\d\w]+)/
     let sharedAppsPrefsRegex = /Shared Applications\/(?<uuid>{[\w\d\-]+})\/(?<prefName>[\w ]+) -- (?<prefValue>[\w\d]+)/
 

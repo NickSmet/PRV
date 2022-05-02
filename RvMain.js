@@ -48,6 +48,8 @@ let reportus
 let reportsPrms = { 'appendTo': '.reportList', 'nodeProperty': 'href' }
 let reportusPrms = { 'appendTo': '.table-striped', 'nodeProperty': 'Onclick' }
 
+let be
+
 function getXmlReport(requestLink) {
   //https://gist.github.com/john-doherty/b9195065884cdbfd2017a4756e6409cc
   function sanitizeStringForXML(str, removeDiscouragedChars=true) {
@@ -244,13 +246,13 @@ nothing yet</div>'
   let type_to_link
   if (!reportus) {
     type_to_link = {
-      'item': 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + item_name,
-      'log': 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + item_name,
+      'item': `https://${domain}/Reports/Xml.aspx?ReportId=` + report_id + '&NodeName=' + item_name,
+      'log': `https://${domain}/Reports/Log.aspx?ReportId=` + report_id + '&LogName=' + item_name,
       'blank': ''
     }
   } else if (reportus) {
     type_to_link = {
-      'item': 'https://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + item_name,
+      'item': `https://${domain}/webapp/reports/` + report_id + '/report_xml/subtree/' + item_name,
       'log': $('a[href*="' + item_name + '"]').attr('href'),
       'blank': ''
     }
@@ -491,8 +493,8 @@ function BulletData(nodeName, option) {
   if (pinned_collapsable.includes(nodeName)) {$('#' + nodeName.replaceAll('\.', '\\\.')).text('loading...'); }
 
 
-  let request_link = 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + report_id + '&NodeName=' + nodeName
-  if (reportus) { request_link = 'https://reportus.prls.net/webapp/reports/' + report_id + '/report_xml/subtree/' + nodeName; }
+  let request_link = `https://${domain}/Reports/Xml.aspx?ReportId=` + report_id + '&NodeName=' + nodeName
+  if (reportus) { request_link = `https://${domain}/webapp/reports/` + report_id + '/report_xml/subtree/' + nodeName; }
 
 
   if (item_id.match('[^c].log')) {
@@ -501,9 +503,9 @@ function BulletData(nodeName, option) {
     if(devenv){return}
 
 
-    request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=' + report_id + '&LogName=' + nodeName
+    request_link = `https://${domain}/Reports/Log.aspx?ReportId=` + report_id + '&LogName=' + nodeName
   } else if (item_id.match('panic.log')) {
-    request_link = 'https://reports.prls.net/Reports/Log.aspx?ReportId=+' + report_id + '+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
+    request_link = `https://${domain}/Reports/Log.aspx?ReportId= `+ report_id + '+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
     panic = true
   }
 
@@ -1274,8 +1276,7 @@ function doReportOverview() {
 }
 
 window.addEventListener("load", function (event) {
-
-
+domain = window.location.hostname
 initialChecks()
 
 if (!reports){return}
@@ -1396,7 +1397,7 @@ function initialChecks()
   {if (!curr_url.match(/Report.aspx\?ReportId=|webapp\/reports/)) { 
     reports = false
     return }
-
+    
   id = curr_url.match(/(\d{9})/)[1]}
 
   if ($('Title').text().match('Waiting')) {
@@ -1410,9 +1411,10 @@ function initialChecks()
   } else if (curr_url.match(/webapp\/reports/)) {
     reportus = true
   }
+
   params = reportus ? reportusPrms : reportsPrms
 
-  xmlUrl = reportus ? 'https://reportus.prls.net/webapp/reports/' + id + '/report_xml/download?filepath=Report.xml' : 'https://reports.prls.net/Reports/Xml.aspx?ReportId=' + id
+  xmlUrl = reportus ? `https://${domain}/webapp/reports/` + id + '/report_xml/download?filepath=Report.xml' : `https://${domain}/Reports/Xml.aspx?ReportId=` + id
 
   if(devenv){xmlUrl = "http://127.0.0.1:5500/testPage/reportxml.xml"}
 
