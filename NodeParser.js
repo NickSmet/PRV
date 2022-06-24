@@ -170,7 +170,7 @@ function parseCurrentVm(CurrentVmData) {
         'Smart Guard': vmObj.Settings.Autoprotect.Enabled,
         'Opt.TimeMachine': vmObj.Settings.Autoprotect.Schema,
         '<b>Boot Flags</b>': vmObj.Settings.Runtime.SystemFlags,
-        'Graphic Switching': vmObj.Settings.Runtime.OptimizePowerConsumptionMode,
+        'Always use high-performance graphics': vmObj.Settings.Runtime.OptimizePowerConsumptionMode,
         'Section': 'Devices',
         'Share Host Printers': vmObj.Settings.VirtualPrintersInfo.UseHostPrinters,
         'Sync Default Printer': vmObj.Settings.VirtualPrintersInfo.SyncDefaultPrinter,
@@ -189,7 +189,7 @@ function parseCurrentVm(CurrentVmData) {
     let specs_to_name = {
         'Lan Adapter': { 0: 'Legacy', 1: 'RealTek RTL8029AS', 2: 'Intel(R) PRO/1000MT', 3: 'Virtio', 4: 'Intel(R) Gigabit CT (82574l)' },
         'Network': { 1: 'Shared', 2: 'Bridged' },
-        'Opt.TimeMachine': { 1: 'On', 2: 'Off' },
+        'Opt.TimeMachine': { 1: 'Off', 2: 'On' },
         'Graphic Switching': { 1: 'Off', 0: 'On' },
         'Hypervisor': { 0: 'Parallels', 1: 'Apple' },
         'Video Mode': { 0: 'Scaled', 1: 'Best for Retina', 2: 'Best for external displays' },

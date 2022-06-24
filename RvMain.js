@@ -176,7 +176,9 @@ function constructNodeBullets(nodeNamesArray, nodesType, appendNodeBulletsTo) {
   let nodeProperty = params.nodeProperty
   for (let i = 0; i < nodeNamesArray.length; i++) {
     //if the element is not present on page, will create a grayed out bullet (it's better to see that something is missing)
-    if ($('a[' + nodeProperty + '*="' + nodeNamesArray[i] + '"]').length === 0 && !reportus) {
+    let searchNodeOnPage = reportus ? 'a:contains("'+nodeNamesArray[i]+'")' : 'a[' + nodeProperty + '*="' + nodeNamesArray[i] + '"]'
+   
+    if ($(searchNodeOnPage).length === 0) {
       nodeBulletElement = buildNodeBullet(nodeNamesArray[i], 'blank')
           }
     else {
@@ -250,10 +252,11 @@ nothing yet</div>'
       'log': `https://${domain}/Reports/Log.aspx?ReportId=` + report_id + '&LogName=' + item_name,
       'blank': ''
     }
+    
   } else if (reportus) {
     type_to_link = {
-      'item': `https://${domain}/webapp/reports/` + report_id + '/report_xml/subtree/' + item_name,
-      'log': $('a[href*="' + item_name + '"]').attr('href'),
+      'item': `https://${domain}/webapp/reports/` + report_id + '/files/' + item_name + '/view/xml_node',
+      'log': $('a[href*="' + item_name + '"]').attr('href')?.replace("download","view/dump_file"),
       'blank': ''
     }
   }
