@@ -256,7 +256,7 @@ nothing yet</div>'
   } else if (reportus) {
     type_to_link = {
       'item': `https://${domain}/webapp/reports/` + report_id + '/files/' + item_name + '/view/xml_node',
-      'log': $('a[href*="' + item_name + '"]').attr('href')?.replace("download","view/dump_file"),
+      'log': $('a[href*="' + item_name + '"]').attr('href')?.replace("download","view/file"),
       'blank': ''
     }
   }
@@ -500,20 +500,20 @@ function BulletData(nodeName, option) {
   if (reportus) { request_link = `https://${domain}/webapp/reports/` + report_id + '/report_xml/subtree/' + nodeName; }
 
 
+    //log data url on reports
   if (item_id.match('[^c].log')) {
-
-
     if(devenv){return}
 
-
     request_link = `https://${domain}/Reports/Log.aspx?ReportId=` + report_id + '&LogName=' + nodeName
-  } else if (item_id.match('panic.log')) {
+  } else if (item_id.match('panic.log')) {//don't remember why, but it's different for panic.log
     request_link = `https://${domain}/Reports/Log.aspx?ReportId= `+ report_id + '+&LogName=panic.log&DownloadOrig=True&DownloadName=panic.log'
     panic = true
   }
 
+  //log data url on reportus
   if (reportus && item_id.match('\.log')) {
-    request_link = $('a[href*="' + nodeName + '"]').attr('href')
+    request_link = $('a[href*="' + nodeName + '"]').attr('href').replace("view/file","download")
+    console.log(request_link);
   }
 
 
