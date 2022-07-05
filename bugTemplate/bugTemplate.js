@@ -60,6 +60,9 @@ ${guestOS}
 *Report URL:*
 ${reporturl}
 
+*Affected software*
+
+
 *Additional info:*
 `
 
