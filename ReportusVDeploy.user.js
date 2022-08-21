@@ -3,14 +3,13 @@
 // @version            1.3.0.0
 // @author 	Nikolai Smetannikov
 
-// @updateURL    https://github.com/NickSmet/PRV/raw/master/ReDeploy.user.js
+// @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
 
 // @include     https://reportus.prls.net/webapp/reports/*
 // @include     https://reportus.prls.net/webapp/reports/*
 
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
 
-// @require      https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js
 // @resource    bootstrapCSS https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css?5
 
 // @require    https://raw.githubusercontent.com/pugetive/plist_parser/master/plist_parser.js?6
