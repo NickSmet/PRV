@@ -1132,9 +1132,9 @@ function parseVmDirectory(item_all_data) {
 
 }
 
-function parseTimeZone(item_all_data) {
+function parseTimeZone() {
 
-    return parseInt(item_all_data.match(bigReportObj.ParallelsProblemReport.TimeZone))
+    return parseInt(bigReportObj.ParallelsProblemReport.TimeZone)
 
 
 }
@@ -1230,7 +1230,7 @@ function parseLicenseData(item_all_data) {
 
     let licenseData = JSON.parse(item_all_data)
     let expirationDate = Date.parse(licenseData['license']['main_period_ends_at'])
-    if (expirationDate - Date.now() > 5 * 365 * 24 * 3600 * 1000) { markBullet('LicenseData', 'pirated') }
+    if (expirationDate - Date.now() > 12 * 365 * 24 * 3600 * 1000) { markBullet('LicenseData', 'pirated') }
 
 
     let result = `<u>Type</u>: ${licType[licenseData['license']['edition']]}

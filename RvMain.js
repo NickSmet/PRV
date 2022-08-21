@@ -498,6 +498,7 @@ function parseJsonItem (
 }
 
 function BulletData (nodeName, option) {
+  
   let nodeData
 
   let item_id = nodeName.replace(/\./g, '')
@@ -543,46 +544,6 @@ function BulletData (nodeName, option) {
     'install.log',
     'parallels-system.log'
   ]
-
-  //should totally get rid of this
-  function fixDisplayedTime (timediff) {
-    //need to rewrite the bit below (and maybe FitTime to aligh with it)
-    correcttime = fixTime(timediff)
-
-    let timeElementPath = reportus
-      ? "b:contains('Creation Time')"
-      : 'table.reportList>tbody:nth-child(1)>tr:nth-child(3)>td:nth-child(3)'
-    let gmtElement = reportus
-      ? $(timeElementPath)
-          .parent()
-          .next()
-      : $(timeElementPath)
-
-    let gmt_string = reportus
-      ? gmtElement.text()
-      : $('.reportList:first tbody:first tr:nth-child(3) script').text()
-
-    //if(devenv){gmt_string='dbDate2LocalAndTableCell("2020-09-05T17:49:54");'}
-
-    let gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
-    let gmt_substr = gmt_string.match(gmt_regex)[1]
-    let gmt_time = Date.parse(gmt_substr)
-    //mention(gmt_time)
-    let time_seconds = gmt_time / 1000
-    //mention(time_seconds)
-    let correct_time1 = new Date(0)
-    //mention(correct_time)
-    //mention(timediff)
-    correct_time1.setUTCSeconds(time_seconds + 10800)
-    gmt_time = correct_time1.toString().substring(4, 24)
-
-    $(gmtElement).html(
-      'Customer: ' +
-        correcttime +
-        '</br> Moscow:&nbsp;&nbsp;&thinsp;&thinsp;' +
-        gmt_time
-    )
-  }
 
   function addNodeAndSearch (item_all_data, item_all_data_search) {
     if (nodeName == 'tools.log') {
@@ -716,9 +677,6 @@ function BulletData (nodeName, option) {
       if (nodeName == 'GuestCommands') {
         console.log($(`#${item_id}`).html())
       } //if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
-      if (option == 'time') {
-        fixDisplayedTime(bullet_parsed_data)
-      }
 
       addNodeAndSearch(nodeName, nodeSearchData)
     })
@@ -1040,6 +998,48 @@ function getScreenshots () {
     screenID++
   })
 }
+
+  //should totally get rid of this
+  function fixDisplayedTime (timediff) {
+    console.log('TIMEDIFF');
+    console.log(timediff);
+    //need to rewrite the bit below (and maybe FitTime to aligh with it)
+    correcttime = fixTime(timediff)
+
+    let timeElementPath = reportus
+      ? "b:contains('Creation Time')"
+      : 'table.reportList>tbody:nth-child(1)>tr:nth-child(3)>td:nth-child(3)'
+    let gmtElement = reportus
+      ? $(timeElementPath)
+          .parent()
+          .next()
+      : $(timeElementPath)
+
+    let gmt_string = reportus
+      ? gmtElement.text()
+      : $('.reportList:first tbody:first tr:nth-child(3) script').text()
+
+    //if(devenv){gmt_string='dbDate2LocalAndTableCell("2020-09-05T17:49:54");'}
+
+    let gmt_regex = reportus ? /(.*)/ : /\(\"([\d\-T\:]*)\"\)/
+    let gmt_substr = gmt_string.match(gmt_regex)[1]
+    let gmt_time = Date.parse(gmt_substr)
+    //mention(gmt_time)
+    let time_seconds = gmt_time / 1000
+    //mention(time_seconds)
+    let correct_time1 = new Date(0)
+    //mention(correct_time)
+    //mention(timediff)
+    correct_time1.setUTCSeconds(time_seconds + 10800 + 3600)
+    gmt_time = correct_time1.toString().substring(4, 24)
+
+    $(gmtElement).html(
+      'Customer: ' +
+        correcttime +
+        '</br> MAU Time:&nbsp;&nbsp;&thinsp;&thinsp;' +
+        gmt_time
+    )
+  }
 
 /** @description  Appends Bug IDs to found signatures (if a signature has a bug)
  */
@@ -1582,12 +1582,13 @@ let xmlUrl
 //let getMacSpecsDatabase = $.get(macDataBaseUrl, () => {})
 
 function doReportOverview () {
+  
   $.get(macDataBaseUrl).then(function (data) {
     let macDatabase = googleCsv2JsonMacModels(data)
     computerModel(macDatabase)
   })
 
-  BulletData('TimeZone', 'time') //should fix it later to get data from the bigJson
+  fixDisplayedTime(timeDifference = parseInt(bigReportObj.ParallelsProblemReport.TimeZone))
 
   $('#form1').replaceWith(function () {
     return $('<div />').append($(this).contents())
@@ -1597,8 +1598,8 @@ function doReportOverview () {
     setTimeout(BulletData(process_immediately[item]), timeout)
     timeout = +80
   }
-
   laterChecksAndSetups()
+
 }
 
 window.addEventListener('load', function (event) {
@@ -1706,6 +1707,7 @@ function checkVmState () {
 }
 
 function laterChecksAndSetups () {
+  
   if (
     niceReportObj.currentVM.Settings.Startup.Bios.EfiEnabled == '0' &&
     niceReportObj.guestOS.type.match('Windows')
