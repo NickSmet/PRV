@@ -40,7 +40,11 @@ function parseLsLr(raw) {
 
 function parseCurrentVm(CurrentVmData) {
 
-    let vmObj = strToXmlToJson(CurrentVmData).ParallelsVirtualMachine
+    console.log(CurrentVmData);
+
+    if(!CurrentVmData){return}
+
+    let vmObj = strToXmlToJson(CurrentVmData)?.ParallelsVirtualMachine
 
     niceReportObj.currentVM = vmObj
 
@@ -1099,6 +1103,7 @@ function parseGuestCommands(item_all_data) {
 }
 
 function parseVmDirectory(item_all_data) {
+    if(!item_all_data){return}
     item_all_data = item_all_data.replace(/&/g, "_") //cuz & in xml causes parsing issues
     //counts number of VMs and marks bullet accordingly
     let numberofvms = item_all_data.match(/VmName/g) ? item_all_data.match(/VmName/g).length / 2 : 0

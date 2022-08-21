@@ -563,6 +563,7 @@ function BulletData (nodeName, option) {
   if (!parseFromNode.includes(nodeName) && !searchFromNode.includes(nodeName)) {
     nodeData = nodesObj[nodeName]
     nodeSearchData = nodeData
+    if(!nodeData){return}
     eval(
       'bullet_parsed_data=parse' +
         nodeName.replace(/\.|\d|gz/g, '') +
@@ -654,6 +655,8 @@ function BulletData (nodeName, option) {
 
       let nodeData = nodesObj[nodeName]
       let nodeSearchData = nodeData
+
+      if(!nodeData){return}
 
       if (parseFromNode.includes(nodeName)) {
         nodeData = bullet_all_data
@@ -1260,7 +1263,9 @@ class Searchable {
       })
   }
 
-  addNodeToSearch (nodeName, item_all_data_search) {
+  addNodeToSearch (nodeName, item_all_data_search) {  
+    if(!item_all_data_search){return}
+
     if (this.nodeContents[nodeName]) {
       return
     }
