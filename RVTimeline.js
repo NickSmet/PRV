@@ -523,7 +523,7 @@ return result
     //add suspend,unsuspend
 
 
-    "hostHddError":{'regex':/(Error writing\/reading HDD sectors|DIO ERROR)/,"group":'Host_Issues',"name":"Host HDD",'style':{'background-color':'rgb(143, 59, 74)'}},
+    "hostHddError":{'regex':/(Error writing\/reading HDD sectors|DIO ERROR)/,"group":'Host_Issues',"name":"Host HDD issues",'style':{'background-color':'rgb(143, 59, 74)'}},
 
 
     "PDFM_98595":{'regex':/Failed to setup bind-mode virtual netif/,"group":'VM_Network',"name":"PDFM-98595",'style':{'background-color':'rgb(230, 163, 186)'}},
