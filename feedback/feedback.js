@@ -12,7 +12,7 @@ css_feedback = ['https://codepen.io/nicksmet-the-vuer/pen/XWbNxLB.css']
 //   }
 
 var curr_rvmain
-var curr_vmLog_prod = /Log\.aspx\?ReportId/
+var curr_vmLog_prod = /Log\.aspx\?ReportId|\.log\/view/
 var curr_vmLog_test = /vm\.log\.html/
 
 var curr_vmLog = curr_vmLog_prod
@@ -50,10 +50,16 @@ function doSubmit(e){
 }
 
 function SetUpFeedback(){
- if(curr_url.match(/Report.aspx\?ReportId/))
+
+  const reportID = curr_url.match(/ReportId=(\d+)/) ? curr_url.match(/ReportId=(\d+)/)[1] : curr_url.match(/webapp\/reports\/(\d+)/)[1]
+
+
+
+
+ if(curr_url.match(/Report.aspx\?ReportId|webapp\/reports\/\d+$/))
 { form_html = '<div class="help-button-wrapper">\
 <form action="javascript:void(0);"; class = "help-list"; id="form" method="get">\
-<label> Report #'+curr_url.match(/ReportId=(\d+)/)[1]+'</label><br>\
+<label> Report #'+reportID+'</label><br>\
 <div class = "left"><input type="radio" id="FR " name="type" value="FR">\
 <label for="FR">[FR]</label><br>\
 <input type="radio" id="BUG" name="type" value="BUG">\
@@ -67,11 +73,12 @@ function SetUpFeedback(){
 </button>\
 </div>'}
 
+
 else if (curr_url.match(curr_vmLog))
 {
 form_html = '<div class="help-button-wrapper">\
 <form action="javascript:void(0)"; class = "help-list"; id="form"; method="get">\
-<label> Log for report #'+curr_url.match(/ReportId=(\d+)/)[1]+'</label><br>\
+<label> Log for report #'+reportID+'</label><br>\
 <div class = "left"><input type="radio"; id="knowhow"; name="type"; value="Knowhow"; checked>\
 <label for="knowhow">[KnowHow]</label><br>\
 <input type="radio"; id="BUG"; name="type"; value="BUG">\

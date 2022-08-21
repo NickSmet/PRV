@@ -211,7 +211,11 @@ function parseCurrentVm(CurrentVmData) {
 
     }
 
-    if (VMHDDs.match(/<u>Expanding<\/u>: 0/) && VMHDDs.match(/<u>Actual Size<\/u>: 0 B/)) { markBullet('CurrentVm', 'Boot Camp') }
+    if (VMHDDs.match(/<u>Expanding<\/u>: 0/) && VMHDDs.match(/<u>Actual Size<\/u>: 0 B/)) { 
+        markBullet('CurrentVm', 'Boot Camp')
+        niceReportObj.currentVM.BootCamp=true
+        console.log({niceReportObj}); 
+    }
     else {//if it's Boot Camp, we don't care about the rest of vHDD info.
         if (VMHDDs.match(/<u>Trim<\/u>: 1/)) { markBullet('CurrentVm', 'trim') }
         if (VMHDDs.match(/<u>Splitted<\/u>: 1/)) { markBullet('CurrentVm', 'splitted') }
@@ -496,32 +500,33 @@ function parseAdvancedVmInfo(item_all_data) {
         item_all_data=JSON.stringify(item_all_data).escapeSpecialChars()
     }
    
-    let snapshots
+    let snapshots = ''
+    let number_of_snapshots = 0
 
     //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
-    regex1 = /<\/AdvancedVmInfo[^>]*>\n<\/AdvancedVmInfo>/gm
-    regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
-    regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
-    regex4 = /<AdvancedVmInfo[^>]*>\n *<AdvancedVmInfo[^>]*>/gm
-    regex5 = /<\?xml version='1\.0' encoding='UTF-8'\?>/
-    regex6 = /<Description><\!\[CDATA\[\]\]>/
-    regex7 = /<SavedStateItem[^>]*?guid=\"\"[^>]*?>/
-    regex8 = /<\n/
+    //commented out, since it's broken too often. Decided to use regex to get snapshot list
 
-    item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
-    item_all_data = item_all_data.replace(regex2, "")
-    item_all_data = item_all_data.replace(regex3, "")
-    item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
-    item_all_data = item_all_data.replace(regex5, '')
-    item_all_data = item_all_data.replace(regex6, '')
-    if(reportus){item_all_data = item_all_data.replace(regex7, '')}
-    item_all_data = item_all_data.replace(regex8, '')
+    // regex1 = /<\/AdvancedVmInfo[^>]*>\n<\/AdvancedVmInfo>/gm
+    // regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
+    // regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
+    // regex4 = /<AdvancedVmInfo[^>]*>\n *<AdvancedVmInfo[^>]*>/gm
+    // regex5 = /<\?xml version='1\.0' encoding='UTF-8'\?>/
+    // regex6 = /<Description><\!\[CDATA\[\]\]>/
+    // regex7 = /<SavedStateItem[^>]*?guid=\"\"[^>]*?>/
+    // regex8 = /<\n/
+
+    // item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
+    // item_all_data = item_all_data.replace(regex2, "")
+    // item_all_data = item_all_data.replace(regex3, "")
+    // item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
+    // item_all_data = item_all_data.replace(regex5, '')
+    // item_all_data = item_all_data.replace(regex6, '')
+    // if(reportus){item_all_data = item_all_data.replace(regex7, '')}
+    // item_all_data = item_all_data.replace(regex8, '')
 
     var bundleData = parseLsLr(item_all_data)
 
     if(!item_all_data.match(/^<AdvancedVmInfo>/)) {item_all_data = '<AdvancedVmInfo>'+item_all_data}
-
-    //console.log(item_all_data);
 
     let AdvancedVmInfoContents = ''
 
@@ -537,15 +542,29 @@ function parseAdvancedVmInfo(item_all_data) {
         markBullet('AdvancedVmInfo', 'root or unknown owner')
     }
 
-
-    console.log(bundleData);
-    
-    if (bundleData.length>1 && bundleData.match(/860e329aab41}\.hds/)==null) {
-        console.log("WHAAAAA");
+    if(bigReportObj.ParallelsProblemReport.VendorInfo.match('Boot Camp')){niceReportObj.currentVM.BootCamp=true}
+    // console.log("ADVVMINFO");
+    // console.log(niceReportObj.currentVM.BootCamp=true);
+    // console.log(`Boot Camp: ${niceReportObj.currentVM.BootCamp}`)
+    if (bundleData.length>1 && bundleData.match(/860e329aab41}\.hds/)==null //making sure there is snapshot data, but '...ab41}.hds' is missing
+    && !bigReportObj.ParallelsProblemReport.ProductName.match('Chrome OS') //while it's not PDFC
+    && niceReportObj.currentVM.BootCamp!=true) //and not a PD BC VM
+    {
         markBullet('AdvancedVmInfo', 'bad',"","Main '860e329aab41}.hds' snapshot missing!")
     }
+
+    const snapshotRegex = /<Name>(?<name>[^<]*)<\/Name>\n[ ]*<DateTime>(?<dateTimeString>[^<]*)<\/DateTime>/g
+
+    for (const match of item_all_data.matchAll(snapshotRegex)) {//the first one is empty
+
+        if(match.groups.dateTimeString==''){continue}
+
+        number_of_snapshots += 1
+        snapshots +=
+`<u>Name</u>: ${match.groups.name}
+<u>Created on</u>: ${match.groups.dateTimeString}\n\n`}
     
-    let number_of_snapshots = !item_all_data.match(/SavedStateItem/g) ? 0 : reportus ? (item_all_data.match(/SavedStateItem/g).length / 2 ) : item_all_data.match(/SavedStateItem/g).length / 2 - 1;
+    //let number_of_snapshots = !item_all_data.match(/SavedStateItem/g) ? 0 : reportus ? ((item_all_data.match(/SavedStateItem/g).length) / 2 ) : (item_all_data.match(/SavedStateItem/g).length / 2)-1;
    
     if (number_of_snapshots < 1) {
         markBullet("AdvancedVmInfo", "no_snapshots")
@@ -557,15 +576,14 @@ function parseAdvancedVmInfo(item_all_data) {
             'Name': 'Name',
             'Created on': 'DateTime'
         }
-
-
-
-        snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)
-
-        
         let snapshotBullet = buildNodeBullet('Snapshots', 'Custom', snapshots, icons['snapshots'])
         AdvancedVmInfoContents += snapshotBullet
     }
+        
+
+    //     snapshots = parseXMLItem(item_all_data, "SavedStateItem", snapshotList)!="XML parsing error." ? parseXMLItem(item_all_data, "SavedStateItem", snapshotList) : parseSnapshotsRegex(item_all_data)
+
+    
 
 
 
@@ -1122,6 +1140,8 @@ function parseTimeZone(item_all_data) {
 }
 
 function parsetoolslog(item_all_data) {
+
+    if(!item_all_data){return}
     //console.log(item_all_data);
     let result = ""
     let last1000chars = item_all_data.slice(item_all_data.length - 1000)
@@ -1174,7 +1194,21 @@ function parsetoolslog(item_all_data) {
         }
 
     }
+
+    const last_50_lines = lines.slice(-50).join()
+
+    if(last_50_lines.match(/prl_dd\.inf/)){
+        markBullet('tools.log','CustomHtml','<a style="color:red" href="https://kb.parallels.com/en/125243">KB125243!</a>')
+    }
+
+    const last_300_lines = lines.slice(-300).join()
+
+    if(last_300_lines.match(/configuration registry database is corrupt/)){
+        markBullet('tools.log','CustomHtml','<a style="color:red" href="https://www.thewindowsclub.com/the-configuration-registry-database-is-corrupt">corrupt reg. DB!</a>')
+    }
     
+
+    console.log(result);        
     return result
 
 

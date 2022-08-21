@@ -206,7 +206,10 @@ $("#restore").click(function(){
   
   function getLogData()
   {
-    return $('pre').text()
+    
+    const log = reportus ? $("#file_data").text() : $('pre').text()
+
+    return log
   }
   
   function doTimeline(daysBack)
@@ -463,16 +466,13 @@ return result
   var curr_groups
   var all_items
 
-  const all_groups = {
-    'vm.log':{'Pause/Resume':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}},
-    'parallels-system.log':{'Prl_Errors':{}},
-  }
 //master
   const all_prl_syslog_groups = {'VM_Errors':{}, 'System_Errors':{}, 'PRL_Errors':{},"PD":{}}
 //-
   const all_vm_groups = {
     'vm.log':{
-    'Pause/Resume':{},
+    'Host_Issues':{},  
+    'Pause/Un-pause':{},
     'Stop/Shutdown/Restart':{},
     'VM_Errors':{},
     'VM_Device':{},
@@ -481,7 +481,7 @@ return result
   }
 
   const all_syslog_groups = {
-    'system.log':{'Pause/Resume':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}}
+    'system.log':{'Pause/Un-pause':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}}
   }
   
   const vmlog_all_items = {
@@ -489,12 +489,14 @@ return result
     "Report_collected":{'style':{'background-color':'rgb(179, 156, 123)'}},
     "Started_report_collection":{'regex':/VM state\(VmStateProblemReport\)\: started/,"group":"vm.log","name":"Collecting report",'style':{'background-color':'rgb(179, 12, 123)'}},
     "shutdown":{'regex':/SHUTDOWN: type 0x21/,"group":"Stop/Shutdown/Restart","name":"shutdown",'style':{'background-color':'rgb(179, 156, 123)'}},
-    "start":{'regex':/VM state\(VmState((?!Paused).)*?\): enqueued 'VmLocalCmdStart'\(\d+\)/,"group":"Stop/Shutdown/Restart","name":"start",'style':{'background-color':'rgb(127, 219, 181)'}},
-    "stop":{'regex':/VM state\(VmStateSuspending\): changed to VmStateStopped/,"group":"Stop/Shutdown/Restart","name":"stopped",'style':{'background-color':'rgb(161, 13, 50)'}},
+    "start":{'regex':/VM state\(VmStateInitFinish\): changed to VmStateRunning/,"group":"Stop/Shutdown/Restart","name":"start",'style':{'background-color':'rgb(127, 219, 181)'}},
+    "suspend":{'regex':/VM state\(VmStateSuspending\): changed to VmStateStopped/,"group":"Stop/Shutdown/Restart","name":"Suspended",'style':{'background-color':'rgb(71, 164, 166)'}},
+    "resume":{'regex':/VM state\(VmStateInitFinish\): changed to VmStateResuming/,"group":"Stop/Shutdown/Restart","name":"Resume",'style':{'background-color':'rgb(68, 201, 173)'}},
+    
     "reset":{'regex':/("VM state\(VmStateStopped\): changed to VmStateInit"|System reset via stop\-start)/,"group":"Stop/Shutdown/Restart","name":"reset",'style':{'background-color':'rgb(181, 40, 113)'}},
     
-    "resume":{'regex':/VM state\((VmStatePaused|f)\): enqueued 'VmLocalCmdStart'/,"group":'Pause/Resume',"name":"resume",'style':{'background-color':'rgb(127, 219, 181)'}},
-    "pause":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdPause'/,"group":'Pause/Resume',"name":"pause",'style':{'background-color':'rgb(182, 217, 184)'}},
+    "unpause":{'regex':/VM state\((VmStatePaused|f)\): enqueued 'VmLocalCmdStart'/,"group":'Pause/Un-pause',"name":"unpause",'style':{'background-color':'rgb(127, 219, 181)'}},
+    "pause":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdPause'/,"group":'Pause/Un-pause',"name":"pause",'style':{'background-color':'rgb(182, 217, 184)'}},
    
 
     "crash":{'regex':/(=============================================================|VM process exiting with code 0)/,"group":"Stop/Shutdown/Restart","name":"сrash(host?)",'style':{'background-color':'rgb(161, 13, 50)'},'rule':true},
@@ -506,19 +508,22 @@ return result
     "PDFM_96373":{'regex':/while io_cnt is not zero\!/,"group":'VM_Device',"name":"PDFM-96373(ish)",'style':{'background-color':'rgb(230, 163, 186)'}},
   
     'tools_outdated':{'regex':/\[PTIAHOST\] Guest tools started: outdated/,"group":'VM_Apps',"name":"Tools outdated",'style':{'background-color':'rgb(109, 163, 117)'}, 'rule':true},
-    'tools_update':{'regex':/\[PTIA_GUEST\] Start installation:/,"group":'VM_Apps',"name":"Tools upd",'style':{'background-color':'rgb(80, 242, 131)'}},
+    'tools_update':{'regex':/\[PTIA_GUEST\] Start installation:/,"group":'VM_Apps',"name":"Updating tools",'style':{'background-color':'rgb(80, 242, 131)'}},
     'tools_update_failed':{'regex':/\[PTIA_GUEST\] Tools installation failed./,"group":'VM_Apps',"name":"Tools upd failed",'style':{'background-color':'rgb(230, 163, 186)'}},
     
   
     "snapshot":{'regex':/VM state(VmStateRunning): enqueued 'DspCmdVmCreateSnapshot'/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
-    //'paused':{'regex':/VM state\(VmStatePaused\): completed pending 'VmLocalCmdPause'\(20002\) command with result 0x0/,"group":'Pause/Resume',"name":"paused",'color':'rgb(185, 199, 189)'},
-    //'unpaused':{'regex':/VCPU0 state\(VcpuStatePaused\): changed to VcpuStateUnpausing/,"group":'Pause/Resume',"name":"unpaused",'color':'rgb(183, 235, 197)'},
+    //'paused':{'regex':/VM state\(VmStatePaused\): completed pending 'VmLocalCmdPause'\(20002\) command with result 0x0/,"group":'Pause/Un-pause',"name":"paused",'color':'rgb(185, 199, 189)'},
+    //'unpaused':{'regex':/VCPU0 state\(VcpuStatePaused\): changed to VcpuStateUnpausing/,"group":'Pause/Un-pause',"name":"unpaused",'color':'rgb(183, 235, 197)'},
     "closed_incorrectly":{'regex':/OpenDisk\(\) returned error PRL_ERR_DISK_INCORRECTLY_CLOSED/,"group":"VM_Errors","name":"INCORRECTLY_CLOSED",'style':{'background-color':'rgb(130, 14, 16)'}},
     
     
   
     "app_launched":{'regex':/(\.exe|\.EXE)/,"group":"VM_Apps","name":"App",'style':{'background-color':'#4b95ef','font-size':'0.8em'},'rule':true},
     //add suspend,unsuspend
+
+
+    "hostHddError":{'regex':/(Error writing\/reading HDD sectors|DIO ERROR)/,"group":'Host_Issues',"name":"Host HDD",'style':{'background-color':'rgb(143, 59, 74)'}},
 
 
     "PDFM_98595":{'regex':/Failed to setup bind-mode virtual netif/,"group":'VM_Network',"name":"PDFM-98595",'style':{'background-color':'rgb(230, 163, 186)'}},
