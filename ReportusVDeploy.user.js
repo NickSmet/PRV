@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels Reportus Viewer 
-// @version            1.3.0.0
+// @version            1.3.1.0
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
