@@ -546,9 +546,6 @@ function BulletData (nodeName, option) {
   ]
 
   function addNodeAndSearch (item_all_data, item_all_data_search) {
-    if (nodeName == 'tools.log') {
-      console.log(bullet_parsed_data)
-    }
 
     $('#' + nodeName.replaceAll('.', '')).html(bullet_parsed_data)
 
@@ -656,7 +653,7 @@ function BulletData (nodeName, option) {
       let nodeData = nodesObj[nodeName]
       let nodeSearchData = nodeData
 
-      if(!nodeData){return}
+      
 
       if (parseFromNode.includes(nodeName)) {
         nodeData = bullet_all_data
@@ -666,13 +663,14 @@ function BulletData (nodeName, option) {
         nodeSearchData = bullet_all_data
       }
 
+      if(nodeData){
       try {
         eval(
           'bullet_parsed_data=parse' +
             nodeName.replace(/\.|\d|gz/g, '') +
             '(nodeData)'
         )
-      } catch (error) {}
+      } catch (error) {}}
 
       {
         $(`#${item_id}`).html(bullet_parsed_data)
@@ -1714,7 +1712,7 @@ function checkVmState () {
 function laterChecksAndSetups () {
   
   if (
-    niceReportObj.currentVM.Settings.Startup.Bios.EfiEnabled == '0' &&
+    niceReportObj.currentVM?.Settings.Startup.Bios.EfiEnabled == '0' &&
     niceReportObj.guestOS.type.match('Windows')
   ) {
     markBullet('CurrentVm', icons.legacyBios, '', 'Legacy Bios')
