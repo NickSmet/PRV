@@ -1200,7 +1200,7 @@ function parsetoolslog(item_all_data) {
 
     }
 
-    const last_50_lines = lines.slice(-50).join()
+    const last_50_lines = lines.slice(-30).join()
 
     if(last_50_lines.match(/prl_dd\.inf/)){
         markBullet('tools.log','CustomHtml','<a style="color:red" href="https://kb.parallels.com/en/125243">KB125243!</a>')
