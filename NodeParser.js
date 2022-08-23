@@ -1145,12 +1145,14 @@ function parseTimeZone() {
 }
 
 function parsetoolslog(item_all_data) {
+    let toolsSuccess = false
 
     if(!item_all_data){return}
     //console.log(item_all_data);
     let result = ""
     let last1000chars = item_all_data.slice(item_all_data.length - 1000)
     if (last1000chars.match(/successfully/)) {
+        toolsSuccess = true
         markBullet('tools.log', 'all good')
     }
     else if (last1000chars.match(/FatalError/)) { markBullet('tools.log', 'bad') }
@@ -1200,11 +1202,8 @@ function parsetoolslog(item_all_data) {
 
     }
 
-    const last_50_lines = lines.slice(-30).join()
 
-    if(last_50_lines.match(/prl_dd\.inf/)){
-        markBullet('tools.log','CustomHtml','<a style="color:red" href="https://kb.parallels.com/en/125243">KB125243!</a>')
-    }
+
 
     const last_300_lines = lines.slice(-300).join()
 
@@ -1212,6 +1211,11 @@ function parsetoolslog(item_all_data) {
         markBullet('tools.log','CustomHtml','<a style="color:red" href="https://www.thewindowsclub.com/the-configuration-registry-database-is-corrupt">corrupt reg. DB!</a>')
     }
     
+    const last_30_lines = lines.slice(-30).join()
+
+    if(last_30_lines.match(/prl_dd\.inf/)&&toolsSuccess==false){
+        markBullet('tools.log','CustomHtml','<a style="color:red" href="https://kb.parallels.com/en/125243">KB125243!</a>')
+    }
 
     console.log(result);        
     return result
