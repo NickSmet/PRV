@@ -11,8 +11,9 @@ function bgtSubmit(e){
  // Prevent reload page
  e.preventDefault();}
 
-function SetUpBgt(){
- console.log("SETTING UP BUG"); 
+function SetUpBgt(niceReportObj){
+  console.log(niceReportObj);
+ console.log("SETTING UP BUG TEMPLATE WIDGET"); 
 var bgt_html = '<div class="bug-wrapper">\
 <form action="javascript:void(0)"; class = "bug-list"; id="Bugform"; method="get">\
 <label>Bug Template</label><br>\
@@ -30,8 +31,14 @@ $("body").append($(bgt_html))
 
 
 let reporturl = window.location.href.match(/(http.*\d{9})/)[1]
-let guestOS =  $("#form1 > table.reportList > tbody > tr:nth-child(19) > td:nth-child(2)").text().replace(/Windows: |Linux: |: OS X /,'')
-let hostOS = $("#form1 > table.reportList > tbody > tr:nth-child(13) > td:nth-child(2)").text()
+
+let guestOS = `${niceReportObj.guestOS.type} ${niceReportObj.guestOS.version}`
+
+if(niceReportObj.guestOS.type=='Linux'){guestOS += niceReportObj.guestOS.kernel}
+
+//$("#form1 > table.reportList > tbody > tr:nth-child(19) > td:nth-child(2)").text().replace(/Windows: |Linux: |: OS X /,'')
+let hostOS = strToXmlToJson(bigReportObj.ParallelsProblemReport.HostInfo).ParallelsHostInfo.OsVersion.StringPresentation
+//$("#form1 > table.reportList > tbody > tr:nth-child(13) > td:nth-child(2)").text()
 
 var bugTemplate = `*Description of problem:*
 
@@ -80,5 +87,4 @@ $(".bug-wrapper").toggleClass("expanded");
 
 }
 
-SetUpBgt()
 

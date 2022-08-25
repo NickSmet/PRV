@@ -502,7 +502,11 @@ return result
     "crash":{'regex':/(=============================================================|VM process exiting with code 0)/,"group":"Stop/Shutdown/Restart","name":"сrash(host?)",'style':{'background-color':'rgb(161, 13, 50)'},'rule':true},
   
     "video_crash":{'regex':/Caught Abort trap\(.+\) in video device thread/,"group":"Stop/Shutdown/Restart","name":"video crash",'style':{'background-color':'rgb(161, 13, 50)'}},
+    
+    "PDFM-111627'ish":{'regex':/Error retrieve information about guest displays/,"group":"VM_Device","name":"PDFM-111627'ish",'style':{'background-color':'rgb(161, 13, 50)'}},
    
+
+
     "hw_reset":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdHardwareReset'\(20007\) command/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
     "guest_hibernate":{'regex':/SHUTDOWN: type 0x74/,"group":"Stop/Shutdown/Restart","name":"hibern(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
     "PDFM_96373":{'regex':/while io_cnt is not zero\!/,"group":'VM_Device',"name":"PDFM-96373(ish)",'style':{'background-color':'rgb(230, 163, 186)'}},

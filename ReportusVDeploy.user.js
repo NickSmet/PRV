@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels Reportus Viewer 
-// @version            1.3.2.1
+// @version            1.3.3.0
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
@@ -50,7 +50,44 @@
 
 // ==/UserScript==
 
-$(`<div style='margin:1em'>   ver. ${GM_info.script.version} <button onclick="window.location.href='https://github.com/NickSmet/PRV/raw/master/RvDeploy.user.js'" style = "font-family:Arial; margin-left: 1em;">↻ Check for updates</button></div>`).insertBefore($(".headerMain:eq(1)"))
+
+function checkVersion(currentVersion, updateUrl){
+    let updateButton
+    GM_xmlhttpRequest({
+    method: "GET",
+    url: updateUrl,
+    onload: function(response) {
+        console.log(response.responseText)
+    const newerVersion = response.responseText.match(/@version +([\d\.]+)/)[1]
+    console.log({newerVersion})
+    console.log({currentVersion})
+    
+    
+    
+    
+    
+    if(versionCompare(newerVersion, currentVersion)==1){
+
+    updateButton = $(`<div
+    style='margin:1em'>   ver. ${currentVersion} <button
+    onclick="window.location.href='${updateUrl}'" style = "font-family:Arial; margin-left: 1em;
+    background-color: #f44336;">!!!Upgrade to ${newerVersion}!!!</button></div>`)
+    
+    }else{
+        updateButton = $(`<div
+    style='margin:1em'>   ver. ${currentVersion}</div>`)
+    }
+    
+    updateButton.insertBefore($("#app"))
+
+
+  }})
+
+
+}
+
+checkVersion(GM_info.script.version,GM_info.script.updateURL)
+
 
 GM_addStyle(GM_getResourceText('feedbackCSS'));
 GM_addStyle(GM_getResourceText('timelineCSS'));

@@ -497,6 +497,10 @@ function parseJsonItem (
   return subBullet
 }
 
+function bigReportObjToNice(bigReportObj){
+
+}
+
 function BulletData (nodeName, option) {
   
   let nodeData
@@ -511,6 +515,8 @@ function BulletData (nodeName, option) {
   let nodeSearchData
 
   let nodesObj = bigReportObj.ParallelsProblemReport
+
+  bigReportObjToNice(bigReportObj)
 
   let excludeFromSearch = ['TimeZone']
 
@@ -1724,6 +1730,8 @@ function laterChecksAndSetups () {
       return old === '➤' ? '▼' : '➤' //took it here: https://stackoverflow.com/questions/16224636/twitter-bootstrap-collapse-change-display-of-toggle-button
     })
   })
+
+  SetUpBgt(niceReportObj)
 }
 
 function initialChecks () {
