@@ -88,8 +88,6 @@ function versionCompare(v1, v2, options) {
 
 function parseCurrentVm(CurrentVmData) {
 
-    console.log(CurrentVmData);
-
     if(!CurrentVmData){return}
 
     let vmObj = strToXmlToJson(CurrentVmData)?.ParallelsVirtualMachine
@@ -266,7 +264,7 @@ function parseCurrentVm(CurrentVmData) {
     if (VMHDDs.match(/<u>Expanding<\/u>: 0/) && VMHDDs.match(/<u>Actual Size<\/u>: 0 B/)) { 
         markBullet('CurrentVm', 'Boot Camp')
         niceReportObj.currentVM.BootCamp=true
-        console.log({niceReportObj}); 
+        //console.log({niceReportObj}); 
     }
     else {//if it's Boot Camp, we don't care about the rest of vHDD info.
         if (VMHDDs.match(/<u>Trim<\/u>: 1/)) { markBullet('CurrentVm', 'trim') }
@@ -277,8 +275,6 @@ function parseCurrentVm(CurrentVmData) {
     let externalVhddRegex = RegExp('(<u>Location</u>: ((?!' + currentVmSpecs['PVM Location']?.replace(/\(/g, "\\(").replace(/\)/g, "\\)") + ').)+)', 'gmi') //checks if there are vHDDs with "Location" outside of PVM
 
     if (VMHDDs.match(externalVhddRegex) && bigReportObj.ParallelsProblemReport.ProductName != 'Parallels Desktop for Chrome OS') { markBullet('CurrentVm', icons["external vHDD"]) }
-    console.log(externalVhddRegex);
-    console.log(VMHDDs);
     if(vmObj.Settings.Runtime.UndoDisks=='1'){markBullet('CurrentVm', icons.rollbackMode, '','Rollback Mode')}
 
     function markConditioner(adapter) {
@@ -1241,7 +1237,6 @@ function parsetoolslog(item_all_data) {
                 const replaceWith = linesInterpreter[regEx]
 
                 if(line_message.match(re)){
-                    console.log(line_message);
                     line_message=line_message.replace(re, replaceWith);
                     result += `${lineTimeString}: ${line_message}\n`
                 }
@@ -1265,7 +1260,7 @@ function parsetoolslog(item_all_data) {
         markBullet('tools.log','CustomHtml','<a style="color:red" href="https://kb.parallels.com/en/125243">KB125243!</a>')
     }
 
-    console.log(result);        
+    // console.log(result);        
     return result
 
 

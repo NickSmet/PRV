@@ -69,7 +69,7 @@ function checkVersion(currentVersion, updateUrl){
     if(versionCompare(newerVersion, currentVersion)==1){
 
     updateButton = $(`<div
-    style='margin:1em'>   ver. ${currentVersion} <button
+    style='margin:1em'>   Reports Viewer ver. ${currentVersion} <button
     onclick="window.location.href='${updateUrl}'" style = "font-family:Arial; margin-left: 1em;
     background-color: #f44336;">!!!Upgrade to ${newerVersion}!!!</button></div>`)
     

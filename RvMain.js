@@ -681,9 +681,7 @@ function BulletData (nodeName, option) {
       {
         $(`#${item_id}`).html(bullet_parsed_data)
       }
-      if (nodeName == 'GuestCommands') {
-        console.log($(`#${item_id}`).html())
-      } //if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
+    //if corresponding function already set the bullet data manually without returning anything (like parseLoadedDrivers)
 
       addNodeAndSearch(nodeName, nodeSearchData)
     })
@@ -1008,8 +1006,6 @@ function getScreenshots () {
 
   //should totally get rid of this
   function fixDisplayedTime (timediff) {
-    console.log('TIMEDIFF');
-    console.log(timediff);
     //need to rewrite the bit below (and maybe FitTime to aligh with it)
     correcttime = fixTime(timediff)
 
