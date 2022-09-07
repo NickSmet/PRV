@@ -155,18 +155,22 @@ $("#restore").click(function(){
               var item_group = all_items[item].group
               var item_name = all_items[item].name
               var item_rule = all_items[item].rule
-              var item_label = datetime_string
+
+              let item_label = all_items[item].label ? all_items[item].label : datetime_string
+
+
+             
   
   
               if (!item_rule){
-                createItem(item_class,item_group,item_name,item_time,curr_line_content)
+                createItem(item_class,item_group,item_name,item_time,curr_line_content,0,item_label)
 
               }
                 else {
-                  rule_result = checkRule(item, line_message, prev_line_content, next_line_content,item_time)
+                  rule_result = checkRule(item, line_message, prev_line_content, next_line_content,item_time, item.style, item_label) 
 
                   if (!rule_result){continue}
-                  else {createItem(item_class,item_group,rule_result.value,item_time,curr_line_content,rule_result.style)}
+                  else {createItem(item_class,item_group,rule_result.value,item_time,curr_line_content,rule_result.style,item_label)}
                 }
   
                 
@@ -178,8 +182,8 @@ $("#restore").click(function(){
   
   }
   
-  function createItem(item, group, content, datetime, line_content, style, customTime){
-    if(!customTime){time = datetime}
+  function createItem(item, group, content, datetime, line_content, style, label){
+    if(!label){label = datetime}
 
 
     items.add({
@@ -187,7 +191,7 @@ $("#restore").click(function(){
       group: groupIds[group],
       content: content,
       start: datetime,
-      title: time,
+      title: label,
       style: style,
       className: item,
       line_content:line_content
@@ -507,7 +511,7 @@ return result
    
 
 
-    "hw_reset":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdHardwareReset'\(20007\) command/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
+    "hw_reset":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdHardwareReset'\(20007\) command/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'},'label':'Guest reset by operating system.'},
     "guest_hibernate":{'regex':/SHUTDOWN: type 0x74/,"group":"Stop/Shutdown/Restart","name":"hibern(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
     "PDFM_96373":{'regex':/while io_cnt is not zero\!/,"group":'VM_Device',"name":"PDFM-96373(ish)",'style':{'background-color':'rgb(230, 163, 186)'}},
   
@@ -516,7 +520,7 @@ return result
     'tools_update_failed':{'regex':/\[PTIA_GUEST\] Tools installation failed./,"group":'VM_Apps',"name":"Tools upd failed",'style':{'background-color':'rgb(230, 163, 186)'}},
     
   
-    "snapshot":{'regex':/VM state(VmStateRunning): enqueued 'DspCmdVmCreateSnapshot'/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
+    "snapshot":{'regex':/VM state(VmStateRunning): enqueued 'DspCmdVmCreateSnapshot'/,"group":"Stop/Shutdown/Restart","name":"Creating Snapshot",'style':{'background-color':'rgb(181, 40, 113)'}},
     //'paused':{'regex':/VM state\(VmStatePaused\): completed pending 'VmLocalCmdPause'\(20002\) command with result 0x0/,"group":'Pause/Un-pause',"name":"paused",'color':'rgb(185, 199, 189)'},
     //'unpaused':{'regex':/VCPU0 state\(VcpuStatePaused\): changed to VcpuStateUnpausing/,"group":'Pause/Un-pause',"name":"unpaused",'color':'rgb(183, 235, 197)'},
     "closed_incorrectly":{'regex':/OpenDisk\(\) returned error PRL_ERR_DISK_INCORRECTLY_CLOSED/,"group":"VM_Errors","name":"INCORRECTLY_CLOSED",'style':{'background-color':'rgb(130, 14, 16)'}},

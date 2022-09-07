@@ -1047,44 +1047,47 @@ function getScreenshots () {
 /** @description  Appends Bug IDs to found signatures (if a signature has a bug)
  */
 function signatureBugs () {
-  function setBugId (signatureObject, bugJiraId) {
+  function setBugId (signatureName, bugJiraId) {
     $(
       `</br><span>Bug: </span><a href="https://jira.prls.net/browse/${bugJiraId}">${bugJiraId}</a></br>`
-    ).insertAfter(signatureObject)
+    ).insertAfter($(`a:contains("${signatureName}")`))
   }
 
-  let signatures = $('a[href*="Signature"]')
+  let signatures = $('a[href*="signatures/"]')
 
   signatures.each(function () {
     $(this).appendTo('.container')
 
-    let signatureObject = this
     let signatureName = this.text
-    let bugJiraId = GM_getValue(signatureName)
+    let signatureInfoUrl = `https://reportus.prls.net/webapp/signatures?filter-product=&filter-version=&filter-name=${signatureName}`
+    //let bugJiraId = GM_getValue(signatureName)
 
-    if (!bugJiraId || bugJiraId == 'No bug yet ') {
-      let loadingMessage = $(
-        '</br><span id="loadingBug">Loading bug info...</span></br>'
-      )
+    let bugJiraId
+
+    console.log(signatureInfoUrl);
+    
+    let loadingMessage = $(
+      '</br><span id="loadingBug">Loading bug info...</span></br>'
+    )
 
       loadingMessage.insertAfter(this)
 
-      $.get(signatureObject.href, function (data) {
+      $.get(signatureInfoUrl, function (data) {
         bugJiraId = $(
-          'div.headerMain > h2:nth-child(6) > span > a',
+          'a[href*="PDFM-"]',
           data
         ).text()
+
+        console.log('!!!!!!!!!!!'+bugJiraId);
 
         if (bugJiraId.length == 0) {
           bugJiraId = 'No bug yet '
         }
-        GM_setValue(signatureName, bugJiraId)
-        setBugId(signatureObject, bugJiraId)
+        
+        setBugId(signatureName, bugJiraId)
         loadingMessage.remove()
       })
-    } else {
-      setBugId(signatureObject, bugJiraId)
-    }
+     
   })
 }
 
@@ -1785,4 +1788,5 @@ function initialSetup () {
   checkVmState()
   buildMenu()
   getScreenshots()
+  signatureBugs()
 }
