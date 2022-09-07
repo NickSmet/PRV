@@ -511,7 +511,7 @@ return result
    
 
 
-    "hw_reset":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdHardwareReset'\(20007\) command/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'},'label':'VM reset initiateb by guest OS (e.g., via Windows GUI).'},
+    "hw_reset":{'regex':/VM state\(VmStateRunning\): enqueued 'VmLocalCmdHardwareReset'\(20007\) command/,"group":"Stop/Shutdown/Restart","name":"reset(WIN)",'style':{'background-color':'rgb(181, 40, 113)'},'label':'VM reset initiateb by guest OS<br>(e.g., via Windows GUI).'},
     "guest_hibernate":{'regex':/SHUTDOWN: type 0x74/,"group":"Stop/Shutdown/Restart","name":"hibern(WIN)",'style':{'background-color':'rgb(181, 40, 113)'}},
     "PDFM_96373":{'regex':/while io_cnt is not zero\!/,"group":'VM_Device',"name":"PDFM-96373(ish)",'style':{'background-color':'rgb(230, 163, 186)'}},
   
