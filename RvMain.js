@@ -1048,8 +1048,12 @@ function getScreenshots () {
  */
 function signatureBugs () {
   function setBugId (signatureName, bugJiraId) {
+    let bugLink = `</br><span>Bug: </span><a href="https://jira.prls.net/browse/${bugJiraId}">${bugJiraId}</a></br>`
+    
+    if(!bugJiraId){bugLink = `</br></br>No bug yet (at least submitted from Reportus).\n<a href="https://jira.prls.net/issues/?jql=text%20~%20%22%5C%22${signatureName}%5C%22%22%20ORDER%20BY%20updated%20DESC">Check jira </a></br>`}
+
     $(
-      `</br><span>Bug: </span><a href="https://jira.prls.net/browse/${bugJiraId}">${bugJiraId}</a></br>`
+      bugLink
     ).insertAfter($(`a:contains("${signatureName}")`))
   }
 
@@ -1077,12 +1081,6 @@ function signatureBugs () {
           'a[href*="PDFM-"]',
           data
         ).text()
-
-        console.log('!!!!!!!!!!!'+bugJiraId);
-
-        if (bugJiraId.length == 0) {
-          bugJiraId = 'No bug yet '
-        }
         
         setBugId(signatureName, bugJiraId)
         loadingMessage.remove()
