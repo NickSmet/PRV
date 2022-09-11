@@ -137,7 +137,6 @@ $("#restore").click(function(){
 
               options.start = last_line_date - period/240
               
-  
       }
           
           if (line_date < last_line_date - period) { 
@@ -268,7 +267,14 @@ $("#restore").click(function(){
 
 
   window.addEventListener("load", function() {
-    page = curr_url.match(url_regex) || '---'
+
+    let vmLogParsingInstructionsUrl = 'https://docs.google.com/spreadsheets/d/1C1cBrvXMm6qbCO3_wC8jZNEMqKHHOXLaNxhfJVNPwVo/gviz/tq?tqx=out:csv&sheet=testvmlog'
+
+    $.get(vmLogParsingInstructionsUrl).then(function (data) {
+      let vmlog = googleCsv2JsonTimeLine(data)
+      vmlog_all_items = vmlog
+  
+     page = curr_url.match(url_regex) || '---'
     setupVars(page[0])
     
     if (curr_url.match(page[0])&&curr_groups){
@@ -295,6 +301,12 @@ $("#restore").click(function(){
       doTimeline()
     });
     }
+
+    })
+
+
+
+    
   });
 
 
@@ -488,7 +500,7 @@ return result
     'system.log':{'Pause/Un-pause':{},'Stop/Shutdown/Restart':{},'VM_Errors':{},'VM_Device':{},'VM_Apps':{}}
   }
   
-  const vmlog_all_items = {
+  let vmlog_all_items = {
     "PD_Version":{'regex':/Parallels Desktop (\d\d)\.(\d)\.(\d)/,"group":"vm.log","name":"PD_Version",'style':{'background-color':'rgb(252, 148, 3)','font-size':'0.8em'},'rule':true},
     "Report_collected":{'style':{'background-color':'rgb(179, 156, 123)'}},
     "Started_report_collection":{'regex':/VM state\(VmStateProblemReport\)\: started/,"group":"vm.log","name":"Collecting report",'style':{'background-color':'rgb(179, 12, 123)'}},
@@ -521,14 +533,13 @@ return result
     
   
     "snapshot":{'regex':/VM state(VmStateRunning): enqueued 'DspCmdVmCreateSnapshot'/,"group":"Stop/Shutdown/Restart","name":"Creating Snapshot",'style':{'background-color':'rgb(181, 40, 113)'}},
-    //'paused':{'regex':/VM state\(VmStatePaused\): completed pending 'VmLocalCmdPause'\(20002\) command with result 0x0/,"group":'Pause/Un-pause',"name":"paused",'color':'rgb(185, 199, 189)'},
-    //'unpaused':{'regex':/VCPU0 state\(VcpuStatePaused\): changed to VcpuStateUnpausing/,"group":'Pause/Un-pause',"name":"unpaused",'color':'rgb(183, 235, 197)'},
+   
     "closed_incorrectly":{'regex':/OpenDisk\(\) returned error PRL_ERR_DISK_INCORRECTLY_CLOSED/,"group":"VM_Errors","name":"INCORRECTLY_CLOSED",'style':{'background-color':'rgb(130, 14, 16)'}},
     
     
   
     "app_launched":{'regex':/(\.exe|\.EXE)/,"group":"VM_Apps","name":"App",'style':{'background-color':'#4b95ef','font-size':'0.8em'},'rule':true},
-    //add suspend,unsuspend
+
 
 
     "hostHddError":{'regex':/(Error writing\/reading HDD sectors|DIO ERROR)/,"group":'Host_Issues',"name":"Host HDD issues",'style':{'background-color':'rgb(143, 59, 74)'}},
@@ -564,3 +575,68 @@ return result
   const special_item_styles = {}
  
   var line_message_regex = /(\w{3,4} \d\d \d\d:\d\d:\d\d|\d\d\-\d\d \d\d:\d\d:\d\d)(.*)/
+
+
+
+
+  function googleCsv2JsonTimeLine (csv) {
+    //that is a very dumb function, but it works.
+  
+    csv = csv
+      .replace(/\"\,\"/gm, ';')
+      .replace(/\"\"/gm, '"')
+      .replace(/(\]\n|\}\n)/g, '$1delimiter')
+      .replace(/}"|"{/gm,"")
+  
+    let headers = csv.split('\n')[0].substring(1, csv.split('\n')[0].length - 1).split(';')
+  
+    csv = csv.substring(csv.indexOf('\n') + 1)
+  
+    let lines = csv.split('\n')
+
+    let result = {}
+
+    let validSpec
+  
+    lines.forEach(line => {
+      let validSpec = 1
+      let currentline = line
+      .substring(1, line.length - 1)//removing quotes from both sides
+
+
+      currentline = currentline.replace(/\{(.*)}/, currentline.match(/\{(.*)}/)[0].replace(/;/gm,","))
+
+      currentline = currentline.replace(/\{(.*)}/,"{$1}".replace(";",",")).split(';')
+      
+      entityId = currentline[0]
+  
+      let specs = {}
+
+      headers.forEach((header, index) => {
+
+
+        let spec = currentline[index]
+  
+        if(spec.match(/\{(.*)\}/)){
+          spec = JSON.parse(spec)}
+
+        if (header == 'regex'){spec = new RegExp(spec)}
+        if (header == 'rule'){spec = parseInt(spec)}
+
+
+
+        if (header == 'Enabled' && spec == "FALSE"){
+          validSpec = 0
+          return }
+        
+        specs[header] = spec
+
+      })
+  
+      if (validSpec) {result[entityId] = specs}
+    })
+  
+   return result;  //JS Obj
+  }
+
+

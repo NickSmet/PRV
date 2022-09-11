@@ -1,6 +1,6 @@
 
 function parseLsLr(raw) {
-    let lsFileRegex = /(?<permissions>[\w\-\+]{9,11}@?) +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>[\w\\]+) +(?<type>[\w\-]+)? +(?<size>\d+) +(?<modified>(?<month>\w{3}) +(?<day>\d{1,2}) +(?<time>(\d\d\:){1,2}\d\d)? (?<year>\d{4} )?)(?<fileName>[\(\)\_ \{\}\-\w\.]+)/g
+    let lsFileRegex = /(?<permissions>[\w\-\+]{9,11}@?) +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>[\w\\]+) +(?<type>[\w\-]+)? +(?<size>\d+) +(?<modified>(?<month>\w{3}) +(?<day>\d{1,2}) +(?<time>(\d\d\:){1,2}\d\d)? (?<year>\d{4} )?)(?<fileName>[\(\)\_\, \{\}\-\w\.]+)/g
     let lsFolderRegex = /(\/[\w ]+\.pvm)?\/(?<location>[^:\n]*):$/gm //the .pvm part is for cases when showing list of files inside .pvm
 
     let bundleContents = ''
@@ -186,7 +186,7 @@ function parseCurrentVm(CurrentVmData) {
         'Resource Quota': vmObj.Settings.Runtime.ResourceQuota,
         'Video Mode': parseInt(vmObj.Hardware.Video.EnableHiResDrawing) + parseInt(vmObj.Hardware.Video.NativeScalingInGuest),
         'Scale To Fit Screen': vmObj.Settings.Runtime.FullScreen.ScaleViewMode,
-        'All Disaplays in Full Screen': vmObj.Settings.Runtime.FullScreen.UseAllDisplays,
+        'All Displays in Full Screen': vmObj.Settings.Runtime.FullScreen.UseAllDisplays,
         '3D Acceleration': vmObj.Hardware.Video.Enable3DAcceleration,
         'Keyboard': vmObj.Settings.Runtime.OptimizeModifiers,
         'Mouse': parseInt(vmObj.Settings.Tools.SmartMouse.Enabled) + parseInt(vmObj.Settings.Tools.MouseSync.Enabled),
@@ -727,6 +727,9 @@ function parseHostInfo(item_all_data) {
 
 function parseMoreHostInfo(item_all_data) {
 
+    if(bigReportObj.ParallelsProblemReport.HostInfo.match("Windows")){return}/*because on Windows (with PAX) it's not an XML 
+    and I don't see a need to cover such case, so just skipping*/
+
     if (item_all_data.length > 120 && item_all_data.length < 250) { return item_all_data } else if (item_all_data.length < 121) { return "Empty" }
 
     regex = /(\<More[^$]*dtd\"\>|\<\=|\<\/MoreHostInfo>)/gm
@@ -907,7 +910,7 @@ function parseAllProcesses(item_all_data) {
     }
 
     function parsePsAux() {
-        let processRegex = /^(?<user>[^ ]+) +(?<pid>[\d.]+) +(?<cpu>[\d.]+) +(?<mem>[\d.]+) +(?<vsz>[\d]+) +(?<rss>[\d]+) +(?<tt>[\w\?]+) +(?<stat>[\w]+) +(?<started>[\d\:\.\w]+) +(?<timeRunning>[\d\:\.]+) +\/(?<name>[^\n]*)$/gm
+        let processRegex = /^(?<user>[^ ]+) +(?<pid>[\d.]+) +(?<cpu>[\d,.]+)  +(?<mem>[\d.,]+) +(?<vsz>[\d]+) +(?<rss>[\d]+) +(?<tt>[\w\?]+) +(?<stat>[\w+]+) +(?<started>[\d\:\.\w]+) +(?<timeRunning>[\d\:\.]+) +\/(?<name>[^\n]*)$/gm
 
         let processesArray = item_all_data.split('\n')
 

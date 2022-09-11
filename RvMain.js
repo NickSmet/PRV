@@ -845,6 +845,8 @@ function googleCsv2JsonMacModels (csv) {
     let specs = {}
     headers.forEach((header, index) => (specs[header] = currentline[index]))
 
+    
+
     result[macID] = specs
   })
 
@@ -1591,6 +1593,7 @@ function doReportOverview () {
   
   $.get(macDataBaseUrl).then(function (data) {
     let macDatabase = googleCsv2JsonMacModels(data)
+    console.log(macDatabase);
     computerModel(macDatabase)
   })
 
