@@ -958,6 +958,7 @@ function humanFileSize (bytes, si) {
  */
 function getScreenshots () {
   function CreateScreenshot (id, url) {
+    
     $.get(url, function (data) {
       let img = $('pre > img', data)
         .eq(0)
@@ -989,21 +990,35 @@ function getScreenshots () {
     $(mypic).appendTo('body')
   }
 
-  if (reportus) {
-    $('h4:contains("Screenshots")')
-      .next()
-      .clone()
-      .appendTo('.container')
-    return
-  }
+  let screensQuery
 
-  let screens_el = $('span:contains("Screenshots")').next()
+  if (reportus) {
+    screensQuery = 'h4:contains("Screenshots")'}
+
+    else {screensQuery = 'span:contains("Screenshots")'}
+
+
+  let screens_el = $(screensQuery).next()
   screens_el.clone().appendTo('.container')
+
+
+  
   let screenID = 1
+
+  if(!reportus){
   screens_el.find('a').each(function () {
     CreateScreenshot(screenID, this.href)
     screenID++
-  })
+  })}
+
+  else{
+    screens_el.find('a[href*="/download"]').each(function () {
+      console.log(this);
+      AddScreenshotHtml(screenID,this.href)
+      //CreateScreenshot(screenID, this.href)
+      screenID++
+    })}
+
 }
 
   //should totally get rid of this
@@ -1082,7 +1097,7 @@ function signatureBugs () {
         bugJiraId = $(
           'a[href*="PDFM-"]',
           data
-        ).text()
+        ).first().text()
         
         setBugId(signatureName, bugJiraId)
         loadingMessage.remove()
