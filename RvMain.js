@@ -1627,6 +1627,7 @@ function doReportOverview () {
 }
 
 window.addEventListener('load', function (event) {
+
   domain = window.location.hostname
   initialChecks()
 
@@ -1636,7 +1637,11 @@ window.addEventListener('load', function (event) {
 
   initialSetup()
 
+  
+  if(window.location.href.match(".log")){return}//because we don't need the rest on log pages
+
   searchNodes = new Searchable('searchNodes', '#doc_top_bar')
+
 
   getXmlReport(xmlUrl).then(function (xmlData) {
     bigReportObj = xmlData

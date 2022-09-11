@@ -599,14 +599,14 @@ return result
     let validSpec
   
     lines.forEach(line => {
-      let validSpec = 1
+      validSpec = 1
       let currentline = line
       .substring(1, line.length - 1)//removing quotes from both sides
 
 
-      currentline = currentline.replace(/\{(.*)}/, currentline.match(/\{(.*)}/)[0].replace(/;/gm,","))
+      if(currentline.match(/\{(.*)}/)){currentline = currentline.replace(/\{(.*)}/, currentline.match(/\{(.*)}/)[0].replace(/;/gm,","))
 
-      currentline = currentline.replace(/\{(.*)}/,"{$1}".replace(";",",")).split(';')
+      currentline = currentline.replace(/\{(.*)}/,"{$1}".replace(";",",")).split(';')}
       
       entityId = currentline[0]
   
