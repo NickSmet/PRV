@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels Reportus Viewer 
-// @version            1.4.3.4
+// @version            1.4.3.5
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
@@ -53,8 +53,17 @@
 
 //for security-monitors.prls.net. Completely separate feature.
 if (window.location.href.match(/security-monitors.prls.net/)){
+    let response
+    if(JSON.parse($("pre").text()).events.length==0){
+        response = "No recent events."
+    }
+    else
+    {
+        response = JSON.parse($("pre").text()).events.join("\n\n")
+    }
 
-    $("pre").text(JSON.parse($("pre").text()).events.join("\n\n"))
+
+    $("pre").text(response)
     
         }
 
