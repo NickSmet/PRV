@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name     Parallels Reportus Viewer 
-// @version            1.4.3.3
+// @version            1.4.3.4
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
 
 // @include     https://reportus.prls.net/webapp/reports/*
 // @include     https://reportus.prls.net/webapp/reports/*
+// @include        https://security-monitors.prls.net/user_audit/api/mail.py*
 
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
 
@@ -49,6 +50,13 @@
 // @grant          GM_setClipboard
 
 // ==/UserScript==
+
+//for security-monitors.prls.net. Completely separate feature.
+if (window.location.href.match(/security-monitors.prls.net/)){
+
+    $("pre").text(JSON.parse($("pre").text()).events.join("\n\n"))
+    
+        }
 
 
 function checkVersion(currentVersion, updateUrl){
