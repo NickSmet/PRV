@@ -1,6 +1,7 @@
 
 function parseLsLr(raw) {
-    let lsFileRegex = /(?<permissions>[\w\-\+]{9,11}@?) +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>[\w\\]+) +(?<type>[\w\-]+)? +(?<size>\d+) +(?<modified>(?<month>\w{3}) +(?<day>\d{1,2}) +(?<time>(\d\d\:){1,2}\d\d)? (?<year>\d{4} )?)(?<fileName>[\(\)\_\, \{\}\-\w\.]+)/g
+    let lsFileRegex = 
+    /(?<permissions>[\w\-\+]{9,11}@?) +(?<hardLinks>\d+) +(?<ownerName>[\(\)\_\{\}\-\w\.]+) +(?<owneGroup>[\w\\]+) +(?<type>[\w\-]+)? +(?<size>\d+) +(?<modified>(?<month>\w{3}) +(?<day>\d{1,2}) +(?<time>(\d\d\:){1,2}\d\d)? (?<year>\d{4} )?)(?<fileName>.+)/g
     let lsFolderRegex = /(\/[\w ]+\.pvm)?\/(?<location>[^:\n]*):$/gm //the .pvm part is for cases when showing list of files inside .pvm
 
     let bundleContents = ''
