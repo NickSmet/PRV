@@ -152,7 +152,10 @@ $("#restore").click(function(){
               var item_time = line_date
               var item_class = item
               var item_group = all_items[item].group
-              var item_name = all_items[item].name
+
+
+
+              var item_name = all_items[item].name.match(/\$\d/) ? curr_line_content.replace(all_items[item].regex,all_items[item].name) : all_items[item].name
               var item_rule = all_items[item].rule
 
               let item_label = all_items[item].label ? all_items[item].label : datetime_string
@@ -564,7 +567,8 @@ return result
     'settings':{'regex':/VmCfgCommitDiff/,"group":'PD',"name":"Settings changed",'style':{'background-color':'rgb(109, 163, 117)'}, 'rule':true},
     'PDFM_100983':{'regex':/KMErrorDomain Code\=1/,"group":'System_Errors',"name":"PDFM-100983",'style':{'background-color':'rgb(230, 0, 0)'}, 'rule':true},
     'PDFM-102106':{'regex':/PRL_NET_PRLNET_OPEN_FAILED/,"group":'System_Errors',"name":"~PDFM-102106",'style':{'background-color':'rgb(230, 111, 0)'}},
-    'PDFM-102112':{'regex':/Converter message: \(null\)/,"group":'System_Errors',"name":"~PDFM-102112",'style':{'background-color':'rgb(64, 85, 143)'}}
+    'PDFM-102112':{'regex':/Converter message: \(null\)/,"group":'System_Errors',"name":"~PDFM-102112",'style':{'background-color':'rgb(64, 85, 143)'}},
+    'msg':{'regex':/.*Showing message box. Type = \[.* ([^\]]*)\].*/,"group":'System_Errors',"name":"PD Message: $1",'style':{'background-color':'rgb(178, 182, 194)'}}
   }
 
   const syslog_items = {
