@@ -17,6 +17,7 @@ let niceReportObj = {
   host: {},
   virtHw: {},
   guestOS: {
+    type: undefined,
     version: undefined,
     adapters: [],
     networkDrives: [],
@@ -1654,6 +1655,7 @@ window.addEventListener('load', function (event) {
 const icons_Url = 'https://fe.parallels.com/1f8605fe770fb2a774d8cc981eaef9d2/'
 
 const icons = {
+  macvm: icons_Url + 'macvm.png',
   legacyBios: icons_Url + 'legacyBios.png',
   rollbackMode:
     icons_Url + '121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png',

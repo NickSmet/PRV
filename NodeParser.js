@@ -93,6 +93,13 @@ function parseCurrentVm(CurrentVmData) {
 
     let vmObj = strToXmlToJson(CurrentVmData)?.ParallelsVirtualMachine
 
+    let macvm
+
+    if (vmObj.Identification.VmHome.match(/\.macvm/)){
+        niceReportObj.guestOS.type='macmv'
+    macvm = true
+    markBullet("CurrentVm",'macvm')}
+
     niceReportObj.currentVM = vmObj
 
 
@@ -100,7 +107,7 @@ function parseCurrentVm(CurrentVmData) {
     let AdjustsVMHDDs = { 'Interface': 'hddtype', 'Actual Size': 'appleMbytes', 'Virtual Size': 'mbytes' }
     let iconVMHDDs = icons.hdds
 
-    if(!vmObj.Hardware.Hdd){markBullet('CurrentVm','bad','','No HDD attached to VM!')}
+    if(!vmObj.Hardware.Hdd&&!macvm){markBullet('CurrentVm','bad','','No HDD attached to VM!')}
 
     let VMHDDs_data = parseJsonItem(vmObj.Hardware.Hdd, ParamVMHDDs, AdjustsVMHDDs)
     //var VMHDDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMHDDs,AdjustsVMHDDs)
@@ -197,8 +204,8 @@ function parseCurrentVm(CurrentVmData) {
         'Subbullet2': VMHDDs,
         'Subbullet4': VMCDs,
 
-        'Hypervisor': vmObj.Settings.Runtime.HypervisorType,
-        'Adaptive Hypervisor': vmObj.Settings.Runtime.EnableAdaptiveHypervisor,
+        'Hypervisor': (function(){if(macvm){return 1}else{return vmObj.Settings.Runtime.HypervisorType}})(),
+        'Adaptive Hypervisor': (vmObj.Settings.Runtime.EnableAdaptiveHypervisor),
         'Nested Virtualization': vmObj.Hardware.Cpu.VirtualizedHV,
 
         'Section2': 'Sharing',
@@ -346,7 +353,7 @@ if(networkAdapters) {
     if (currentVmSpecs['PVM Location'].match(/^\/Volumes/)) { markBullet("CurrentVm", "external drive") }
 
     //Identifying AppleHV and marking bullet accordingly
-    if (currentVmSpecs['Hypervisor'] == 1) { markBullet("CurrentVm", "AppleHV") }
+    if (currentVmSpecs['Hypervisor'] == 1&&!macvm) { markBullet("CurrentVm", "AppleHV") }//Doesn't make sense to do it for macvm.
 
     //Identifying Nested Virtualization and marking bullet accordingly
     if (currentVmSpecs['Nested Virtualization'] == 1) { markBullet("CurrentVm", "Nested") }
@@ -597,7 +604,8 @@ function parseAdvancedVmInfo(item_all_data) {
     // console.log(`Boot Camp: ${niceReportObj.currentVM.BootCamp}`)
     if (bundleData.length>1 && bundleData.match(/860e329aab41}\.hds/)==null //making sure there is snapshot data, but '...ab41}.hds' is missing
     && !bigReportObj.ParallelsProblemReport.ProductName.match('Chrome OS') //while it's not PDFC
-    && niceReportObj.currentVM.BootCamp!=true) //and not a PD BC VM
+    && niceReportObj.currentVM.BootCamp!=true//and not a PD BC VM
+    && niceReportObj.guestOS.version!=macvm)//and not a macvm
     {
         markBullet('AdvancedVmInfo', 'bad',"","Main '860e329aab41}.hds' snapshot missing!")
     }
