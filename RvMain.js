@@ -1613,7 +1613,7 @@ function doReportOverview () {
     computerModel(macDatabase)
   })
 
-  fixDisplayedTime(timeDifference = parseInt(bigReportObj.ParallelsProblemReport.TimeZone))
+  //fixDisplayedTime(timeDifference = parseInt(bigReportObj.ParallelsProblemReport.TimeZone))
 
   $('#form1').replaceWith(function () {
     return $('<div />').append($(this).contents())
