@@ -1633,6 +1633,7 @@ window.addEventListener('load', function (event) {
   initialChecks()
 
   if (!reports) {
+    console.log('some issue with page');
     return
   }
 
