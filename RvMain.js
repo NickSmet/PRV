@@ -1759,6 +1759,8 @@ function laterChecksAndSetups () {
 function initialChecks () {
   let curr_url = window.location.href
 
+  console.log(curr_url);
+
   if (curr_url.match('localhost')) {
     devenv = true
   }
