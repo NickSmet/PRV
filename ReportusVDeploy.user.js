@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels Reportus Viewer 
-// @version            1.4.5.1
+// @version            1.4.6.0
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
@@ -50,6 +50,10 @@
 // @grant          GM_setClipboard
 
 // ==/UserScript==
+
+let curr_url = window.location.href
+
+console.log(curr_url);
 
 //for security-monitors.prls.net. Completely separate feature.
 if (window.location.href.match(/security-monitors.prls.net/)){
