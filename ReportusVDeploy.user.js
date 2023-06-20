@@ -51,9 +51,6 @@
 
 // ==/UserScript==
 
-let curr_url = window.location.href
-
-console.log(curr_url);
 
 //for security-monitors.prls.net. Completely separate feature.
 if (window.location.href.match(/security-monitors.prls.net/)){
