@@ -102,14 +102,24 @@ function strToXmlToJson (data) {
   if (!data) {
     return
   }
-  try {
-    xmlDoc = $.parseXML(data)
-  } catch (e) {
-    console.log('XML Parsing error')
-    console.log(e)
-    console.log(data)
-    return 'XML Parsing error'
-  }
+
+//in some weired cases this extra line is present and it breaks the xml. Dunno why.
+data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '')
+
+
+  
+  console.log(data)
+  xmlDoc = $.parseXML(data)
+  
+
+  // try {
+  //   xmlDoc = $.parseXML(data)
+  // } catch (e) {
+  //   console.log('XML Parsing error')
+  //   console.log(e)
+  //   console.log(data)
+  //   return 'XML Parsing error'
+  // }
   jsonObj = x2js.xml2json(xmlDoc)
   return jsonObj
 }
@@ -565,6 +575,7 @@ function BulletData (nodeName, option) {
   //if (typeof nodesObj[nodeName] == 'string' || typeof nodesObj[nodeName] == 'object') {}
 
   if (!parseFromNode.includes(nodeName) && !searchFromNode.includes(nodeName)) {
+    
     nodeData = nodesObj[nodeName]
     nodeSearchData = nodeData
     if(!nodeData){return}
@@ -648,12 +659,16 @@ function BulletData (nodeName, option) {
           bullet_all_data = $('pre', data)
             .eq(0)
             .text()
-            .replace('<?xml version="1.0" encoding="UTF-8"?>', '')
+            .replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/, '')
         } else {
           bullet_all_data = data
-            .replace('<![CDATA[<?xml version="1.0" encoding="UTF-8"?>', '')
-            .replace(']]>', '')
-            .replace('<![CDATA[', '')
+            .replace(/<!\[CDATA\[<\?xml version=["']1.0['"] encoding=['"]UTF-8['"]\?>/g, '')
+            .replace(/\]\]>/g, '')
+            .replace(/<!\[CDATA\[/g, '')
+            .replace(/\<s /g, '').replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/, '')
+  
+            
+
         }
       }
 
@@ -759,7 +774,11 @@ const ObjByString = function (o, s) {
 
 function computerModel (macDatabase) {
   let macElement = $('td:contains("Computer Model")').next()
-  let macModel = bigReportObj.ParallelsProblemReport.ComputerModel
+  let macModel = bigReportObj.ParallelsProblemReport?.ComputerModel
+
+  if (!macModel) {
+    return
+  }
 
   if (!macModel.match(/MacBook|iMac|Macmini|MacPro/)) {
     return
