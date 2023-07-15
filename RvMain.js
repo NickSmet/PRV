@@ -107,19 +107,17 @@ function strToXmlToJson (data) {
 data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '')
 
 
-  
-  console.log(data)
-  xmlDoc = $.parseXML(data)
+
   
 
-  // try {
-  //   xmlDoc = $.parseXML(data)
-  // } catch (e) {
-  //   console.log('XML Parsing error')
-  //   console.log(e)
-  //   console.log(data)
-  //   return 'XML Parsing error'
-  // }
+  try {
+    xmlDoc = $.parseXML(data)
+  } catch (e) {
+    console.log('XML Parsing error')
+    console.log(e)
+    console.log(data)
+    return 'XML Parsing error'
+  }
   jsonObj = x2js.xml2json(xmlDoc)
   return jsonObj
 }
@@ -581,7 +579,7 @@ function BulletData (nodeName, option) {
     if(!nodeData){return}
     eval(
       'bullet_parsed_data=parse' +
-        nodeName.replace(/\.|\d|gz/g, '') +
+        nodeName.replace(/\.|\d|gz/g, '').replace(/-/g, '') +
         '(nodeData)'
     )
     $(`#${item_id}`).html(bullet_parsed_data)
@@ -689,7 +687,7 @@ function BulletData (nodeName, option) {
       try {
         eval(
           'bullet_parsed_data=parse' +
-            nodeName.replace(/\.|\d|gz/g, '') +
+            nodeName.replace(/\.|\d|gz/g, '').replace(/-/g, '') +
             '(nodeData)'
         )
       } catch (error) {}}
@@ -1190,8 +1188,9 @@ function markBullet (bullet_name, icon, html, title) {
     nodename = nodename.replace(/\.log/, 'log')
   }
 
-  console.log(`Parsing ${nodename}`)
+  console.log(nodename);
 
+  
   $(`button#btn_${nodename}`)
     .next()
     .filter(function () {
@@ -1675,6 +1674,7 @@ window.addEventListener('load', function (event) {
 const icons_Url = 'https://fe.parallels.com/1f8605fe770fb2a774d8cc981eaef9d2/'
 
 const icons = {
+  coherence: icons_Url + 'coherence.png',
   macvm: icons_Url + 'macvm.png',
   legacyBios: icons_Url + 'legacyBios.png',
   rollbackMode:

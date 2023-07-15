@@ -494,8 +494,15 @@ function parseNetConfig(item_all_data) {
 }
 
 function parseClientInfo(item_all_data) {
+    let clientSettings
 
-    let clientSettings = item_all_data.ClientInfo.ClientSettings.split('\n')
+    try {
+    clientSettings = item_all_data.ClientInfo.ClientSettings.split('\n')
+    } catch (error) {
+        return "Parsing error."
+    }
+
+    
 
     if(!clientSettings){return "Nothing."}
 
@@ -559,26 +566,6 @@ function parseAdvancedVmInfo(item_all_data) {
     let snapshots = ''
     let number_of_snapshots = 0
 
-    //Here we're just fixing the XML structure. For some resong for AdvancedVmInfo it's a bit off. Need to clean this up later.
-    //commented out, since it's broken too often. Decided to use regex to get snapshot list
-
-    // regex1 = /<\/AdvancedVmInfo[^>]*>\n<\/AdvancedVmInfo>/gm
-    // regex2 = /(<ParallelsSavedStates>|<\/DiskInfo>|<\/Hdd>)/gm
-    // regex3 = /(<DiskInfo>|<Hdd[^>]*>)/gm
-    // regex4 = /<AdvancedVmInfo[^>]*>\n *<AdvancedVmInfo[^>]*>/gm
-    // regex5 = /<\?xml version='1\.0' encoding='UTF-8'\?>/
-    // regex6 = /<Description><\!\[CDATA\[\]\]>/
-    // regex7 = /<SavedStateItem[^>]*?guid=\"\"[^>]*?>/
-    // regex8 = /<\n/
-
-    // item_all_data = item_all_data.replace(regex1, '</AdvancedVmInfo>');
-    // item_all_data = item_all_data.replace(regex2, "")
-    // item_all_data = item_all_data.replace(regex3, "")
-    // item_all_data = item_all_data.replace(regex4, '<AdvancedVmInfo>')
-    // item_all_data = item_all_data.replace(regex5, '')
-    // item_all_data = item_all_data.replace(regex6, '')
-    // if(reportus){item_all_data = item_all_data.replace(regex7, '')}
-    // item_all_data = item_all_data.replace(regex8, '')
 
     var bundleData = parseLsLr(item_all_data)
 
@@ -837,10 +824,17 @@ function parseLoadedDrivers(item_all_data) {
         //need to make some object to put all this into
         let HostInfo = strToXmlToJson(bigReportObj['ParallelsProblemReport']['HostInfo'])
         let CPU = HostInfo.ParallelsHostInfo.Cpu.Model
+        let hostOS = HostInfo.ParallelsHostInfo.OsVersion.Major
 
-        if (non_apple_arr == null && prl_arr == null && CPU!='Apple M1') {
+        if (non_apple_arr == null && prl_arr == null && (!CPU.match('Apple') || hostOS < 12 )) {
             $('#LoadedDrivers').html('Only apple, <b style="color:red">no prl(!)</b>');
             markBullet('LoadedDrivers', 'serious warning')
+            return;
+        }
+
+                if (non_apple_arr == null && prl_arr == null && (CPU.match('Apple') || hostOS >= 12)) {
+            $('#LoadedDrivers').html('Only apple, as expected.');
+            markBullet('LoadedDrivers', 'all good')
             return;
         }
 
@@ -859,7 +853,7 @@ function parseLoadedDrivers(item_all_data) {
             }
         }
 
-        if (prl_arr == null&&CPU!='Apple M1') {
+        if (prl_arr == null&& !(CPU.match('Apple') || hostOS >= 12)) {
             non_apple_arr.unshift('<b style="color:red"> no prl(!)</b>');
             markBullet('LoadedDrivers', 'serious warning')
         }
@@ -956,7 +950,7 @@ function parseMountInfo(item_all_data) {
 
     let lowStorage = false
 
-    let fileSystemRegex = /^(?<id>[\w\/]*) on [^\(]* \((?<filesystem>[^,]+)/
+    let fileSystemRegex = /^(?<id>[\w\/\-:]*) on [^\(]* \((?<filesystem>[^,]+)/
 
     let mountInfoRegex = /(?<id>(map |\/dev|\/\/|devfs)[\w\/\-@\.]*)  +(?<Size>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Used>[\d\.]*(Gi|Ti|Bi|Ki|Mi)) +(?<Avail>[\d\.]*(Gi|Ti|Bi|Ki|Mi) +)(?<Capacity>\d+\%) +(?<iused>\d+) +(?<ifree>\d+) +(?<iused2>\d+\%) +(?<MountedOn>\/.*)(\n|$)/
 
@@ -1013,7 +1007,10 @@ function parseMountInfo(item_all_data) {
 
 function parseGuestOs(item_all_data) {
 
+
     let guestOsJson = strToXmlToJson(item_all_data)
+   
+    
 
     const guestOsVersion = guestOsJson.GuestOsInformation?.RealOsVersion?.replace(/(,$)/g, "") || '--' //removing trailing comma
     const guestOsType = guestOsJson.GuestOsInformation?.ConfOsType
@@ -1279,6 +1276,18 @@ function parsetoolslog(item_all_data) {
 
 }
 
+
+function parseparallelssystemlog(item_all_data) {
+   
+    if(!item_all_data){return}
+    let last50000chars = item_all_data.slice(item_all_data.length - 50000)
+    console.log(last50000chars);
+    if (last50000chars.match(/Coherence state full dump/gm)) {
+        markBullet('parallels-system.log', 'coherence')
+    }
+   
+}
+
 function parseLicenseData(item_all_data) {
     const licType = {
         1:"STD",
@@ -1369,7 +1378,8 @@ function parseAppConfig(item_all_data) {
     let defaultVmFolder
     while ((defaultVmFolder = defaultVmFolderRegex.exec(item_all_data)) !== null) {
         appConfigContents += bulletSubItem('Default VM Folder', defaultVmFolder[1])
-        if (defaultVmFolder[1].match(/^\/Volumes/) && !externalVmFolder) { markBullet('AppConfig', 'External Default VM folder') }//to avoid marking it a second time in case there are multiple such volumes
+        if (defaultVmFolder[1].match(/^\/Volumes/) && !externalVmFolder) { 
+            ('AppConfig', 'External Default VM folder') }//to avoid marking it a second time in case there are multiple such volumes
     }
 
     appConfigContents += permanentAssignments
