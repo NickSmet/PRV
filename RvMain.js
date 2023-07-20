@@ -104,7 +104,8 @@ function strToXmlToJson (data) {
   }
 
 //in some weired cases this extra line is present and it breaks the xml. Dunno why.
-data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '')
+data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"<[^>]*>/g, '')
+
 
 
 
@@ -374,6 +375,8 @@ function parseXMLItem (
   data = data.replace(/<\?xml[^>]*>/g, '')
   data = data.replace(/\&/g, '')
   data = data.replace(/[&]]/g, '')
+
+
 
   try {
     xmlDoc = $.parseXML(data)
@@ -658,12 +661,14 @@ function BulletData (nodeName, option) {
             .eq(0)
             .text()
             .replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/, '')
+            .replace(/\"<[^>]*>/g, '')
         } else {
           bullet_all_data = data
             .replace(/<!\[CDATA\[<\?xml version=["']1.0['"] encoding=['"]UTF-8['"]\?>/g, '')
             .replace(/\]\]>/g, '')
             .replace(/<!\[CDATA\[/g, '')
             .replace(/\<s /g, '').replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/, '')
+            .replace(/\"<[^>]*>/g, '')
   
             
 
