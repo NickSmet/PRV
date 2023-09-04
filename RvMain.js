@@ -54,8 +54,9 @@ let reportusPrms = { appendTo: '.table-striped', nodeProperty: 'Onclick' }
 let be
 
 function getXmlReport (requestLink) {
-  //https://gist.github.com/john-doherty/b9195065884cdbfd2017a4756e6409cc
+
   function sanitizeStringForXML (str, removeDiscouragedChars = true) {
+
     // let NOT_SAFE_IN_XML_1_0 = /[^\x09\x0A\x0D\x20-\xFF\x85\xA0-\uD7FF\uE000-\uFDCF\uFDE0-\uFFFD];/gm;
     // let otherStuff = /[\0x1d]/gm
     // return theString.replace(NOT_SAFE_IN_XML_1_0, '').replace(otherStuff, '');
@@ -79,48 +80,58 @@ function getXmlReport (requestLink) {
           '(?:[^\\uD800-\\uDBFF]|^)[\\uDC00-\\uDFFF]))',
         'g'
       )
-
+        
       str = str.replace(regex, '')
     }
 
-    return str
+    console.log("After sanitizeStringForXML, contains </SystemFlags>: ", str.includes("</SystemFlags>"));
+
+    return str;
   }
 
   return new Promise(function (resolve, reject) {
     $.get(requestLink, function ldd (data) {
+      
+      // Log check
+      console.log("Initial data, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
+
       if (devenv) {
-        data = new XMLSerializer().serializeToString(data)
+        data = new XMLSerializer().serializeToString(data);
+        
+        // Log check
+        console.log("After XMLSerializer, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
       }
-      data = sanitizeStringForXML(data)
-      let xmlObj = strToXmlToJson(data)
-      resolve(xmlObj)
-    })
-  })
+      data = sanitizeStringForXML(data);
+      
+      let xmlObj = strToXmlToJson(data);
+      resolve(xmlObj);
+    });
+  });
 }
 
 function strToXmlToJson (data) {
+  // Log check
+  console.log("Start of strToXmlToJson, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
+
   if (!data) {
-    return
+    return;
   }
 
-//in some weired cases this extra line is present and it breaks the xml. Dunno why.
-data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"<[^>]*>/g, '')
+  data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"<[^>]*>/g, '');
 
-
-
-
-  
+  // Log check
+  console.log("After replacements, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
 
   try {
-    xmlDoc = $.parseXML(data)
+    xmlDoc = $.parseXML(data);
   } catch (e) {
-    console.log('XML Parsing error')
-    console.log(e)
-    console.log(data)
-    return 'XML Parsing error'
+    console.log('XML Parsing error');
+    console.log(data);
+    return 'XML Parsing error';
   }
-  jsonObj = x2js.xml2json(xmlDoc)
-  return jsonObj
+  
+  jsonObj = x2js.xml2json(xmlDoc);
+  return jsonObj;
 }
 
 //https://stackoverflow.com/questions/26891846/is-there-an-equivalent-of-console-table-in-the-browser

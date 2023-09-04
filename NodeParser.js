@@ -88,17 +88,25 @@ function versionCompare(v1, v2, options) {
 }
 
 function parseCurrentVm(CurrentVmData) {
-
+    
     if(!CurrentVmData){return}
 
-    let vmObj = strToXmlToJson(CurrentVmData)?.ParallelsVirtualMachine
+    let vmObj;
+try {
+  vmObj = strToXmlToJson(CurrentVmData)?.ParallelsVirtualMachine;
+} catch (error) {
+  console.error("Parsing error");
+  return "Parsing error";
+}
+if(!vmObj){return}
 
     let macvm
 
-    if (vmObj.Identification.VmHome.match(/\.macvm/)){
-        niceReportObj.guestOS.type='macmv'
-    macvm = true
-    markBullet("CurrentVm",'macvm')}
+    if (vmObj?.Identification?.VmHome?.match(/\.macvm/)) {
+        niceReportObj.guestOS.type = 'macmv';
+        macvm = true;
+        markBullet("CurrentVm", 'macvm');
+    }
 
     niceReportObj.currentVM = vmObj
 
@@ -107,9 +115,9 @@ function parseCurrentVm(CurrentVmData) {
     let AdjustsVMHDDs = { 'Interface': 'hddtype', 'Actual Size': 'appleMbytes', 'Virtual Size': 'mbytes' }
     let iconVMHDDs = icons.hdds
 
-    if(!vmObj.Hardware.Hdd&&!macvm){markBullet('CurrentVm','bad','','No HDD attached to VM!')}
+    if(!vmObj?.Hardware?.Hdd&&!macvm){markBullet('CurrentVm','bad','','No HDD attached to VM!')}
 
-    let VMHDDs_data = parseJsonItem(vmObj.Hardware.Hdd, ParamVMHDDs, AdjustsVMHDDs)
+    let VMHDDs_data = parseJsonItem(vmObj?.Hardware?.Hdd, ParamVMHDDs, AdjustsVMHDDs)
     //var VMHDDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMHDDs,AdjustsVMHDDs)
 
     let VMHDDs = buildNodeBullet('HDDs', 'Custom', VMHDDs_data, iconVMHDDs)
@@ -119,7 +127,7 @@ function parseCurrentVm(CurrentVmData) {
     let iconVMCDs = icons.cd
     let CdExclude = { 'Connected': '0' }
 
-    let VMCDs_data = parseJsonItem(vmObj.Hardware.CdRom, ParamVMCDs, AdjustsVMCDs, CdExclude)
+    let VMCDs_data = parseJsonItem(vmObj?.Hardware?.CdRom, ParamVMCDs, AdjustsVMCDs, CdExclude)
     //var VMCDs_data = parseXMLItem (item_all_data,element = "Hdd",ParamVMCDs,AdjustsVMCDs)
 
     let VMCDs = buildNodeBullet('CDs', 'Custom', VMCDs_data, iconVMCDs)
@@ -129,7 +137,7 @@ function parseCurrentVm(CurrentVmData) {
     let iconVMNETWORKs = icons.networkAdapter
 
     //var VMNETWORKs_data = parseXMLItem (item_all_data, element = "NetworkAdapter", ParamVMNETWORKs, AdjustsVMNETWORKs)
-    let networkAdapters = vmObj.Hardware.NetworkAdapter
+    let networkAdapters = vmObj?.Hardware?.NetworkAdapter
     let VMNETWORKs_data = parseJsonItem(networkAdapters, ParamVMNETWORKs, AdjustsVMNETWORKs)
 
 
