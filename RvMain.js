@@ -93,13 +93,13 @@ function getXmlReport (requestLink) {
     $.get(requestLink, function ldd (data) {
       
       // Log check
-      console.log("Initial data, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
+      console.log("Initial data, contains </ProblemDescription>: ", data.includes("</ProblemDescription>"));
 
       if (devenv) {
         data = new XMLSerializer().serializeToString(data);
         
         // Log check
-        console.log("After XMLSerializer, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
+        console.log("After XMLSerializer, contains </ProblemDescription>: ", data.includes("</ProblemDescription>"));
       }
       data = sanitizeStringForXML(data);
       
@@ -111,16 +111,16 @@ function getXmlReport (requestLink) {
 
 function strToXmlToJson (data) {
   // Log check
-  console.log("Start of strToXmlToJson, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
+  console.log("Start of strToXmlToJson, contains </ProblemDescription>: ", data.includes("</ProblemDescription>"));
 
   if (!data) {
     return;
   }
 
-  data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"<[^>]*>/g, '');
+  data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"xml[^>]*>/g, '');
 
   // Log check
-  console.log("After replacements, contains </SystemFlags>: ", data.includes("</SystemFlags>"));
+  console.log("After replacements, contains </ProblemDescription>: ", data.includes("</ProblemDescription>"));
 
   try {
     xmlDoc = $.parseXML(data);
@@ -587,8 +587,12 @@ function BulletData (nodeName, option) {
   //if (typeof nodesObj[nodeName] == 'string' || typeof nodesObj[nodeName] == 'object') {}
 
   if (!parseFromNode.includes(nodeName) && !searchFromNode.includes(nodeName)) {
-    
-    nodeData = nodesObj[nodeName]
+    try {
+      nodeData = nodesObj[nodeName];
+  } catch (e) {
+     return // Handle the error here if needed
+  }
+
     nodeSearchData = nodeData
     if(!nodeData){return}
     eval(
@@ -674,6 +678,7 @@ function BulletData (nodeName, option) {
             .replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/, '')
             .replace(/\"<[^>]*>/g, '')
         } else {
+          
           bullet_all_data = data
             .replace(/<!\[CDATA\[<\?xml version=["']1.0['"] encoding=['"]UTF-8['"]\?>/g, '')
             .replace(/\]\]>/g, '')
@@ -686,7 +691,12 @@ function BulletData (nodeName, option) {
         }
       }
 
-      let nodeData = nodesObj[nodeName]
+      try {
+        nodeData = nodesObj[nodeName];
+    } catch (e) {
+      return
+        // Handle the error here if needed
+    }
       let nodeSearchData = nodeData
 
       

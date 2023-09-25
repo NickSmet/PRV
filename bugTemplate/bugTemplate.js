@@ -29,8 +29,15 @@ function SetUpBgt(niceReportObj) {
     guestOS += niceReportObj.guestOS.kernel;
   }
   
-  let hostOS = strToXmlToJson(bigReportObj.ParallelsProblemReport.HostInfo).ParallelsHostInfo.OsVersion.StringPresentation;
-  
+  let hostOS
+
+  try {
+  hostOS = strToXmlToJson(bigReportObj.ParallelsProblemReport.HostInfo).ParallelsHostInfo.OsVersion.StringPresentation;
+  }
+  catch {
+   hostOS = 'undefined'
+  }
+
   var frTemplate = `**User story:**
 
   When I…

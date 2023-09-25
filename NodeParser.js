@@ -832,7 +832,7 @@ function parseLoadedDrivers(item_all_data) {
         //need to make some object to put all this into
         let HostInfo = strToXmlToJson(bigReportObj['ParallelsProblemReport']['HostInfo'])
         let CPU = HostInfo.ParallelsHostInfo.Cpu.Model
-        let hostOS = HostInfo.ParallelsHostInfo.OsVersion.Major
+        let hostOS = HostInfo?.ParallelsHostInfo?.OsVersion?.Major
 
         if (non_apple_arr == null && prl_arr == null && (!CPU.match('Apple') || hostOS < 12 )) {
             $('#LoadedDrivers').html('Only apple, <b style="color:red">no prl(!)</b>');
