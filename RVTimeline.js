@@ -378,7 +378,7 @@ $("#restore").click(function(){
     switch (item) { 
       case 'crash'://need a rule that works in case there are some more lines after 'VM process exiting with code 0'
       if(!prev_line){return}
-      if (!prev_line.match(/BattWatcher|Encryption plugin|Terminating VM Process \.\.\.|VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
+      if (!prev_line.match(/Vm will be stopped|BattWatcher|Encryption plugin|Terminating VM Process \.\.\.|VM process exiting with code 0|VM state\(VmStateNone\): enqueued 'VmLocalCmdStart'\(20001\) command/)&&line_message.match(/===========================================================/))
       {return result}else{return false
       }
 

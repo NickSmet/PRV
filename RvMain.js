@@ -117,7 +117,8 @@ function strToXmlToJson (data) {
     return;
   }
 
-  data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"xml[^>]*>/g, '');
+  data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"xml[^>]*>/g, '')
+  .replace(/\<IASUPCaller\:\/\>/gm, '');
 
   // Log check
   console.log("After replacements, contains </ProblemDescription>: ", data.includes("</ProblemDescription>"));
