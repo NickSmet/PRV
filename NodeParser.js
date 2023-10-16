@@ -767,19 +767,36 @@ function parseMoreHostInfo(item_all_data) {
 
         let gpu = graphics_subel[i]
         let gpu_name = (gpu['sppci_model'])
-        if (gpuNames.includes(gpu_name)) { gpu_name += "_" + i }
-        gpuNames.push(gpu_name)
-        let displays = []
-        for (var i in gpu['spdisplays_ndrvs']) {
-            number_of_displays++
-            let display_subel = gpu['spdisplays_ndrvs']
-            display =
-                "\n<u>Display</u>: " + display_subel[i]['_name'] + "\
-                \n<u>Phys resolution</u>: "+ display_subel[i]['_spdisplays_pixels'] + "\
-                \n<u>Logical resolution</u>: "+ display_subel[i]['_spdisplays_resolution'] + "\n"
+        if (gpuNames.includes(gpu_name)) {
+          gpu_name += "_" + i;
+        }
+        gpuNames.push(gpu_name);
+        let displays = [];
+        for (var i in gpu["spdisplays_ndrvs"]) {
+          number_of_displays++;
+          let display_subel = gpu["spdisplays_ndrvs"];
 
-            displays += display
-            //CreateBullet(item_name, bullet_type, data = '', icon_url)
+          let name = display_subel[i]["_name"];
+
+          console.log(display_subel[i])
+          if (
+            name == "Color LCD" &&
+            display_subel[i]["_spdisplays_display-vendor-id"] == 610
+          ) {
+            name = "MacBook Built-In Display";
+          }
+
+          display =
+            "\n<u>Display</u>: " +
+            name +
+            "\n<u>Phys resolution</u>: " +
+            display_subel[i]["_spdisplays_pixels"] +
+            "\n<u>Logical resolution</u>: " +
+            display_subel[i]["_spdisplays_resolution"] +
+            "\n";
+
+          displays += display;
+          //CreateBullet(item_name, bullet_type, data = '', icon_url)
         }
         let bulletType
         if (displays == "") {
