@@ -891,7 +891,7 @@ function parseLoadedDrivers(item_all_data) {
             markBullet('LoadedDrivers', 'warning')
         }
         else {
-            markBullet('LoadedDrivers', 'bad')
+            markBullet('LoadedDrivers', 'hackintosh',"","hackintosh or Legacy Patcher")
         }
 
         return non_apple_str

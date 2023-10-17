@@ -1774,7 +1774,8 @@ const icons = {
   'not PvmDefault': icons_Url + '983874.png',
   travelMode: icons_Url + '121824353-5ceabf80-ccb4-11eb-9120-b5cbd15e31e9.png',
   inputDevice: icons_Url + 'input.png',
-  CCID: icons_Url + 'CCID.png'
+  CCID: icons_Url + 'CCID.png',
+  hackintosh: icons_Url + 'hackintosh.png'
 }
 
 function checkVmState () {
