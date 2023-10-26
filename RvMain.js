@@ -1775,13 +1775,21 @@ const icons = {
   travelMode: icons_Url + '121824353-5ceabf80-ccb4-11eb-9120-b5cbd15e31e9.png',
   inputDevice: icons_Url + 'input.png',
   CCID: icons_Url + 'CCID.png',
-  hackintosh: icons_Url + 'hackintosh.png'
+  hackintosh: icons_Url + 'hackintosh.png',
+  stopped_vm: icons_Url + 'stopped_vm.png'
 }
 
 function checkVmState () {
   let reportType = $("td:contains('UserDefined')").text()
   if (reportType.match('Stoped')) {
     $("td:contains('UserDefined')").css('font-weight', 'bold')
+    $("td:contains('UserDefined')").append('<i class="some-icon-class"></i>');
+
+    $("td:contains('UserDefined')").append('<img src="'+icons.stopped_vm+'" title="VM Not Running" style="display: linline; height: 1.5em">');
+
+
+
+
   }
 }
 
