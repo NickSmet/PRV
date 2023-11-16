@@ -1069,8 +1069,12 @@ function parseGuestOs(item_all_data) {
 }
 
 function parseGuestCommands(item_all_data) {
+    console.log(niceReportObj.guestOS.type)
 
-    if (!item_all_data['GuestCommand']||item_all_data.length < 100) {
+    if(niceReportObj.guestOS.type=='Linux'){return "It's Linux. Look inside."}
+
+    if ((!item_all_data['GuestCommand']||item_all_data.length < 100)&&niceReportObj.guestOS.type!='Linux') {
+
         markBullet('GuestCommands',icons.warning)
         return 'GuestCommands empty'}
 

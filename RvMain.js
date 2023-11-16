@@ -120,6 +120,18 @@ function strToXmlToJson (data) {
   data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"xml[^>]*>/g, '')
   .replace(/\<[^:]{1,30}\:\/>/gm, '');
 
+
+  const linuxIndicator = '<ConfOsType>Linux<\/ConfOsType>';
+
+if (data.includes(linuxIndicator)) {
+  console.log("Substring found!");
+  data = data.replace(/<GuestCommands.*?>([\s\S]*?)<\/GuestCommands>/g, (match, content) => {
+    // Replace '<' and '>' in the content with visual equivalents
+    const modifiedContent = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<GuestCommands>${modifiedContent}</GuestCommands>`;
+  });
+}
+
   // Log check
   console.log("After replacements, contains </ProblemDescription>: ", data.includes("</ProblemDescription>"));
 
