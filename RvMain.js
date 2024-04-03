@@ -120,6 +120,8 @@ function strToXmlToJson (data) {
   data = data.replace(/<\?xml version=['"]1.0['"] encoding=['"]UTF-8['"]\?>/g, '').replace(/\"xml[^>]*>/g, '')
   .replace(/\<[^:]{1,30}\:\/>/gm, '');
 
+  data = data.replace(/NSUserDictionaryReplacementItems -- \[.*\]/gm, '')
+
 
   const linuxIndicator = '<ConfOsType>Linux<\/ConfOsType>';
 
