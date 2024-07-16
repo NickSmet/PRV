@@ -1228,7 +1228,6 @@ function parseTimeZone() {
 
 function parsetoolslog(item_all_data) {
     let toolsSuccess = false
-    console.log(bigReportObj.ParallelsProblemReport)
     if (!bigReportObj.ParallelsProblemReport.GuestOs.match("Windows"))
     { 
             markBullet('tools.log','CustomHtml','<a title="Not Windows. Tools log not expected."> ℹ️ </a>')
