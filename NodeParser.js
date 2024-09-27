@@ -1251,6 +1251,7 @@ function parsetoolslog(item_all_data) {
     let successfulInstallRegex = /Setup finished with code 3010 \(0xbc2\)/
     let linesInterpreter = {
         " Setup finished with code 3010 \\(0xbc2\\)":"Installation successful!",
+        " The requested operation is successful":"Installation successful!",
         " Setup finished with code 0 \\(0x0\\)":"Installation successful!",
         " Setup finished with code 1641 \\(0x669\\)":"Installation successful!",
         " \\*{14} Setup mode: UPDATE from version (\\d\\d\\.\\d\\.\\d\\.\\d{5})":"Updating from <b>$1</b>",
