@@ -1712,7 +1712,7 @@ window.addEventListener('load', function (event) {
 
 //note to self -- start hosting those somewhere (github even?)
 
-const icons_Url = 'https://fe.parallels.com/1f8605fe770fb2a774d8cc981eaef9d2/'
+const icons_Url = 'https://fe.parallels.com/182a1ed1f222784beb29f5c66d423509/'
 
 const icons = {
   coherence: icons_Url + 'coherence.png',
