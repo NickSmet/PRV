@@ -1237,7 +1237,7 @@ function parsetoolslog(item_all_data) {
     //console.log(item_all_data);
     let result = ""
     let last1000chars = item_all_data.slice(item_all_data.length - 1000)
-    if (last1000chars.match(/successfully/)) {
+    if (last1000chars.match(/successful/)) {
         toolsSuccess = true
         markBullet('tools.log', 'all good')
     }
@@ -1250,6 +1250,8 @@ function parsetoolslog(item_all_data) {
     let lineRegex = /(?<dateString>\d\d-\d\d \d\d:\d\d:\d\d).*WIN_TOOLS_SETUP\](?<message>.*)/
     let successfulInstallRegex = /Setup finished with code 3010 \(0xbc2\)/
     let linesInterpreter = {
+        ".*Installation type ([A-Z]+) detected":"$1",
+        " Installer exited with error code 3010: The requested operation is successful.*":"Installation successful!",
         " Setup finished with code 3010 \\(0xbc2\\)":"Installation successful!",
         " The requested operation is successful":"Installation successful!",
         " Setup finished with code 0 \\(0x0\\)":"Installation successful!",
