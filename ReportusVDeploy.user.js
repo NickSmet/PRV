@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels Reportus Viewer 
-// @version            1.7.0.0
+// @version            1.7.0.1
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
@@ -19,7 +19,7 @@
 
 // @require    https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js
 
-// @require      https://fe.parallels.com/e787045f0b4d5f21296d5796181cf938/xml2json.js
+// @require      https://raw.githubusercontent.com/abdolence/x2js/refs/heads/master/xml2json.js
 
 // @require      https://visjs.github.io/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js?9
 // @resource     timelineCSS https://visjs.github.io/vis-timeline/styles/vis-timeline-graph2d.min.css?9
