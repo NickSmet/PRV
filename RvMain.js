@@ -1712,7 +1712,7 @@ window.addEventListener('load', function (event) {
 
 //note to self -- start hosting those somewhere (github even?)
 
-const icons_Url = 'https://fe.parallels.com/182a1ed1f222784beb29f5c66d423509/'
+const icons_Url = 'https://chatbotkbimages.blob.core.windows.net/reportus-parser-icons/'
 
 const icons = {
   coherence: icons_Url + 'coherence.png',
