@@ -1,0 +1,280 @@
+<script lang="ts">
+	import * as Tooltip from '$lib/components/ui/tooltip';
+	import * as Collapsible from '$lib/components/ui/collapsible';
+	import { Badge } from '$lib/components/ui/badge';
+	import type { NodeModel, NodeSection, NodeRow } from '$lib/nodeBuilder';
+	import {
+		HardDrive as HardDriveIcon,
+		Network,
+		Usb,
+		Disc,
+		Cpu,
+		Monitor,
+		MemoryStick,
+		Shield,
+		FolderOpen,
+		Cloud,
+		Settings
+	} from '@lucide/svelte';
+
+	let { node }: { node: NodeModel } = $props();
+
+	// Collapsible state
+	let networksOpen = $state(false);
+	let hddsOpen = $state(false);
+	let usbOpen = $state(false);
+	let cdOpen = $state(false);
+
+	// Helper to find a section
+	function getSection(title: string): NodeSection | undefined {
+		return node.sections.find((s) => s.title === title);
+	}
+
+	// Get sections
+	const startupSection = getSection('Startup / Shutdown');
+	const generalSection = getSection('General');
+	const hardwareSection = getSection('Hardware');
+	const sharingSection = getSection('Sharing');
+
+	// Get subsections from Hardware
+	const networkSubs = hardwareSection?.subSections?.filter((s) => s.title === 'Networks')[0];
+	const hddSubs = hardwareSection?.subSections?.filter((s) => s.title === 'HDDs')[0];
+	const usbSubs = hardwareSection?.subSections?.filter((s) => s.title === 'USBs')[0];
+	const cdSubs = hardwareSection?.subSections?.filter((s) => s.title === 'CD / DVD')[0];
+
+	// Helper to get badge variant with fallback
+	function getBadgeVariant(row: NodeRow) {
+		if (!row.badge) return 'outline';
+		const variant = row.badge.variant;
+		// Map 'muted' to 'secondary' for consistency
+		if (variant === 'muted') return 'secondary';
+		return variant;
+	}
+</script>
+
+<Tooltip.Provider>
+	<div class="compact-current-vm space-y-3">
+		<!-- Startup & Shutdown as compact 2-column table -->
+		{#if startupSection}
+			<section class="space-y-2">
+				<h3 class="text-xs font-bold text-foreground">{startupSection.title}</h3>
+				<div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+					{#each startupSection.rows as row}
+						<div class="flex items-center justify-between">
+							<span class="text-muted-foreground">{row.label}</span>
+							{#if row.badge}
+								<Badge variant={getBadgeVariant(row)} class="h-5 text-[10px] font-normal">
+									{row.badge.label}
+								</Badge>
+							{:else}
+								<span class="font-medium">{row.value}</span>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
+		<!-- Hardware as inline flow -->
+		{#if hardwareSection}
+			<section class="space-y-2">
+				<h3 class="text-xs font-bold text-foreground">Hardware</h3>
+				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+					{#each hardwareSection.rows as row, i}
+						{#if i > 0}
+							<span class="text-muted-foreground/40">•</span>
+						{/if}
+						<Tooltip.Root>
+							<Tooltip.Trigger class="inline-flex items-center gap-1">
+								{#if row.iconKey === 'cpu'}
+									<Cpu class="h-3.5 w-3.5 text-muted-foreground" />
+								{:else if row.iconKey === 'monitor'}
+									<Monitor class="h-3.5 w-3.5 text-muted-foreground" />
+								{:else if row.iconKey === 'keyboard' || row.iconKey === 'mouse'}
+									<Settings class="h-3.5 w-3.5 text-muted-foreground" />
+								{/if}
+								<span class="font-medium">{row.label}:</span>
+								{#if row.badge}
+									<Badge variant={getBadgeVariant(row)} class="h-4 px-1 text-[9px]">
+										{row.badge.label}
+									</Badge>
+								{:else}
+									<span>{row.value}</span>
+								{/if}
+							</Tooltip.Trigger>
+							<Tooltip.Content>
+								<p class="max-w-[250px] text-xs">{row.label}: {row.value || row.badge?.label}</p>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
+		<!-- Networks collapsible -->
+		{#if networkSubs && networkSubs.rows.length > 0}
+			<Collapsible.Root bind:open={networksOpen}>
+				<Collapsible.Trigger
+					class="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-accent"
+				>
+					<div class="flex items-center gap-2">
+						<Network class="h-3.5 w-3.5" />
+						<span>{networkSubs.title}</span>
+					</div>
+					<span class="text-lg">{networksOpen ? '−' : '+'}</span>
+				</Collapsible.Trigger>
+				<Collapsible.Content class="mt-2">
+					<div class="rounded-md border border-border bg-card p-3">
+						<div class="space-y-0.5 text-[11px]">
+							{#each networkSubs.rows as row}
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground">{row.label}</span>
+									{#if row.badge}
+										<Badge variant={getBadgeVariant(row)} class="h-4 text-[9px]">
+											{row.badge.label}
+										</Badge>
+									{:else}
+										<span class="font-medium">{row.value}</span>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					</div>
+				</Collapsible.Content>
+			</Collapsible.Root>
+		{/if}
+
+		<!-- HDDs collapsible -->
+		{#if hddSubs && hddSubs.rows.length > 0}
+			<Collapsible.Root bind:open={hddsOpen}>
+				<Collapsible.Trigger
+					class="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-accent"
+				>
+					<div class="flex items-center gap-2">
+						<HardDriveIcon class="h-3.5 w-3.5" />
+						<span>{hddSubs.title}</span>
+					</div>
+					<span class="text-lg">{hddsOpen ? '−' : '+'}</span>
+				</Collapsible.Trigger>
+				<Collapsible.Content class="mt-2">
+					<div class="rounded-md border border-border bg-card p-3">
+						<div class="space-y-0.5 text-[11px]">
+							{#each hddSubs.rows as row}
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground">{row.label}</span>
+									{#if row.badge}
+										<Badge variant={getBadgeVariant(row)} class="h-4 text-[9px]">
+											{row.badge.label}
+										</Badge>
+									{:else if row.type === 'path'}
+										<span class="truncate font-mono text-[10px]">{row.value}</span>
+									{:else}
+										<span class="font-medium">{row.value}</span>
+									{/if}
+								</div}
+							{/each}
+						</div>
+					</div>
+				</Collapsible.Content>
+			</Collapsible.Root>
+		{/if}
+
+		<!-- USB Devices collapsible -->
+		{#if usbSubs && usbSubs.rows.length > 0}
+			<Collapsible.Root bind:open={usbOpen}>
+				<Collapsible.Trigger
+					class="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-accent"
+				>
+					<div class="flex items-center gap-2">
+						<Usb class="h-3.5 w-3.5" />
+						<span>{usbSubs.title}</span>
+					</div>
+					<span class="text-lg">{usbOpen ? '−' : '+'}</span>
+				</Collapsible.Trigger>
+				<Collapsible.Content class="mt-2">
+					<div class="space-y-2">
+						{#each usbSubs.rows as row}
+							<div class="rounded-md border border-border bg-card p-3">
+								<div class="mb-1 text-xs font-semibold">{row.label}</div>
+								{#if row.value}
+									<div class="text-[11px] text-muted-foreground">{row.value}</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				</Collapsible.Content>
+			</Collapsible.Root>
+		{/if}
+
+		<!-- CD/DVD collapsible -->
+		{#if cdSubs && cdSubs.rows.length > 0}
+			<Collapsible.Root bind:open={cdOpen}>
+				<Collapsible.Trigger
+					class="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-accent"
+				>
+					<div class="flex items-center gap-2">
+						<Disc class="h-3.5 w-3.5" />
+						<span>{cdSubs.title}</span>
+					</div>
+					<span class="text-lg">{cdOpen ? '−' : '+'}</span>
+				</Collapsible.Trigger>
+				<Collapsible.Content class="mt-2">
+					<div class="rounded-md border border-border bg-card p-3">
+						<div class="space-y-0.5 text-[11px]">
+							{#each cdSubs.rows as row}
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground">{row.label}</span>
+									{#if row.badge}
+										<Badge variant={getBadgeVariant(row)} class="h-4 text-[9px]">
+											{row.badge.label}
+										</Badge>
+									{:else}
+										<span class="font-medium">{row.value}</span>
+									{/if}
+								</div}
+							{/each}
+						</div>
+					</div>
+				</Collapsible.Content>
+			</Collapsible.Root>
+		{/if}
+
+		<!-- Sharing as compact table -->
+		{#if sharingSection}
+			<section class="space-y-2">
+				<h3 class="text-xs font-bold text-foreground">{sharingSection.title}</h3>
+				<div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+					{#each sharingSection.rows as row}
+						<div class="flex items-center justify-between">
+							<span class="text-muted-foreground">{row.label}</span>
+							{#if row.badge}
+								<Badge variant={getBadgeVariant(row)} class="h-5 text-[10px] font-normal">
+									{row.badge.label}
+								</Badge>
+							{:else}
+								<span class="font-medium">{row.value}</span>
+							{/if}
+						</div}
+					{/each}
+				</div>
+			</section>
+		{/if}
+
+		<!-- General section (VM info) -->
+		{#if generalSection}
+			<section class="space-y-2">
+				<h3 class="text-xs font-bold text-foreground">{generalSection.title}</h3>
+				<div class="space-y-1 text-xs">
+					{#each generalSection.rows as row}
+						<div class="flex items-start justify-between gap-2">
+							<span class="text-muted-foreground">{row.label}</span>
+							<span class="break-all text-right font-mono text-[10px] text-muted-foreground">
+								{row.value}
+							</span>
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
+	</div>
+</Tooltip.Provider>

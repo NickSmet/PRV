@@ -1,2 +1,11 @@
 .VSCodeCounter/
 .vscode/settings.json
+node_modules/
+userscript-dev-tool/
+userscript-svelte/node_modules/
+userscript-svelte/node_modules/
+docs/
+userscript-svelte/dist/
+userscript-svelte/docs/
+userscript-svelte/*.md
+userscript-svelte/dist/*.md

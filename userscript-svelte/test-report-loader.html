@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Loader Test</title>
+  <style>
+    body {
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f9fafb;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #111827;
+      margin-bottom: 10px;
+    }
+    .description {
+      color: #6b7280;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .test-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #111827;
+      font-size: 18px;
+    }
+    .file-input-wrapper {
+      margin-bottom: 20px;
+    }
+    input[type="file"] {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    button.secondary:hover {
+      background: #4b5563;
+    }
+    .output {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    .output pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .status {
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+    .status.success {
+      background: #ecfdf3;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .status.error {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecdd3;
+    }
+    .status.info {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+    #app-container {
+      min-height: 600px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Report Loader Test Page</h1>
+    <p class="description">
+      Test the full report XML loader with your downloaded Report.xml file.
+      This page allows you to load the XML, extract all node data, and verify the parsers.
+    </p>
+
+    <div class="test-section">
+      <h2>1. Load Report XML</h2>
+      <div class="file-input-wrapper">
+        <input type="file" id="xmlFileInput" accept=".xml" />
+      </div>
+      <button onclick="loadFile()">Load XML File</button>
+      <button class="secondary" onclick="fetchFromServer()">Fetch from Server (if on Reportus)</button>
+      <div id="loadStatus"></div>
+      <div id="extractionOutput" class="output" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Inspect Extracted Data</h2>
+      <button onclick="showGlobals()">Show window.__prv_* Globals</button>
+      <button class="secondary" onclick="clearOutput()">Clear Output</button>
+      <div id="globalsOutput" class="output" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. App Preview</h2>
+      <p style="color: #6b7280; font-size: 14px; margin-bottom: 15px;">
+        The Svelte app will render here if the userscript is loaded.
+      </p>
+      <div id="app-container"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the report loader functions (adjust path as needed)
+    import { loadReportFromXML } from './dist/rv-userscript-svelte.user.js';
+
+    window.loadFile = function() {
+      const input = document.getElementById('xmlFileInput');
+      const file = input.files[0];
+
+      if (!file) {
+        showStatus('error', 'Please select an XML file first');
+        return;
+      }
+
+      showStatus('info', 'Loading file...');
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const xmlText = e.target.result;
+
+        try {
+          showStatus('info', `Processing XML (${xmlText.length} bytes)...`);
+
+          // Use the report loader to extract data
+          loadReportFromXML(xmlText);
+
+          // Count extracted globals
+          const globals = Object.keys(window)
+            .filter(key => key.startsWith('__prv_'))
+            .filter(key => window[key] !== undefined);
+
+          showStatus('success', `✅ Successfully extracted ${globals.length} data nodes from the XML`);
+
+          // Show extraction summary
+          const output = document.getElementById('extractionOutput');
+          output.style.display = 'block';
+          output.innerHTML = '<pre>' + globals.map(key => {
+            const value = window[key];
+            const preview = typeof value === 'string'
+              ? value.substring(0, 100) + (value.length > 100 ? '...' : '')
+              : String(value);
+            return `${key}: ${value ? value.length + ' chars' : 'undefined'}`;
+          }).join('\n') + '</pre>';
+
+        } catch (error) {
+          showStatus('error', 'Error processing XML: ' + error.message);
+          console.error('Error:', error);
+        }
+      };
+
+      reader.onerror = function() {
+        showStatus('error', 'Error reading file');
+      };
+
+      reader.readAsText(file);
+    };
+
+    window.fetchFromServer = function() {
+      showStatus('info', 'Fetching report from server...');
+
+      // Check if we're on a Reportus page
+      const match = window.location.pathname.match(/\/reports\/(\d+)/);
+      if (!match) {
+        showStatus('error', 'Not on a Reportus report page. Please use the file upload option.');
+        return;
+      }
+
+      const reportId = match[1];
+      const url = `/webapp/reports/${reportId}/report_xml/download`;
+
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.text();
+        })
+        .then(xmlText => {
+          showStatus('info', `Processing XML (${xmlText.length} bytes)...`);
+          loadReportFromXML(xmlText);
+
+          const globals = Object.keys(window)
+            .filter(key => key.startsWith('__prv_'))
+            .filter(key => window[key] !== undefined);
+
+          showStatus('success', `✅ Successfully fetched and extracted ${globals.length} data nodes`);
+        })
+        .catch(error => {
+          showStatus('error', 'Failed to fetch report: ' + error.message);
+          console.error('Fetch error:', error);
+        });
+    };
+
+    window.showGlobals = function() {
+      const output = document.getElementById('globalsOutput');
+      output.style.display = 'block';
+
+      const globals = Object.keys(window)
+        .filter(key => key.startsWith('__prv_'))
+        .sort();
+
+      if (globals.length === 0) {
+        output.innerHTML = '<pre style="color: #9ca3af;">No __prv_* globals found. Load an XML file first.</pre>';
+        return;
+      }
+
+      const details = globals.map(key => {
+        const value = window[key];
+        if (!value) return `${key}: undefined`;
+
+        const type = typeof value;
+        const length = value.length || 0;
+        const preview = String(value).substring(0, 200).replace(/\n/g, '\\n');
+
+        return `\n${key}:\n  Type: ${type}\n  Length: ${length}\n  Preview: ${preview}${length > 200 ? '...' : ''}\n`;
+      }).join('\n');
+
+      output.innerHTML = '<pre>' + details + '</pre>';
+    };
+
+    window.clearOutput = function() {
+      document.getElementById('extractionOutput').style.display = 'none';
+      document.getElementById('globalsOutput').style.display = 'none';
+      document.getElementById('loadStatus').innerHTML = '';
+    };
+
+    function showStatus(type, message) {
+      const status = document.getElementById('loadStatus');
+      status.className = `status ${type}`;
+      status.textContent = message;
+    }
+  </script>
+</body>
+</html>
