@@ -4,27 +4,29 @@ import chokidar from 'chokidar';
 
 import { parseHTML } from 'linkedom';
 
-import { parseAdvancedVmInfo } from '../src/services/parseAdvancedVmInfo';
-import { parseAllProcesses } from '../src/services/parseAllProcesses';
-import { parseAppConfig } from '../src/services/parseAppConfig';
-import { parseAutoStatisticInfo } from '../src/services/parseAutoStatisticInfo';
-import { parseClientInfo } from '../src/services/parseClientInfo';
-import { parseClientProxyInfo } from '../src/services/parseClientProxyInfo';
-import { parseCurrentVm } from '../src/services/parseCurrentVm';
-import { parseGuestCommands } from '../src/services/parseGuestCommands';
-import { parseGuestOs } from '../src/services/parseGuestOs';
-import { parseHostInfo } from '../src/services/parseHostInfo';
-import { parseInstalledSoftware } from '../src/services/parseInstalledSoftware';
-import { parseLaunchdInfo } from '../src/services/parseLaunchdInfo';
-import { parseLicenseData } from '../src/services/parseLicenseData';
-import { parseLoadedDrivers } from '../src/services/parseLoadedDrivers';
-import { parseMoreHostInfo } from '../src/services/parseMoreHostInfo';
-import { parseMountInfo } from '../src/services/parseMountInfo';
-import { parseNetConfig } from '../src/services/parseNetConfig';
-import { parseParallelsSystemLog } from '../src/services/parseParallelsSystemLog';
-import { parseTimeZone } from '../src/services/parseTimeZone';
-import { parseToolsLog } from '../src/services/parseToolsLog';
-import { parseVmDirectory } from '../src/services/parseVmDirectory';
+import {
+  parseAdvancedVmInfo,
+  parseAllProcesses,
+  parseAppConfig,
+  parseAutoStatisticInfo,
+  parseClientInfo,
+  parseClientProxyInfo,
+  parseCurrentVm,
+  parseGuestCommands,
+  parseGuestOs,
+  parseHostInfo,
+  parseInstalledSoftware,
+  parseLaunchdInfo,
+  parseLicenseData,
+  parseLoadedDrivers,
+  parseMoreHostInfo,
+  parseMountInfo,
+  parseNetConfig,
+  parseParallelsSystemLog,
+  parseTimeZone,
+  parseToolsLog,
+  parseVmDirectory
+} from '@prv/report-core';
 
 type NodeKey =
   | 'AdvancedVmInfo'

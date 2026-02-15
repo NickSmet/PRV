@@ -1,0 +1,15 @@
+{
+	"/": [],
+	"/api/reports/[id]": [
+		"src/routes/api/reports/[id]/+server.ts"
+	],
+	"/api/reports/[id]/files/[...filePath]": [
+		"src/routes/api/reports/[id]/files/[...filePath]/+server.ts"
+	],
+	"/api/reports/[id]/model": [
+		"src/routes/api/reports/[id]/model/+server.ts"
+	],
+	"/api/reports/[id]/nodes/[nodeKey]": [
+		"src/routes/api/reports/[id]/nodes/[nodeKey]/+server.ts"
+	]
+}

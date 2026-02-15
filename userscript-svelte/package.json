@@ -1,65 +1,26 @@
 {
-  "name": "userscript-svelte",
-  "version": "0.0.1",
+  "name": "prv-report-tools",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "servers/*"
+  ],
   "scripts": {
-    "dev": "node ../userscript-dev-tool/bin/cli.js",
-    "dev:all": "concurrently \"npm:dev\" \"npm:watch:all\"",
-    "dev:fast": "vite --config vite.config.dev.ts",
-    "dev:server": "node dev-server.js",
-    "dev:with-server": "concurrently \"npm:dev:server\" \"npm:watch:dev\"",
-    "build": "vite build",
-    "build:dev": "vite build --config vite.config.dev.ts",
-    "build:google": "vite build --config vite.config.google.ts",
-    "build:all": "vite build && vite build --config vite.config.google.ts",
-    "watch:main": "vite build --watch --mode development",
-    "watch:dev": "vite build --config vite.config.dev.ts --watch --mode development",
-    "watch:google": "vite build --config vite.config.google.ts --watch --mode development",
-    "watch:all": "concurrently \"npm run watch:main\" \"npm run watch:google\"",
-    "preview": "vite preview",
+    "dev": "npm -w apps/userscript run dev",
+    "dev:all": "npm -w apps/userscript run dev:all",
+    "build": "npm -w apps/userscript run build",
     "parse:node": "tsx scripts/parse-node.ts",
-    "parse:node:watch": "tsx watch scripts/parse-node.ts",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "web:dev": "npm -w apps/web run dev",
+    "web:build": "npm -w apps/web run build",
+    "mcp:dev": "npm -w servers/mcp run dev"
   },
   "devDependencies": {
-    "@internationalized/date": "^3.10.0",
-    "@jsrepo/transform-prettier": "^0.0.6",
-    "@lucide/svelte": "^0.561.0",
-    "@shikijs/langs": "^3.17.0",
-    "@shikijs/themes": "^3.17.0",
-    "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@tailwindcss/vite": "^4.1.17",
-    "@tsconfig/svelte": "^5.0.4",
-    "bits-ui": "^2.14.4",
-    "clsx": "^2.1.1",
-    "concurrently": "^9.2.1",
-    "isomorphic-dompurify": "^2.25.0",
-    "jsrepo": "^3.0.5",
-    "runed": "^0.36.0",
-    "shiki": "^3.17.0",
-    "svelte": "^5.18.2",
-    "svelte-toolbelt": "^0.10.6",
-    "tailwind-merge": "^3.4.0",
-    "tailwind-variants": "^3.2.2",
-    "tailwindcss": "^4.1.17",
-    "tsx": "^4.21.0",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.1",
-    "vite-plugin-monkey": "^7.1.5",
-    "storybook": "^8.6.15",
-    "@storybook/svelte-vite": "^8.6.15",
-    "@storybook/addon-essentials": "^8.6.15"
-  },
-  "dependencies": {
     "chokidar": "^4.0.3",
-    "express": "^4.21.2",
-    "fast-xml-parser": "^4.5.3",
     "linkedom": "^0.18.12",
-    "vis-timeline": "^8.4.0"
-  },
-  "optionalDependencies": {
-    "@oxc-parser/binding-darwin-arm64": "^0.96.0"
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.3"
   }
 }
+

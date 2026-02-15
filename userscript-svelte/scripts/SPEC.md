@@ -2,9 +2,9 @@
 
 ## Overview
 
-This project needs a fast iteration loop for **backend parsing logic** (parsers in `src/services/`) that does not require running the full userscript UI.
+This project needs a fast iteration loop for **backend parsing logic** (parsers in `packages/report-core/src/services/`) that does not require running any UI surface.
 
-Parser implementations are organized per node under `src/services/nodes/`, while `src/services/parse*.ts` remains a stable import surface (re-export wrappers).
+Parser implementations are organized per node under `packages/report-core/src/services/nodes/`, while `packages/report-core/src/services/index.ts` (and `@prv/report-core`) remain the stable export surface.
 
 The harness:
 - reads a local report XML fixture (`Report.xml` / `report.xml`)
@@ -18,7 +18,7 @@ Keep the harness **string-in, object-out**:
 - Inputs are raw report XML (or raw node XML/text) as strings.
 - Parsers produce typed summary objects.
 
-This mirrors the runtime pipeline (report loader → parsers → node builder), but is optimized for rapid parser development.
+This mirrors the runtime pipeline (payload resolution → parsers → `ReportModel` → viewmodels), but is optimized for rapid parser development.
 
 ## CLI
 

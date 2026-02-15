@@ -1,0 +1,12 @@
+{
+  "name": "@prv/report-viewmodel",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@prv/report-core": "0.0.1"
+  }
+}
