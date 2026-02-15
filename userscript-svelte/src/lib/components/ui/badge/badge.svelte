@@ -15,7 +15,9 @@
 				success:
 					"bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 [a&]:hover:bg-green-500/20",
 				muted:
-					"bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700",
+					// Userscript note: host pages may set `html.dark`, which would flip `dark:*` variants.
+					// We want muted pills to stay readable in our (mostly light) UI, regardless of host theme.
+					"bg-gray-100 text-gray-600 border-gray-200",
 			},
 		},
 		defaultVariants: {
