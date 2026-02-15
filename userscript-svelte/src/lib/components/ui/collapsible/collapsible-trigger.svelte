@@ -1,30 +1,7 @@
 <script lang="ts">
-  import { getContext } from 'svelte';
-  import { cn } from "$lib/utils";
-  import type { Snippet } from "svelte";
-  import type { HTMLButtonAttributes } from "svelte/elements";
+	import { Collapsible as CollapsiblePrimitive } from 'bits-ui';
 
-  let {
-    class: className,
-    children,
-    ...restProps
-  }: HTMLButtonAttributes & {
-    children?: Snippet;
-  } = $props();
-
-  const ctx = getContext<{ toggle: () => void }>('collapsible');
-
-  function handleClick(e: MouseEvent) {
-    ctx.toggle();
-    restProps.onclick?.(e);
-  }
+	let { ref = $bindable(null), ...restProps }: CollapsiblePrimitive.TriggerProps = $props();
 </script>
 
-<button
-  type="button"
-  class={cn("", className)}
-  onclick={handleClick}
-  {...restProps}
->
-  {@render children?.()}
-</button>
+<CollapsiblePrimitive.Trigger bind:ref data-slot="collapsible-trigger" {...restProps} />

@@ -25,11 +25,31 @@ import type { ReportModel } from './types/report';
 import { deriveCurrentVmFields, createEmptyReportModel } from './types/report';
 import { evaluateCurrentVmRules } from './rules';
 import { getNodeLevelMarkers, severityToVariant } from './types/markers';
+import { formatHddInterface, formatMbytes } from './utils/units';
 
 export interface NodeBadge {
   label: string;
   tone?: 'info' | 'warn' | 'danger';
-  iconKey?: 'hdd' | 'net' | 'travel' | 'vm' | 'warn';
+  iconKey?:
+    | 'hdd'
+    | 'net'
+    | 'travel'
+    | 'vm'
+    | 'warn'
+    | 'keyboard'
+    | 'mouse'
+    | 'cd'
+    | 'disc'
+    | 'camera'
+    | 'bluetooth'
+    | 'usb'
+    | 'printer'
+    | 'cloud'
+    | 'folder'
+    | 'clipboard'
+    | 'clock'
+    | 'shield'
+    | 'cpu';
 }
 
 export interface NodeRow {
@@ -47,7 +67,7 @@ export interface NodeSubSection {
   id: string;
   title: string;
   rows: NodeRow[];
-  iconKey?: 'hdd' | 'net' | 'travel' | 'vm' | 'warn';
+  iconKey?: NodeBadge['iconKey'];
 }
 
 export interface NodeSection {
@@ -62,6 +82,11 @@ export interface NodeModel {
   badges: NodeBadge[];
   sections: NodeSection[];
   openByDefault?: boolean;
+  /**
+   * Optional per-node structured payload for custom renderers in `src/App.svelte`.
+   * Keep this stable and additive; don't rely on it for core parsing logic.
+   */
+  data?: unknown;
 }
 
 const maps = {
@@ -183,6 +208,9 @@ export function buildCurrentVmNode(rawXml?: string): NodeModel {
     };
   }
 
+  // Derived fields are used for rules/markers; we also reuse them for UI hints (e.g. which disk is external).
+  const derived = deriveCurrentVmFields(summary);
+
   pushSection(sections, 'Startup / Shutdown', [
     {
       label: 'Start Automatically',
@@ -248,11 +276,20 @@ export function buildCurrentVmNode(rawXml?: string): NodeModel {
 
   const hddRows: NodeRow[] = summary.hdds?.length
     ? summary.hdds.flatMap((disk, index) => {
+        const isExternalToBundle =
+          typeof disk.location === 'string' &&
+          (derived.externalVhddLocations ?? []).includes(disk.location);
+
         return [
-          { label: 'Location', value: disk.location, type: 'path' as const } as NodeRow,
-          { label: 'Virtual Size', value: disk.virtualSize } as NodeRow,
-          { label: 'Actual Size', value: disk.actualSize } as NodeRow,
-          { label: 'Interface', value: disk.interfaceType } as NodeRow,
+          {
+            label: 'Location',
+            value: disk.location,
+            type: 'path' as const
+          } as NodeRow,
+          { label: 'External to PVM', ...toBadge(isExternalToBundle ? '1' : '0', 'yesNo') } as NodeRow,
+          { label: 'Virtual Size', value: formatMbytes(disk.virtualSize) ?? disk.virtualSize } as NodeRow,
+          { label: 'Actual Size', value: formatMbytes(disk.actualSize) ?? disk.actualSize } as NodeRow,
+          { label: 'Interface', value: formatHddInterface(disk.interfaceType) ?? disk.interfaceType } as NodeRow,
           { label: 'Splitted', ...toBadge(disk.splitted === '0' ? '0' : '1', 'yesNo') } as NodeRow,
           { label: 'Trim', ...toBadge(disk.trim, 'enabled') } as NodeRow,
           { label: 'Expanding', ...toBadge(disk.expanding, 'yesNo') } as NodeRow
@@ -609,7 +646,8 @@ export function buildNetConfigNode(rawXml?: string, hostOsMajor?: number): NodeM
     id: 'net-config',
     title: 'NetConfig',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -669,18 +707,21 @@ export function buildAdvancedVmInfoNode(
 
   pushSection(sections, 'Snapshots', snapshotRows);
 
-  // PVM Bundle contents (if available)
-  if (summary.pvmBundleContents && summary.pvmBundleContents.length > 10) {
-    pushSection(sections, 'PVM Bundle', [
-      { label: 'Contents', value: summary.pvmBundleContents }
-    ]);
+  // PVM Bundle (structured tree is rendered in UI; keep minimal summary rows here)
+  const bundleRows: NodeRow[] = [];
+  if (summary.pvmBundleTree?.path) {
+    bundleRows.push({ label: 'Root', value: summary.pvmBundleTree.path, type: 'path' as const });
+  } else {
+    bundleRows.push({ label: 'Status', value: 'No PVM bundle file list' });
   }
+  pushSection(sections, 'PVM Bundle', bundleRows);
 
   return {
     id: 'advanced-vm-info',
     title: 'AdvancedVmInfo',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -701,126 +742,27 @@ export function buildHostInfoNode(rawXml?: string): NodeModel {
     };
   }
 
-  // Add DisplayLink badge if detected
-  if (summary.hasDisplayLink) {
-    badges.push({ label: 'DisplayLink', tone: 'warn' });
-  }
+  // Summary badges (keep short; details are in custom view)
+  const osName = summary.system.os.name ?? null;
+  const osVersion = summary.system.os.version ?? null;
+  const hostRamGb = summary.system.memory.hostRamGb ?? null;
+  if (osName && osVersion) badges.push({ label: `${osName} ${osVersion}`, tone: 'info' });
+  else if (summary.system.os.displayString) badges.push({ label: summary.system.os.displayString, tone: 'info' });
+  if (hostRamGb !== null) badges.push({ label: `${hostRamGb}GB RAM`, tone: 'info' });
 
-  const hardwareSubSections: NodeSubSection[] = [];
-
-  // USB Devices
-  const usbRows: NodeRow[] = summary.usbDevices.length
-    ? summary.usbDevices.map((usb, index) => ({
-        label: usb.name || `USB Device ${index + 1}`,
-        value: usb.uuid,
-        iconKey: 'usb',
-        type: 'uuid' as const
-      }))
-    : [{ label: 'No USB devices', badge: { label: 'Empty', variant: 'muted' } }];
-  hardwareSubSections.push({
-    id: 'usb-devices',
-    title: 'USB Devices',
-    iconKey: 'usb',
-    rows: usbRows
-  });
-
-  // Hard Disks
-  const hddRows: NodeRow[] = summary.hardDisks.length
-    ? summary.hardDisks.flatMap((hdd, index) => [
-        { label: hdd.name || `Disk ${index + 1}`, value: hdd.size, iconKey: 'hdd' },
-        { label: 'UUID', value: hdd.uuid, type: 'uuid' as const }
-      ].filter(r => r.value !== undefined))
-    : [{ label: 'No hard disks', badge: { label: 'Empty', variant: 'muted' } }];
-  hardwareSubSections.push({
-    id: 'hard-disks',
-    title: 'Hard Disks',
-    iconKey: 'hdd',
-    rows: hddRows
-  });
-
-  // Network Adapters
-  const netRows: NodeRow[] = summary.networkAdapters.length
-    ? summary.networkAdapters.flatMap((net, index) => [
-        { label: net.name || `Adapter ${index + 1}`, iconKey: 'net' },
-        { label: 'MAC', value: net.mac },
-        { label: 'IP', value: net.ip },
-        { label: 'UUID', value: net.uuid, type: 'uuid' as const }
-      ].filter(r => r.value !== undefined))
-    : [{ label: 'No network adapters', badge: { label: 'Empty', variant: 'muted' } }];
-  hardwareSubSections.push({
-    id: 'network-adapters',
-    title: 'Network Adapters',
-    iconKey: 'net',
-    rows: netRows
-  });
-
-  // Cameras
-  const cameraRows: NodeRow[] = summary.cameras.length
-    ? summary.cameras.map((cam, index) => ({
-        label: cam.name || `Camera ${index + 1}`,
-        value: cam.uuid,
-        type: 'uuid' as const
-      }))
-    : [{ label: 'No cameras', badge: { label: 'Empty', variant: 'muted' } }];
-  hardwareSubSections.push({
-    id: 'cameras',
-    title: 'Cameras',
-    rows: cameraRows
-  });
-
-  // Input Devices
-  const inputRows: NodeRow[] = summary.inputDevices.length
-    ? summary.inputDevices.map((input, index) => ({
-        label: input.name || `Input Device ${index + 1}`,
-        value: input.uuid,
-        type: 'uuid' as const
-      }))
-    : [{ label: 'No input devices', badge: { label: 'Empty', variant: 'muted' } }];
-  hardwareSubSections.push({
-    id: 'input-devices',
-    title: 'Input Devices',
-    rows: inputRows
-  });
-
-  // Printers
-  const printerRows: NodeRow[] = summary.printers.length
-    ? summary.printers.map((printer, index) => ({
-        label: printer.name || `Printer ${index + 1}`,
-        value: printer.uuid,
-        iconKey: 'printer',
-        type: 'uuid' as const
-      }))
-    : [{ label: 'No printers', badge: { label: 'Empty', variant: 'muted' } }];
-  hardwareSubSections.push({
-    id: 'printers',
-    title: 'Printers',
-    iconKey: 'printer',
-    rows: printerRows
-  });
-
-  // CCIDs
-  const ccidRows: NodeRow[] = summary.ccids.length
-    ? summary.ccids.map((ccid, index) => ({
-        label: ccid.name || `CCID ${index + 1}`,
-        value: ccid.uuid,
-        type: 'uuid' as const
-      }))
-    : [{ label: 'No CCIDs', badge: { label: 'Empty', variant: 'muted' } }];
-  hardwareSubSections.push({
-    id: 'ccids',
-    title: 'Smart Card Readers',
-    rows: ccidRows
-  });
-
-  pushSection(sections, 'Host Devices', [], {
-    subSections: hardwareSubSections
-  });
+  if (summary.flags.lowMemory) badges.push({ label: 'High memory usage', tone: 'warn', iconKey: 'warn' });
+  if (summary.flags.privacyRestricted) badges.push({ label: 'Privacy restricted', tone: 'warn', iconKey: 'shield' });
+  if (summary.hasDisplayLink) badges.push({ label: 'DisplayLink', tone: 'warn', iconKey: 'vm' });
+  if (summary.flags.hasExternalDisks) badges.push({ label: 'External disk', tone: 'info', iconKey: 'hdd' });
+  if (summary.flags.hasUsbCamera) badges.push({ label: 'USB camera', tone: 'info', iconKey: 'camera' });
+  if (summary.flags.hasBluetoothAudio) badges.push({ label: 'BT audio', tone: 'info', iconKey: 'bluetooth' });
 
   return {
     id: 'host-info',
     title: 'HostInfo',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -926,26 +868,12 @@ export function buildMountInfoNode(textData?: string): NodeModel {
     badges.push({ label: 'NTFS detected', tone: 'info' });
   }
 
-  // Build volume rows
-  const volumeRows: NodeRow[] = summary.volumes.flatMap(vol => [
-    { label: 'Device', value: vol.identifier },
-    { label: 'Mounted on', value: vol.mountedOn },
-    { label: 'Size', value: vol.size },
-    { label: 'Free', value: vol.free },
-    { label: 'Capacity', value: vol.capacityStr,
-      badge: vol.capacity > 99 ? { label: 'Critical', variant: 'destructive' as const } :
-             vol.capacity > 90 ? { label: 'Warning', variant: 'destructive' as const } : undefined },
-    { label: 'Filesystem', value: vol.filesystem,
-      badge: vol.isNtfs ? { label: 'NTFS', variant: 'secondary' as const } : undefined }
-  ].filter(r => r.value !== undefined || r.badge !== undefined));
-
-  pushSection(sections, 'Mounted Volumes', volumeRows);
-
   return {
     id: 'mount-info',
     title: 'MountInfo',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -971,6 +899,25 @@ export function buildAllProcessesNode(textData?: string): NodeModel {
     badges.push({ label: 'bsdtar', tone: 'danger' });
   }
 
+  const total = summary.items?.length ?? 0;
+  const apps = summary.items?.filter((p) => p.kind === 'app').length ?? 0;
+  const services = summary.items?.filter((p) => p.kind === 'service').length ?? 0;
+  const other = Math.max(0, total - apps - services);
+
+  pushSection(sections, 'Overview', [
+    { label: 'Processes parsed', value: String(total) },
+    { label: 'Apps', value: String(apps) },
+    { label: 'Services', value: String(services) },
+    { label: 'Other', value: String(other) },
+    summary.top?.timestamp ? { label: 'Top snapshot', value: summary.top.timestamp } : undefined,
+    summary.top?.loadAvg?.one != null
+      ? { label: 'Load Avg', value: `${summary.top.loadAvg.one}, ${summary.top.loadAvg.five}, ${summary.top.loadAvg.fifteen}` }
+      : undefined,
+    summary.top?.cpu?.user != null
+      ? { label: 'CPU usage', value: `${summary.top.cpu.user}% user, ${summary.top.cpu.sys}% sys, ${summary.top.cpu.idle}% idle` }
+      : undefined
+  ].filter(Boolean) as NodeRow[]);
+
   // Top CPU processes
   const topCpuRows: NodeRow[] = summary.topCpuProcesses.map((proc, index) => ({
     label: `${index + 1}. ${proc.name.substring(0, 40)}`,
@@ -987,18 +934,12 @@ export function buildAllProcessesNode(textData?: string): NodeModel {
 
   pushSection(sections, 'Top Memory Usage', topMemRows);
 
-  // Running applications
-  const appRows: NodeRow[] = summary.runningApps.length > 0
-    ? summary.runningApps.map(app => ({ label: app, value: 'Running' }))
-    : [{ label: 'No apps detected', badge: { label: 'Empty', variant: 'muted' } }];
-
-  pushSection(sections, 'Running Applications', appRows);
-
   return {
     id: 'all-processes',
     title: 'AllProcesses',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -1026,36 +967,18 @@ export function buildMoreHostInfoNode(xmlData?: string): NodeModel {
     badges.push({ label: `${summary.displayCount} displays`, tone: 'info' });
   }
 
-  // Build GPU subsections
-  const gpuSubSections: NodeSubSection[] = summary.gpus.map((gpu, index) => {
-    const displayRows: NodeRow[] = gpu.displays.length > 0
-      ? gpu.displays.flatMap(display => [
-          { label: 'Display', value: display.name },
-          { label: 'Physical', value: display.physicalResolution },
-          { label: 'Logical', value: display.logicalResolution }
-        ].filter(r => r.value !== undefined))
-      : [{ label: 'No displays', badge: { label: 'Empty', variant: 'muted' } }];
-
-    return {
-      id: `gpu-${index}`,
-      title: gpu.name,
-      rows: displayRows
-    };
-  });
-
-  if (gpuSubSections.length > 0) {
-    pushSection(sections, 'GPUs & Displays', [], { subSections: gpuSubSections });
-  } else {
-    pushSection(sections, 'GPUs & Displays', [
-      { label: 'Status', value: 'No GPU information available' }
-    ]);
-  }
+  // Minimal section (the rich visualization is handled by MoreHostInfoView).
+  pushSection(sections, 'Overview', [
+    { label: 'GPUs', value: String(summary.gpus.length) },
+    { label: 'Displays', value: String(summary.displayCount) }
+  ]);
 
   return {
     id: 'more-host-info',
     title: 'MoreHostInfo',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -1099,7 +1022,8 @@ export function buildVmDirectoryNode(xmlData?: string): NodeModel {
     id: 'vm-directory',
     title: 'VmDirectory',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -1130,7 +1054,8 @@ export function buildGuestCommandsNode(jsonData?: string, guestOsType?: string):
       id: 'guest-commands',
       title: 'GuestCommands',
       badges: [{ label: 'Linux', tone: 'info' }],
-      sections: [{ title: 'Info', rows: [{ label: 'Status', value: "It's Linux. Look inside." }] }]
+      sections: [{ title: 'Info', rows: [{ label: 'Status', value: "It's Linux. Look inside." }] }],
+      data: summary
     };
   }
 
@@ -1139,36 +1064,90 @@ export function buildGuestCommandsNode(jsonData?: string, guestOsType?: string):
     badges.push({ label: 'Empty', tone: 'warn' });
   }
 
+  // System section
+  const systemRows: NodeRow[] = summary.system
+    ? ([
+        { label: 'Hostname', value: summary.system.hostname },
+        { label: 'Processor count', value: summary.system.processorCount?.toString() },
+        { label: 'Architecture', value: summary.system.architecture }
+      ].filter((r) => r.value !== undefined))
+    : [{ label: 'No system info', badge: { label: 'Empty', variant: 'muted' as const } }];
+
+  pushSection(sections, 'System', systemRows);
+
   // Network adapters section
-  const adapterRows: NodeRow[] = summary.networkAdapters.length > 0
-    ? summary.networkAdapters.flatMap(adapter => [
+  const adapters = summary.network?.adapters ?? [];
+  const adapterRows: NodeRow[] = adapters.length > 0
+    ? adapters.flatMap((adapter) => [
         { label: 'Adapter', value: adapter.name },
-        { label: 'Descriptor', value: adapter.descriptor },
-        { label: 'IP', value: adapter.ip }
+        { label: 'Description', value: adapter.description },
+        { label: 'IPv4', value: adapter.ip },
+        { label: 'IPv6', value: adapter.ipv6 },
+        { label: 'Gateway', value: adapter.gateway },
+        { label: 'DHCP', value: adapter.dhcpEnabled === undefined ? undefined : (adapter.dhcpEnabled ? 'Enabled' : 'Disabled') },
+        { label: 'DNS', value: adapter.dns?.join(', ') }
       ].filter(r => r.value !== undefined))
     : [{ label: 'No adapters', badge: { label: 'Empty', variant: 'muted' as const } }];
 
   pushSection(sections, 'Network Adapters', adapterRows);
 
   // Network drives section
-  const driveRows: NodeRow[] = summary.networkDrives.length > 0
-    ? summary.networkDrives.map(drive => ({ label: 'Drive', value: drive }))
+  const drives = summary.network?.drives ?? [];
+  const driveRows: NodeRow[] = drives.length > 0
+    ? drives.flatMap((drive) => ([
+        { label: 'Drive', value: drive.letter ? `${drive.letter}:` : undefined },
+        { label: 'Remote', value: drive.remotePath },
+        { label: 'Provider', value: drive.provider },
+        { label: 'Status', value: drive.status === 'Other' ? (drive.statusRaw ?? 'Other') : drive.status }
+      ].filter((r) => r.value !== undefined)))
     : [{ label: 'No network drives', badge: { label: 'Empty', variant: 'muted' as const } }];
 
   pushSection(sections, 'Network Volumes', driveRows);
 
-  // Top processes section
-  const processRows: NodeRow[] = summary.topProcesses.length > 0
-    ? summary.topProcesses.map((proc, index) => ({ label: `${index + 1}.`, value: proc }))
+  // Processes section (may be large; show a small slice in UI for now)
+  const processes = summary.processes ?? [];
+  const totals = summary.totals;
+  const processesPreview = processes.slice(0, 5);
+  const processRows: NodeRow[] = processesPreview.length > 0
+    ? [
+        ...(totals?.cpuPercent !== undefined || totals?.memoryKb !== undefined
+          ? [{
+              label: 'Totals',
+              value: `${totals?.cpuPercent?.toFixed?.(2) ?? totals?.cpuPercent ?? '?'}% CPU, ${totals?.memoryKb ?? '?'} KB`
+            }]
+          : []),
+        ...processesPreview.map((proc, index) => ({
+          label: `${index + 1}.`,
+          value: [
+            proc.cpuPercent === undefined ? undefined : `${proc.cpuPercent.toFixed(2)}%`,
+            proc.memoryKb === undefined ? undefined : `${proc.memoryKb} KB`,
+            proc.pid === undefined ? undefined : `pid=${proc.pid}`,
+            proc.architecture,
+            proc.user,
+            proc.path
+          ].filter(Boolean).join(' ')
+        }))
+      ]
     : [{ label: 'No processes', badge: { label: 'Empty', variant: 'muted' as const } }];
 
-  pushSection(sections, 'Top Processes', processRows);
+  pushSection(sections, 'Processes', processRows);
+
+  const powerRequests = summary.powerRequests ?? [];
+  const powerRows: NodeRow[] = powerRequests.length > 0
+    ? powerRequests.map((req, index) => ({
+        label: `${index + 1}. ${req.type ?? 'Unknown'}`,
+        value: [req.requestor, req.path].filter(Boolean).join(' ')
+      }))
+    : [{ label: 'No power requests', badge: { label: 'Empty', variant: 'muted' as const } }];
+
+  pushSection(sections, 'Power Requests', powerRows);
 
   return {
     id: 'guest-commands',
     title: 'GuestCommands',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 
@@ -1543,15 +1522,23 @@ export function buildLaunchdInfoNode(textData?: string): NodeModel {
     };
   }
 
+  if (summary.stats) {
+    badges.push({ label: `${summary.stats.files} files`, tone: 'info' });
+    if (summary.stats.rootOwnedFiles > 0) {
+      badges.push({ label: `${summary.stats.rootOwnedFiles} root-owned`, tone: 'warn' });
+    }
+  }
+
   pushSection(sections, 'Launchd Daemons & Agents', [
-    { label: 'File Listing', value: summary.formattedListing }
+    { label: 'Status', value: summary.tree ? 'Parsed as tree' : 'Parsed as listing' }
   ]);
 
   return {
     id: 'launchd-info',
     title: 'LaunchdInfo',
     badges,
-    sections
+    sections,
+    data: summary
   };
 }
 

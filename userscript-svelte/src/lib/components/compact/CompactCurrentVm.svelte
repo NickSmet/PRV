@@ -62,6 +62,27 @@
 	const usbMarkers = $derived(getMarkersForSubSection(markers, node.id, 'Hardware', 'usbs'));
 	const cdMarkers = $derived(getMarkersForSubSection(markers, node.id, 'Hardware', 'cds'));
 
+	type RowGroup = { key: string; rows: NodeRow[] };
+	function groupByLabelStart(rows: NodeRow[] | undefined, startLabel: string): RowGroup[] {
+		if (!rows || rows.length === 0) return [];
+		const groups: RowGroup[] = [];
+		let current: NodeRow[] = [];
+		let idx = 0;
+
+		for (const row of rows) {
+			if (row.label === startLabel && current.length > 0) {
+				groups.push({ key: String(idx++), rows: current });
+				current = [];
+			}
+			current.push(row);
+		}
+
+		if (current.length > 0) groups.push({ key: String(idx++), rows: current });
+		return groups;
+	}
+
+	const hddGroups = $derived(groupByLabelStart(hddSubs?.rows, 'Location'));
+
 	// Handle marker click - scroll to target
 	function handleMarkerClick(marker: Marker) {
 		scrollToMarker(marker.id);
@@ -228,15 +249,26 @@
 					<span class="text-lg">{hddsOpen ? '−' : '+'}</span>
 				</Collapsible.Trigger>
 				<Collapsible.Content class="mt-2 ml-4">
-					<div class="rounded-md border border-border/50 bg-muted/20 p-3" data-marker-id="no-hdd-subsection">
-						<div class="space-y-0.5 text-[11px]">
-							{#each hddSubs.rows as row}
-								<div class="flex items-center justify-between">
-									<span class="text-muted-foreground">{row.label}</span>
-									<RowValue {row} size="sm" />
+					<div class="space-y-2" data-marker-id="no-hdd-subsection">
+						{#each hddGroups as group, groupIndex (group.key)}
+							{@const externalRow = group.rows.find((r) => r.label === 'External to PVM')}
+							<div class="rounded-md border border-border/50 bg-muted/20 p-3">
+								<div class="mb-2 flex items-center justify-between gap-2">
+									<div class="text-xs font-semibold text-foreground/80">Disk {groupIndex + 1}</div>
+									{#if externalRow}
+										<RowValue row={externalRow} size="sm" class="shrink-0" />
+									{/if}
 								</div>
-							{/each}
-						</div>
+								<div class="space-y-0.5 text-[11px]">
+									{#each group.rows as row}
+										<div class="flex items-center justify-between gap-3">
+											<span class="min-w-0 text-muted-foreground">{row.label}</span>
+											<RowValue {row} size="sm" class="max-w-[65%]" />
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/each}
 					</div>
 				</Collapsible.Content>
 			</Collapsible.Root>

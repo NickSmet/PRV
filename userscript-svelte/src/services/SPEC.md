@@ -8,6 +8,9 @@
 
 This spec also defines the **XML parsing contract** and the intended migration from browser `DOMParser` to `fast-xml-parser` without changing parser public APIs.
 
+Current project priority is **parsing + model stability** (build a reliable `ReportModel`), and only then iterate on UI rendering.
+See: `src/lib/types/SPEC.md`.
+
 ## Architecture
 
 ```
@@ -16,8 +19,10 @@ Full Report XML (ParallelsProblemReport)
       └─ extracts node payload strings into window.__prv_* globals
 
 Node payload (XML/JSON/text)
-  └─ src/services/parse*.ts (this directory)
+  └─ src/services/nodes/*/parse*.ts (per-node implementations)
       └─ returns *Summary | null
+  └─ src/services/parse*.ts (stable entrypoints; re-export from nodes/)
+      └─ preserves existing import paths
 
 Summary
   └─ src/lib/nodeBuilder.ts
@@ -104,9 +109,9 @@ Parsers must:
 ### Observed structure notes (real reports vary)
 
 Reports can differ in whether they embed node payloads or only reference them by filename.
-For example, in one sample report (`/Users/nikolai.smetannikov/Downloads/Report (1).xml`), many top-level nodes contain filenames (e.g. `CurrentVm.xml`, `HostInfo.xml`, `AllProcesses.txt`), while `SystemLogs` and `UserDefined` are inline lists whose `<Data/>` elements are empty and require separate fetching.
+For example, in some reports many top-level nodes contain filenames (e.g. `CurrentVm.xml`, `HostInfo.xml`, `AllProcesses.txt`), while `SystemLogs` and `UserDefined` are inline lists whose `<Data/>` elements are empty and require separate fetching.
 
-External reference: `/Users/nikolai.smetannikov/code-projects/alludo/PRV/docs/REPORT_XML_STRUCTURE.md`
+External reference: `docs/pd-reports-knowledge/REPORT_XML_STRUCTURE.md`
 
 ### Node inventory (payload → parser → type)
 
@@ -138,6 +143,13 @@ This is the canonical mapping used by the loader/builder pipeline:
 
 Reference (meaning of nodes): `docs/pd-reports-knowledge/pd-reports-overview.md`
 
+Per-node specs live next to implementations under `src/services/nodes/*/SPEC.md`.
+
+**Convention:** every node parser should have a sibling `SPEC.md` describing:
+- inputs (payload type + primary source global)
+- output shape + key fields
+- heuristics/normalization + known edge cases
+
 ### XML normalization rules
 
 Some nodes require normalization before parsing:
@@ -145,6 +157,47 @@ Some nodes require normalization before parsing:
 - `MoreHostInfo`: is “plist-like” XML; may need cleanup before parsing (implementation-dependent).
 
 Normalization should happen **inside** the parser that needs it (so the parser remains usable outside of `reportLoader`).
+
+## Parser Iteration Workflow (CLI Harness)
+
+For fast parser iteration without running the userscript UI, use the `parse:node` harness.
+
+- Spec: `scripts/SPEC.md`
+- Entrypoint: `scripts/parse-node.ts`
+
+### Example (GuestCommands)
+
+```bash
+npm run parse:node -- --node GuestCommands --fixture fixtures/reports/<report-id>
+```
+
+### Example (HostInfo)
+
+Some nodes are referenced by filename in `Report.xml` (e.g. `<HostInfo><![CDATA[HostInfo.xml]]></HostInfo>`). When a fixture directory is provided, the harness loads the referenced file.
+
+```bash
+npm run parse:node -- --node HostInfo --fixture fixtures/reports/<report-id>
+```
+
+What happens:
+1. Resolves a report XML path from `--fixture` (`Report.xml`, `report.xml`, or `Report (1).xml`) or `--report-xml`.
+2. Reads the report XML file as a string.
+3. Resolves the node payload:
+   - if the node is embedded inline: pass the raw content/element XML to the parser
+   - if the node contains a referenced filename: load that file from the fixture directory (relative path if safe, otherwise by basename)
+4. Calls the parser (e.g. `parseGuestCommands(...)`) and prints the parsed summary as stable JSON.
+
+Notes:
+- `fixtures/` is gitignored; not all developers will have the same fixture reports locally.
+- Not all nodes are embedded inline in `Report.xml`. Many nodes reference attachments by filename; the harness will be extended node-by-node to load the right payload source.
+
+### Recommended iteration loop
+
+1. Update the node spec in `src/services/nodes/<node>/SPEC.md`
+2. Update the parser implementation in `src/services/nodes/<node>/parse*.ts`
+3. Validate with `npm run parse:node` (and optionally snapshot with `--out`)
+4. Wire/normalize into `ReportModel` (`src/lib/types/report.ts`) as needed
+5. Update UI rendering only after the model is stable
 
 ## Configuration
 

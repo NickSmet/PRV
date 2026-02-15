@@ -132,9 +132,16 @@ const externalVhddRule: Rule = (report) => {
   if (report.meta.productName?.includes('Chrome OS')) return [];
   
   if (report.currentVm?.isExternalVhdd) {
+    const externalCount = report.currentVm.externalVhddLocations?.length ?? 0;
+    const externalSample = (report.currentVm.externalVhddLocations ?? [])
+      .slice(0, 2)
+      .map((p) => p.split('/').filter(Boolean).pop() ?? p)
+      .join(', ');
     return [
-      createNodeMarker('external-vhdd', NODE_ID, 'warn', 'External vHDD', {
-        tooltip: 'Virtual HDD is located outside the PVM bundle',
+      createNodeMarker('external-vhdd', NODE_ID, 'warn', externalCount > 1 ? `External vHDD (${externalCount})` : 'External vHDD', {
+        tooltip: externalCount > 0
+          ? `Virtual HDD is located outside the PVM bundle (${externalCount} disk${externalCount === 1 ? '' : 's'}).${externalSample ? ` Example: ${externalSample}` : ''}`
+          : 'Virtual HDD is located outside the PVM bundle',
         iconKey: 'hard-drive'
       }),
       createSubSectionMarker('external-vhdd-subsection', NODE_ID, 'Hardware', 'hdds', 'warn', 'External', {

@@ -11,51 +11,168 @@
  * 4. Provides scaffolding for attachment fetching (logs, screenshots)
  */
 
+import { XMLParser } from 'fast-xml-parser';
+
+type ParsedXml = Record<string, unknown>;
+
 /**
  * Extract text content from a node, stripping CDATA if present
  */
-function extractNodeText(node: Element | null): string | undefined {
-  if (!node) return undefined;
-  const text = node.textContent?.trim();
-  return text || undefined;
+function normalizeText(text: unknown): string | undefined {
+  if (text === null || text === undefined) return undefined;
+  const value = String(text);
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
-/**
- * Extract CDATA-wrapped content from a node
- */
-function extractCDATA(node: Element | null): string | undefined {
-  if (!node) return undefined;
-
-  const text = node.textContent?.trim();
-  if (!text) return undefined;
-
-  // CDATA content is already unwrapped by textContent
-  return text;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/**
- * Extract inline XML content (serialize child nodes)
- */
-function extractInlineXML(node: Element | null): string | undefined {
-  if (!node) return undefined;
+function firstOrSelf<T>(value: T | T[] | undefined): T | undefined {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
 
-  // Serialize the node itself as XML
-  const serializer = new XMLSerializer();
-  return serializer.serializeToString(node);
+function flattenTextContent(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(flattenTextContent).join('');
+
+  if (isRecord(value)) {
+    let out = '';
+    const cdata = value.__cdata;
+    if (typeof cdata === 'string') out += cdata;
+
+    const text = value.__text;
+    if (typeof text === 'string') out += text;
+
+    for (const [key, child] of Object.entries(value)) {
+      if (key.startsWith('@_')) continue;
+      if (key === '__cdata' || key === '__text') continue;
+      out += flattenTextContent(child);
+    }
+    return out;
+  }
+
+  return '';
+}
+
+function extractNodeText(nodeValue: unknown): string | undefined {
+  const text = flattenTextContent(nodeValue);
+  return normalizeText(text);
+}
+
+function parseReportXml(xmlText: string): ParsedXml | null {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    cdataPropName: '__cdata',
+    textNodeName: '__text',
+    parseTagValue: false,
+    parseAttributeValue: false,
+    trimValues: false,
+    processEntities: false
+  });
+
+  try {
+    return parser.parse(xmlText) as ParsedXml;
+  } catch (error) {
+    console.error('[PRV] Report XML parsing error:', error);
+    return null;
+  }
 }
 
 /**
  * Extract timezone from root-level <TimeZone> element
  */
-function extractTimeZone(doc: Document): string | undefined {
-  const node = doc.querySelector('ParallelsProblemReport > TimeZone');
-  if (!node) return undefined;
-
-  const timezone = extractNodeText(node);
+function buildTimeZoneXml(timeZoneValue: unknown): string | undefined {
+  const timezone = extractNodeText(timeZoneValue);
   if (!timezone) return undefined;
 
-  // Wrap in minimal XML for parseTimeZone
   return `<ParallelsProblemReport><TimeZone>${timezone}</TimeZone></ParallelsProblemReport>`;
+}
+
+function indexOfTagStart(xml: string, tagName: string, fromIndex: number): number {
+  // Finds the next "<tagName" that is not a closing tag.
+  // We intentionally keep this simple; the more robust matching happens in extractElementXml().
+  const re = new RegExp(`<${tagName}(\\s|>|/)`, 'g');
+  re.lastIndex = fromIndex;
+  const match = re.exec(xml);
+  return match ? match.index : -1;
+}
+
+function findTagEndIndex(xml: string, startIndex: number): number {
+  // Find the end '>' of a tag while respecting quotes.
+  let inQuote: '"' | "'" | null = null;
+  for (let i = startIndex; i < xml.length; i++) {
+    const ch = xml[i];
+    if (inQuote) {
+      if (ch === inQuote) inQuote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      inQuote = ch as '"' | "'";
+      continue;
+    }
+    if (ch === '>') return i;
+  }
+  return -1;
+}
+
+function extractElementXml(xmlText: string, tagName: string): string | undefined {
+  const start = indexOfTagStart(xmlText, tagName, 0);
+  if (start === -1) return undefined;
+
+  let depth = 0;
+  let i = start;
+
+  while (i < xmlText.length) {
+    // Skip comments
+    if (xmlText.startsWith('<!--', i)) {
+      const end = xmlText.indexOf('-->', i + 4);
+      if (end === -1) break;
+      i = end + 3;
+      continue;
+    }
+
+    // Skip CDATA blocks (do not interpret tags inside)
+    if (xmlText.startsWith('<![CDATA[', i)) {
+      const end = xmlText.indexOf(']]>', i + 9);
+      if (end === -1) break;
+      i = end + 3;
+      continue;
+    }
+
+    // Closing tag
+    if (xmlText.startsWith(`</${tagName}`, i)) {
+      depth--;
+      const tagEnd = findTagEndIndex(xmlText, i);
+      if (tagEnd === -1) break;
+      i = tagEnd + 1;
+      if (depth === 0) {
+        return xmlText.slice(start, i);
+      }
+      continue;
+    }
+
+    // Opening tag (not closing)
+    if (xmlText.startsWith(`<${tagName}`, i)) {
+      const tagEnd = findTagEndIndex(xmlText, i);
+      if (tagEnd === -1) break;
+      const tagText = xmlText.slice(i, tagEnd + 1);
+      const isSelfClosing = /\/>\s*$/.test(tagText);
+      if (!isSelfClosing) depth++;
+      i = tagEnd + 1;
+      continue;
+    }
+
+    i++;
+  }
+
+  console.warn(`[PRV] Failed to extract <${tagName}> element as XML string (unbalanced tags)`);
+  return undefined;
 }
 
 /**
@@ -86,12 +203,21 @@ function buildAttachmentUrl(reportId: string, type: 'logs' | 'screenshots' | 'at
  * Fetch attachment (scaffolding - to be implemented)
  */
 async function fetchAttachment(reportId: string, type: 'logs' | 'screenshots' | 'attachments' | 'memory_dumps', filename: string): Promise<string | null> {
-  const url = buildAttachmentUrl(reportId, type, filename);
-  console.log('[PRV] [ATTACHMENT] Would fetch:', url);
+  const safeFilename = encodeURIComponent(filename);
+  const url = buildAttachmentUrl(reportId, type, safeFilename);
+  console.log('[PRV] [ATTACHMENT] Fetching:', url);
 
-  // TODO: Implement actual fetching logic
-  // For now, return null to indicate attachment not loaded
-  return null;
+  try {
+    const response = await fetch(url, { credentials: 'include' });
+    if (!response.ok) {
+      console.warn('[PRV] [ATTACHMENT] Failed:', response.status, response.statusText, url);
+      return null;
+    }
+    return await response.text();
+  } catch (error) {
+    console.warn('[PRV] [ATTACHMENT] Error fetching:', url, error);
+    return null;
+  }
 }
 
 /**
@@ -100,7 +226,7 @@ async function fetchAttachment(reportId: string, type: 'logs' | 'screenshots' | 
 async function loadLogAttachments(reportId: string): Promise<void> {
   console.log('[PRV] [ATTACHMENTS] Loading log attachments for report', reportId);
 
-  // TODO: Fetch these logs separately
+  // Fetch these logs separately (SystemLogs <Data/> is empty in report XML)
   const logFiles = [
     'tools.log',
     'parallels-system.log',
@@ -130,18 +256,10 @@ async function loadLogAttachments(reportId: string): Promise<void> {
 export function extractReportData(xmlText: string): void {
   console.log('[PRV] Extracting data from report XML, length:', xmlText.length);
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, 'application/xml');
+  const parsed = parseReportXml(xmlText);
+  const report = parsed?.ParallelsProblemReport;
 
-  // Check for parse errors
-  const parseError = doc.querySelector('parsererror');
-  if (parseError) {
-    console.error('[PRV] XML parsing error:', parseError.textContent);
-    return;
-  }
-
-  const root = doc.querySelector('ParallelsProblemReport');
-  if (!root) {
+  if (!isRecord(report)) {
     console.error('[PRV] Root element <ParallelsProblemReport> not found');
     return;
   }
@@ -150,31 +268,25 @@ export function extractReportData(xmlText: string): void {
   console.log('[PRV] Extracting Phase 1 data...');
 
   // TimeZone (root level, inline)
-  (window as any).__prv_timezoneXml = extractTimeZone(doc);
+  (window as any).__prv_timezoneXml = buildTimeZoneXml(report.TimeZone);
 
   // CurrentVm (CDATA XML)
-  const currentVmNode = doc.querySelector('CurrentVm');
-  (window as any).__prv_currentVmXml = extractCDATA(currentVmNode);
+  (window as any).__prv_currentVmXml = extractNodeText(firstOrSelf(report.CurrentVm));
 
   // GuestOs (CDATA XML)
-  const guestOsNode = doc.querySelector('GuestOs');
-  (window as any).__prv_guestOsXml = extractCDATA(guestOsNode);
+  (window as any).__prv_guestOsXml = extractNodeText(firstOrSelf(report.GuestOs));
 
   // LicenseData (inline JSON)
-  const licenseNode = doc.querySelector('LicenseData');
-  (window as any).__prv_licenseDataJson = extractNodeText(licenseNode);
+  (window as any).__prv_licenseDataJson = extractNodeText(firstOrSelf(report.LicenseData));
 
   // NetConfig (CDATA XML)
-  const netConfigNode = doc.querySelector('NetConfig');
-  (window as any).__prv_netConfigXml = extractCDATA(netConfigNode);
+  (window as any).__prv_netConfigXml = extractNodeText(firstOrSelf(report.NetConfig));
 
   // AdvancedVmInfo (inline XML)
-  const advancedVmNode = doc.querySelector('AdvancedVmInfo');
-  (window as any).__prv_advancedVmInfoXml = extractInlineXML(advancedVmNode);
+  (window as any).__prv_advancedVmInfoXml = extractElementXml(xmlText, 'AdvancedVmInfo');
 
   // HostInfo (CDATA XML)
-  const hostInfoNode = doc.querySelector('HostInfo');
-  (window as any).__prv_hostInfoXml = extractCDATA(hostInfoNode);
+  (window as any).__prv_hostInfoXml = extractNodeText(firstOrSelf(report.HostInfo));
 
   console.log('[PRV] Phase 1 extraction complete');
 
@@ -182,49 +294,46 @@ export function extractReportData(xmlText: string): void {
   console.log('[PRV] Extracting Phase 2 data...');
 
   // LoadedDrivers (CDATA text)
-  const loadedDriversNode = doc.querySelector('LoadedDrivers');
-  (window as any).__prv_loadedDriversText = extractCDATA(loadedDriversNode);
+  (window as any).__prv_loadedDriversText = extractNodeText(firstOrSelf(report.LoadedDrivers));
 
   // MountInfo (inline text)
-  const mountInfoNode = doc.querySelector('MountInfo');
-  (window as any).__prv_mountInfoText = extractNodeText(mountInfoNode);
+  (window as any).__prv_mountInfoText = extractNodeText(firstOrSelf(report.MountInfo));
 
   // AllProcesses (CDATA text)
-  const allProcessesNode = doc.querySelector('AllProcesses');
-  (window as any).__prv_allProcessesText = extractCDATA(allProcessesNode);
+  (window as any).__prv_allProcessesText = extractNodeText(firstOrSelf(report.AllProcesses));
 
   // MoreHostInfo (CDATA plist)
-  const moreHostInfoNode = doc.querySelector('MoreHostInfo');
-  (window as any).__prv_moreHostInfoXml = extractCDATA(moreHostInfoNode);
+  (window as any).__prv_moreHostInfoXml = extractNodeText(firstOrSelf(report.MoreHostInfo));
 
   // VmDirectory (CDATA XML)
-  const vmDirectoryNode = doc.querySelector('VmDirectory');
-  (window as any).__prv_vmDirectoryXml = extractCDATA(vmDirectoryNode);
+  (window as any).__prv_vmDirectoryXml = extractNodeText(firstOrSelf(report.VmDirectory));
 
   console.log('[PRV] Phase 2 extraction complete');
 
   // Extract Phase 3 data
   console.log('[PRV] Extracting Phase 3 data...');
 
-  // GuestCommands (inline JSON)
-  const guestCommandsNode = doc.querySelector('GuestCommands');
-  (window as any).__prv_guestCommandsJson = extractNodeText(guestCommandsNode);
+  // GuestCommands:
+  // - some reports embed inline XML (<GuestCommand> children)
+  // - some reports embed JSON text
+  // Preserve the full XML element string only when inline XML is present.
+  const guestCommandsValue = firstOrSelf(report.GuestCommands);
+  const hasInlineGuestCommands = isRecord(guestCommandsValue) && 'GuestCommand' in guestCommandsValue;
+  (window as any).__prv_guestCommandsJson = hasInlineGuestCommands
+    ? extractElementXml(xmlText, 'GuestCommands')
+    : extractNodeText(guestCommandsValue);
 
   // AppConfig (CDATA XML)
-  const appConfigNode = doc.querySelector('AppConfig');
-  (window as any).__prv_appConfigXml = extractCDATA(appConfigNode);
+  (window as any).__prv_appConfigXml = extractNodeText(firstOrSelf(report.AppConfig));
 
   // ClientInfo (CDATA text)
-  const clientInfoNode = doc.querySelector('ClientInfo');
-  (window as any).__prv_clientInfoText = extractCDATA(clientInfoNode);
+  (window as any).__prv_clientInfoText = extractNodeText(firstOrSelf(report.ClientInfo));
 
   // ClientProxyInfo (CDATA text)
-  const clientProxyInfoNode = doc.querySelector('ClientProxyInfo');
-  (window as any).__prv_clientProxyInfoText = extractCDATA(clientProxyInfoNode);
+  (window as any).__prv_clientProxyInfoText = extractNodeText(firstOrSelf(report.ClientProxyInfo));
 
   // InstalledSoftware (CDATA text) - direct child of root to avoid the one inside CurrentVm
-  const installedSoftwareNode = doc.querySelector('ParallelsProblemReport > InstalledSoftware');
-  (window as any).__prv_installedSoftwareText = extractCDATA(installedSoftwareNode);
+  (window as any).__prv_installedSoftwareText = extractNodeText(firstOrSelf(report.InstalledSoftware));
 
   console.log('[PRV] Phase 3 extraction complete');
 
@@ -232,12 +341,10 @@ export function extractReportData(xmlText: string): void {
   console.log('[PRV] Extracting Phase 4 data...');
 
   // LaunchdInfo (CDATA text)
-  const launchdInfoNode = doc.querySelector('LaunchdInfo');
-  (window as any).__prv_launchdInfoText = extractCDATA(launchdInfoNode);
+  (window as any).__prv_launchdInfoText = extractNodeText(firstOrSelf(report.LaunchdInfo));
 
   // AutoStatisticInfo (inline XML)
-  const autoStatisticInfoNode = doc.querySelector('AutoStatisticInfo');
-  (window as any).__prv_autoStatisticInfoXml = extractInlineXML(autoStatisticInfoNode);
+  (window as any).__prv_autoStatisticInfoXml = extractElementXml(xmlText, 'AutoStatisticInfo');
 
   console.log('[PRV] Phase 4 extraction complete (attachments deferred)');
 

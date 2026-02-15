@@ -22,10 +22,9 @@
 		...rest
 	}: CopyButtonProps = $props();
 
-	// this way if the user passes text then the button will be the default size
-	if (size === 'icon' && children) {
-		size = 'default';
-	}
+	// If the user passes children content, `icon` sizing is usually too small.
+	// Avoid mutating props-derived values; use a derived effective size instead.
+	const effectiveSize = $derived(size === 'icon' && children ? 'default' : size);
 
 	const clipboard = new UseClipboard();
 </script>
@@ -34,7 +33,7 @@
 	{...rest}
 	bind:ref
 	{variant}
-	{size}
+	size={effectiveSize}
 	{tabindex}
 	class={cn('flex items-center gap-2', className)}
 	type="button"

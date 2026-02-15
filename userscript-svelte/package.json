@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "node ../userscript-dev-tool/bin/cli.js",
     "dev:all": "concurrently \"npm:dev\" \"npm:watch:all\"",
-    "dev:fast": "REPORT_XML_PATH=/Users/nikolai.smetannikov/Downloads/Report.xml vite --config vite.config.dev.ts",
-    "dev:server": "REPORT_XML_PATH=/Users/nikolai.smetannikov/Downloads/Report.xml node dev-server.js",
+    "dev:fast": "vite --config vite.config.dev.ts",
+    "dev:server": "node dev-server.js",
     "dev:with-server": "concurrently \"npm:dev:server\" \"npm:watch:dev\"",
     "build": "vite build",
     "build:dev": "vite build --config vite.config.dev.ts",
@@ -17,12 +17,16 @@
     "watch:dev": "vite build --config vite.config.dev.ts --watch --mode development",
     "watch:google": "vite build --config vite.config.google.ts --watch --mode development",
     "watch:all": "concurrently \"npm run watch:main\" \"npm run watch:google\"",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "parse:node": "tsx scripts/parse-node.ts",
+    "parse:node:watch": "tsx watch scripts/parse-node.ts",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "devDependencies": {
     "@internationalized/date": "^3.10.0",
     "@jsrepo/transform-prettier": "^0.0.6",
-    "@lucide/svelte": "^0.554.0",
+    "@lucide/svelte": "^0.561.0",
     "@shikijs/langs": "^3.17.0",
     "@shikijs/themes": "^3.17.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
@@ -40,14 +44,22 @@
     "tailwind-merge": "^3.4.0",
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.1.17",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.3",
     "vite": "^6.0.1",
-    "vite-plugin-monkey": "^7.1.5"
+    "vite-plugin-monkey": "^7.1.5",
+    "storybook": "^8.6.15",
+    "@storybook/svelte-vite": "^8.6.15",
+    "@storybook/addon-essentials": "^8.6.15"
   },
   "dependencies": {
     "chokidar": "^4.0.3",
     "express": "^4.21.2",
+    "fast-xml-parser": "^4.5.3",
     "linkedom": "^0.18.12",
     "vis-timeline": "^8.4.0"
+  },
+  "optionalDependencies": {
+    "@oxc-parser/binding-darwin-arm64": "^0.96.0"
   }
 }

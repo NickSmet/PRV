@@ -29,8 +29,13 @@
     secondary: "",
     destructive: "",
     outline: "",
-    muted: "background-color: hsl(220 14% 85%); color: hsl(220 10% 40%);",
-    success: "background-color: hsl(142 60% 50%); color: hsl(0 0% 100%);"
+    // NOTE: In userscript mode, host pages sometimes ship aggressive CSS resets with `!important`.
+    // Inline styles normally win, but `!important` in page CSS can override them — so we mark our
+    // critical pill colors as `!important` to keep badges readable.
+    muted:
+      "background-color: hsl(220 14% 85%) !important; color: hsl(220 10% 40%) !important; border-color: transparent !important;",
+    success:
+      "background-color: hsl(142 60% 50%) !important; color: hsl(0 0% 100%) !important; border-color: transparent !important;"
   };
 </script>
 

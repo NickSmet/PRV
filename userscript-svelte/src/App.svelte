@@ -62,6 +62,15 @@
   import { CopyButton } from './ui/copy-button';
   // import CompactLayoutDemo from '$lib/components/compact/CompactLayoutDemo.svelte';
   import CompactCurrentVm from '$lib/components/compact/CompactCurrentVm.svelte';
+  import AdvancedVmInfoView from '$lib/components/advanced-vm-info/advanced-vm-info-view.svelte';
+  import AllProcessesView from '$lib/components/all-processes/all-processes-view.svelte';
+  import GuestCommandsView from '$lib/components/guest-commands/guest-commands-view.svelte';
+  import LaunchdInfoView from '$lib/components/launchd-info/launchd-info-view.svelte';
+  import MountInfoView from '$lib/components/mount-info/mount-info-view.svelte';
+  import NetConfigView from '$lib/components/net-config/net-config-view.svelte';
+  import MoreHostInfoView from '$lib/components/more-host-info/more-host-info-view.svelte';
+  import HostInfoView from '$lib/components/host-info/host-info-view.svelte';
+  import VmDirectoryView from '$lib/components/vm-directory/vm-directory-view.svelte';
 
   // Svelte 5 props using $props() rune
   let { context = 'reportus' }: { context?: 'reportus' | string } = $props();
@@ -622,6 +631,69 @@
             {#if node.id === 'current-vm'}
               <!-- Compact CurrentVm rendering with markers -->
               <CompactCurrentVm {node} {markers} />
+            {:else if node.id === 'advanced-vm-info'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <AdvancedVmInfoView {summary} />
+              {:else}
+                <div class="rv-empty">No AdvancedVmInfo data</div>
+              {/if}
+            {:else if node.id === 'mount-info'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <MountInfoView {summary} />
+              {:else}
+                <div class="rv-empty">No MountInfo data</div>
+              {/if}
+            {:else if node.id === 'all-processes'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <AllProcessesView {summary} />
+              {:else}
+                <div class="rv-empty">No AllProcesses data</div>
+              {/if}
+            {:else if node.id === 'guest-commands'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <GuestCommandsView {summary} />
+              {:else}
+                <div class="rv-empty">No GuestCommands data</div>
+              {/if}
+            {:else if node.id === 'more-host-info'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <MoreHostInfoView {summary} />
+              {:else}
+                <div class="rv-empty">No MoreHostInfo data</div>
+              {/if}
+            {:else if node.id === 'host-info'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <HostInfoView {summary} />
+              {:else}
+                <div class="rv-empty">No HostInfo data</div>
+              {/if}
+            {:else if node.id === 'vm-directory'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <VmDirectoryView {summary} />
+              {:else}
+                <div class="rv-empty">No VmDirectory data</div>
+              {/if}
+            {:else if node.id === 'net-config'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <NetConfigView {summary} />
+              {:else}
+                <div class="rv-empty">No NetConfig data</div>
+              {/if}
+            {:else if node.id === 'launchd-info'}
+              {@const summary = node.data as any}
+              {#if summary}
+                <LaunchdInfoView {summary} />
+              {:else}
+                <div class="rv-empty">No LaunchdInfo data</div>
+              {/if}
             {:else}
               <!-- Original rendering for other nodes -->
             {#each node.sections as section}

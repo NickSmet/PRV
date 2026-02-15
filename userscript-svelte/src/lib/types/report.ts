@@ -173,6 +173,16 @@ export interface CurrentVmModel extends CurrentVmSummary {
   // Derived fields for rule evaluation
   isBootCamp?: boolean;
   isExternalVhdd?: boolean;
+  /**
+   * Normalized `.pvm` bundle root used for disk location comparisons.
+   * (May be empty if VmHome is missing.)
+   */
+  pvmBundleRoot?: string;
+  /**
+   * Disk locations (as reported) that are outside the `.pvm` bundle root.
+   * This helps the UI explain *which* disk triggered `isExternalVhdd`.
+   */
+  externalVhddLocations?: string[];
   isCopied?: boolean;
   isOnExternalVolume?: boolean;
   isPlainDisk?: boolean;
@@ -191,21 +201,74 @@ export interface CurrentVmModel extends CurrentVmSummary {
  * Compute derived fields from base CurrentVmSummary
  */
 export function deriveCurrentVmFields(summary: CurrentVmSummary): CurrentVmModel {
-  const vmHome = summary.vmHome || '';
+  const vmHomeRaw = summary.vmHome || '';
   const hdds = summary.hdds || [];
   const netAdapters = summary.netAdapters || [];
+
+  function normalizePosixPath(input: string): string {
+    const trimmed = input.trim();
+    if (!trimmed) return '';
+    // Normalize repeated slashes and remove a trailing slash (except root).
+    const collapsed = trimmed.replace(/\/{2,}/g, '/');
+    if (collapsed.length > 1 && collapsed.endsWith('/')) return collapsed.slice(0, -1);
+    return collapsed;
+  }
+
+  function dirnamePosix(absPath: string): string {
+    const p = normalizePosixPath(absPath);
+    const idx = p.lastIndexOf('/');
+    if (idx <= 0) return '/';
+    return p.slice(0, idx);
+  }
+
+  /**
+   * CurrentVm's `VmHome` is *usually* the `.pvm` folder path, but some reports
+   * provide a path to `config.pvs` inside the bundle:
+   * - `/.../VM.pvm`
+   * - `/.../VM.pvm/config.pvs`
+   *
+   * For any path comparisons (e.g. "external vHDD"), normalize this to the
+   * `.pvm` bundle root.
+   */
+  function normalizePvmBundleRoot(vmHomeValue: string): string {
+    const vmHome = normalizePosixPath(vmHomeValue);
+    if (!vmHome) return '';
+
+    // Prefer explicit `.pvm` root if present anywhere in the path.
+    const pvmMatch = /^(?<root>.*?\.pvm)(?:\/|$)/i.exec(vmHome);
+    const root = pvmMatch?.groups?.root;
+    if (root) return normalizePosixPath(root);
+
+    // Fallback: if it points to a file, take its directory.
+    if (/\.(pvs|xml|txt|log|json)$/i.test(vmHome)) {
+      return dirnamePosix(vmHome);
+    }
+
+    return vmHome;
+  }
+
+  const vmHome = normalizePvmBundleRoot(vmHomeRaw);
 
   // Check for Boot Camp: expanding=0 and actualSize=0
   const isBootCamp = hdds.some(
     (hdd) => hdd.expanding === '0' && (hdd.actualSize === '0' || hdd.actualSize === '0 B')
   );
 
-  // Check for external vHDD (location outside PVM folder)
-  const isExternalVhdd = hdds.some((hdd) => {
-    if (!hdd.location || !vmHome) return false;
-    // If HDD location doesn't start with the PVM location, it's external
-    return !hdd.location.startsWith(vmHome.replace(/\/?$/, ''));
-  });
+  const externalVhddLocations = hdds
+    .map((hdd) => hdd.location)
+    .filter((loc): loc is string => typeof loc === 'string')
+    .filter((rawLoc) => {
+      const location = normalizePosixPath(rawLoc);
+      if (!location || !vmHome) return false;
+      // If disk location isn't an absolute path (uncommon in reports), treat as internal.
+      if (!location.startsWith('/')) return false;
+      // If HDD location doesn't start with the `.pvm` bundle root, it's external-to-bundle.
+      const rootPrefix = vmHome.endsWith('/') ? vmHome : `${vmHome}/`;
+      return !location.startsWith(rootPrefix);
+    });
+
+  // Check for external vHDD (location outside PVM bundle root)
+  const isExternalVhdd = externalVhddLocations.length > 0;
 
   // Check if VM was copied (Source UUID != VM UUID)
   const isCopied = !!(
@@ -215,7 +278,7 @@ export function deriveCurrentVmFields(summary: CurrentVmSummary): CurrentVmModel
   );
 
   // Check if VM is on external volume
-  const isOnExternalVolume = vmHome.startsWith('/Volumes');
+  const isOnExternalVolume = vmHome.startsWith('/Volumes/');
 
   // Check for plain (non-expanding) disk
   const isPlainDisk = hdds.some((hdd) => hdd.expanding === '0') && !isBootCamp;
@@ -237,6 +300,8 @@ export function deriveCurrentVmFields(summary: CurrentVmSummary): CurrentVmModel
     ...summary,
     isBootCamp,
     isExternalVhdd,
+    pvmBundleRoot: vmHome || undefined,
+    externalVhddLocations,
     isCopied,
     isOnExternalVolume,
     isPlainDisk,

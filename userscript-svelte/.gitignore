@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+
+# Local parsing fixtures (reports + extracted attachments)
+fixtures/
+
+# Local parser outputs
+**/_out/
+
+# Storybook
+storybook-static/
+.cache-storybook/
