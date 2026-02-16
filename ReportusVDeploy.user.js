@@ -81,7 +81,7 @@ if (window.location.href.match(/security-monitors.prls.net/)){
 
 function checkVersion(currentVersion, updateUrl){
     const isBeta = typeof GM_getValue === 'function' ? !!GM_getValue('prv_use_beta', false) : false
-    const toggleLabel = isBeta ? 'Switch to stable' : 'Switch to beta'
+    const toggleLabel = isBeta ? 'Switch to stable' : 'TRY NEW VERSION (ALPHA)'
 
     function normalizeGitHubRawUrl(url) {
       try {
