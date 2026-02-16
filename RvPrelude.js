@@ -7,6 +7,15 @@
   'use strict';
 
   const BETA_TOGGLE_KEY = 'prv_use_beta';
+  const isMainReportRoute = (() => {
+    try {
+      if (location.hostname !== 'reportus.prls.net') return false;
+      // Only: /webapp/reports/{id} (optional trailing slash). Query params allowed.
+      return /^\/webapp\/reports\/\d+\/?$/.test(location.pathname);
+    } catch {
+      return false;
+    }
+  })();
 
   let useBeta = false;
   try {
@@ -22,7 +31,9 @@
     // ignore
   }
 
-  if (!useBeta) return;
+  // Only block legacy bootstrap on the main report route.
+  // On sub-routes (e.g. /webapp/reports/{id}/files/...), we keep legacy PRV behavior even if beta is enabled.
+  if (!useBeta || !isMainReportRoute) return;
 
   const origAdd = window.addEventListener.bind(window);
 

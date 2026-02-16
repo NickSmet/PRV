@@ -149,7 +149,17 @@ checkVersion(GM_info.script.version,GM_info.script.updateURL)
 
 // If beta is enabled, legacy bootstrap is blocked by `RvPrelude.js`.
 // Here we load the new Svelte userscript bundle in userscript context.
-if (typeof GM_getValue === 'function' && GM_getValue('prv_use_beta', false) && window.location.href.match(/reportus\.prls\.net/)) {
+function isMainReportRoute() {
+  try {
+    if (location.hostname !== 'reportus.prls.net') return false
+    // Only: /webapp/reports/{id} (optional trailing slash). Query params allowed.
+    return /^\/webapp\/reports\/\d+\/?$/.test(location.pathname)
+  } catch (e) {
+    return false
+  }
+}
+
+if (typeof GM_getValue === 'function' && GM_getValue('prv_use_beta', false) && isMainReportRoute()) {
   (function loadBetaBundle() {
     const url = 'https://chatbotkbimages.blob.core.windows.net/reportus-parser-new/rv-userscript-svelte.user.js'
     GM_xmlhttpRequest({
