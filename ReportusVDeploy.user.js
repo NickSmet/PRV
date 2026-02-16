@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Parallels Reportus Viewer 
-// @version            1.7.0.1
+// @version            1.8.0.0
 // @author 	Nikolai Smetannikov
 
 // @updateURL    https://raw.githubusercontent.com/NickSmet/PRV/master/ReportusVDeploy.user.js
@@ -82,6 +82,13 @@ if (window.location.href.match(/security-monitors.prls.net/)){
 function checkVersion(currentVersion, updateUrl){
     const isBeta = typeof GM_getValue === 'function' ? !!GM_getValue('prv_use_beta', false) : false
     const toggleLabel = isBeta ? 'Switch to stable' : 'TRY NEW VERSION (ALPHA)'
+    const showToggle = (() => {
+      try {
+        if (location.hostname !== 'reportus.prls.net') return false
+        // Only: /webapp/reports/{id} (optional trailing slash). Query params allowed.
+        return /^\/webapp\/reports\/\d+\/?$/.test(location.pathname)
+      } catch (e) { return false }
+    })()
 
     function normalizeGitHubRawUrl(url) {
       try {
@@ -101,20 +108,26 @@ function checkVersion(currentVersion, updateUrl){
            </button>`
         : ''
 
+      const togglePart = showToggle
+        ? `<button id="prv-beta-toggle" style="font-family:Arial; margin-left: 1em; background-color: #1976d2; color: white;">
+            ${toggleLabel}
+           </button>`
+        : ''
+
       const html = `<div id="prv-loader-header" style="margin:1em">
         ${newerVersion ? `Reports Viewer ver. ${currentVersion}` : `ver. ${currentVersion}`}
         ${upgradePart}
-        <button id="prv-beta-toggle" style="font-family:Arial; margin-left: 1em; background-color: #1976d2; color: white;">
-          ${toggleLabel}
-        </button>
+        ${togglePart}
       </div>`
 
       const $el = $(html)
       $el.insertBefore($("#app"))
-      $("#prv-beta-toggle").on("click", function () {
-        try { GM_setValue('prv_use_beta', !isBeta) } catch (e) {}
-        window.location.reload()
-      })
+      if (showToggle) {
+        $("#prv-beta-toggle").on("click", function () {
+          try { GM_setValue('prv_use_beta', !isBeta) } catch (e) {}
+          window.location.reload()
+        })
+      }
     }
 
     // Always render immediately (so button exists even if update check fails)
