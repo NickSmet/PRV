@@ -1,36 +1,22 @@
 <script lang="ts">
-  import { ReportViewer } from '@prv/report-ui-svelte';
-  import type { NodeModel } from '@prv/report-viewmodel';
-  import type { Marker } from '@prv/report-core';
-
   let reportId = $state('');
-  let loading = $state(false);
-  let error = $state<string | null>(null);
 
-  let nodes = $state<NodeModel[]>([]);
-  let markers = $state<Marker[]>([]);
-
-  async function load() {
-    error = null;
-    nodes = [];
-    markers = [];
+  function goMental() {
     const id = reportId.trim();
     if (!id) return;
+    window.location.assign(`/${encodeURIComponent(id)}`);
+  }
 
-    loading = true;
-    try {
-      const res = await fetch(`/api/reports/${encodeURIComponent(id)}/model`);
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { nodes: NodeModel[]; markers: Marker[] };
-      nodes = data.nodes;
-      markers = data.markers;
-    } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
-    } finally {
-      loading = false;
-    }
+  function goNodes() {
+    const id = reportId.trim();
+    if (!id) return;
+    window.location.assign(`/nodes/${encodeURIComponent(id)}`);
+  }
+
+  function goLab() {
+    const id = reportId.trim();
+    if (!id) return;
+    window.location.assign(`/lab/${encodeURIComponent(id)}`);
   }
 </script>
 
@@ -40,20 +26,19 @@
       class="rv-search max-w-xs"
       placeholder="Report ID (e.g. 512022712)"
       bind:value={reportId}
-      onkeydown={(e) => e.key === 'Enter' && load()}
+      onkeydown={(e) => e.key === 'Enter' && goMental()}
     />
-    <button class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" onclick={load}>
-      {loading ? 'Loading…' : 'Load'}
+    <button class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" onclick={goMental}>
+      Mental view
     </button>
-    {#if error}
-      <div class="text-[12px] text-red-600">{error}</div>
-    {/if}
+    <button class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" onclick={goLab}>
+      Mental view (lab icons)
+    </button>
+    <button class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" onclick={goNodes}>
+      Node view
+    </button>
+    <a class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" href="/lab/icons">
+      Icon gallery
+    </a>
   </div>
-
-  {#if nodes.length}
-    <div class="max-w-5xl">
-      <ReportViewer context="web" {nodes} {markers} />
-    </div>
-  {/if}
 </main>
-

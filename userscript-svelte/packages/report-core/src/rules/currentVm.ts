@@ -49,7 +49,7 @@ const noHddRule: Rule = (report) => {
     return [
       createNodeMarker('no-hdd', NODE_ID, 'danger', 'No HDD', {
         tooltip: 'No HDD attached to VM!',
-        iconKey: 'hard-drive'
+        iconKey: 'alert-triangle'
       }),
       createSubSectionMarker('no-hdd-subsection', NODE_ID, 'Hardware', 'hdds', 'danger', 'Empty', {
         tooltip: 'No HDD attached to VM!'
@@ -272,6 +272,25 @@ const copiedVmRule: Rule = (report) => {
 };
 
 /**
+ * Imported VM heuristic (bogus creation date)
+ * Legacy quirk: imported VMs sometimes have creation date set to 1751-12-31.
+ */
+const importedVmRule: Rule = (report) => {
+  if (report.currentVm?.isImported) {
+    return [
+      createNodeMarker('imported-vm', NODE_ID, 'warn', 'Imported', {
+        tooltip: 'VM creation date looks bogus (1751-12-31) — this usually indicates an imported VM.',
+        iconKey: 'clock'
+      }),
+      createRowMarker('imported-vm-date', NODE_ID, 'General.Creation Date', 'warn', 'Imported', {
+        tooltip: 'Bogus creation date (1751-12-31) is a known indicator of imported VM.'
+      })
+    ];
+  }
+  return [];
+};
+
+/**
  * VM on external drive
  * Legacy: markBullet("CurrentVm", "external drive")
  */
@@ -485,6 +504,33 @@ const tpmRule: Rule = (report) => {
   return [];
 };
 
+/**
+ * GuestCommands missing on a "running VM" report type (likely tools not working)
+ * Legacy: markBullet('GuestCommands', icons.warning) when empty while VM is running.
+ */
+const missingGuestCommandsOnRunningVmReportRule: Rule = (report) => {
+  const type = report.meta.reportType ?? '';
+  const t = type.toLowerCase();
+  const isRunningVmReport = type === 'UserDefinedOnRunningVmReport' || t.includes('runningvmreport') || t.includes('running');
+
+  const isLinux = report.guestOs?.type ? /linux/i.test(report.guestOs.type) : false;
+  const guestCommandsEmpty = !report.guestCommands || report.guestCommands.isEmpty;
+
+  if (isRunningVmReport && !isLinux && guestCommandsEmpty) {
+    return [
+      createNodeMarker('guest-commands-missing', NODE_ID, 'warn', 'No GuestCommands', {
+        tooltip:
+          type === 'UserDefinedOnRunningVmReport'
+            ? 'GuestCommands is empty for a running VM report; this often indicates Parallels Tools is not working.'
+            : `GuestCommands is empty for report type "${type}"; this often indicates Parallels Tools is not working.`,
+        iconKey: 'alert-triangle'
+      })
+    ];
+  }
+
+  return [];
+};
+
 // ============================================================================
 // Cross-Node Rules (require host info)
 // ============================================================================
@@ -580,6 +626,7 @@ export const currentVmRules: Rule[] = [
   
   // Identity
   copiedVmRule,
+  importedVmRule,
   externalDriveRule,
   linkedCloneRule,
   
@@ -598,6 +645,7 @@ export const currentVmRules: Rule[] = [
   resourceQuotaRule,
   smartGuardRule,
   tpmRule,
+  missingGuestCommandsOnRunningVmReportRule,
   
   // Cross-Node (RAM)
   tooMuchRamRule,
@@ -606,7 +654,3 @@ export const currentVmRules: Rule[] = [
   // Chrome OS
   notPvmDefaultRule
 ];
-
-
-
-

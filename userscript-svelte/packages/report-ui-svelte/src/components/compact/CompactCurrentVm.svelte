@@ -15,23 +15,28 @@
 	import type { Marker } from '@prv/report-core';
 	import { getMarkersForSubSection, severityToVariant } from '@prv/report-core';
 	import { scrollToMarker } from '../../stores/markerStore.svelte.ts';
-	import {
-		HardDrive as HardDriveIcon,
-		Network,
-		Usb,
-		Disc,
-		Cpu,
-		Monitor,
-		Settings,
-		AlertTriangle
-	} from '@lucide/svelte';
+	import PrvIcon from '../PrvIcon.svelte';
+	import { AlertTriangle } from '@lucide/svelte';
 
 	interface Props {
 		node: NodeModel;
 		markers?: Marker[];
+		iconUrlByKey?: Record<string, string>;
 	}
 
-	let { node, markers = [] }: Props = $props();
+	let { node, markers = [], iconUrlByKey }: Props = $props();
+
+	function badgeVariant(tone: string | undefined): 'destructive' | 'default' | 'outline' {
+		if (tone === 'danger') return 'destructive';
+		if (tone === 'warn') return 'default';
+		return 'outline';
+	}
+
+	function iconClass(tone: string | undefined): string {
+		if (tone === 'danger') return 'text-red-700';
+		if (tone === 'warn') return 'text-amber-700';
+		return 'text-muted-foreground';
+	}
 
 	// Collapsible state
 	let networksOpen = $state(false);
@@ -109,6 +114,19 @@
 
 <Tooltip.Provider>
 	<div class="compact-current-vm space-y-3">
+		{#if node.badges.length}
+			<div class="flex flex-wrap items-center gap-1.5">
+				{#each node.badges as b (b.label)}
+					<Badge variant={badgeVariant(b.tone)} class="text-[11px] gap-1">
+						{#if b.iconKey}
+							<PrvIcon iconKey={b.iconKey} {iconUrlByKey} size={12} class={iconClass(b.tone)} />
+						{/if}
+						{b.label}
+					</Badge>
+				{/each}
+			</div>
+		{/if}
+
 		<!-- General section (VM info) -->
 		{#if generalSection}
 			<section class="space-y-2">
@@ -150,12 +168,8 @@
 						{/if}
 						<Tooltip.Root>
 							<Tooltip.Trigger class="inline-flex items-center gap-1">
-								{#if row.iconKey === 'cpu'}
-									<Cpu class="h-3.5 w-3.5 text-muted-foreground" />
-								{:else if row.iconKey === 'monitor'}
-									<Monitor class="h-3.5 w-3.5 text-muted-foreground" />
-								{:else if row.iconKey === 'keyboard' || row.iconKey === 'mouse'}
-									<Settings class="h-3.5 w-3.5 text-muted-foreground" />
+								{#if row.iconKey}
+									<PrvIcon iconKey={row.iconKey} {iconUrlByKey} size={14} class="text-muted-foreground" />
 								{/if}
 								<span class="font-medium">{row.label}:</span>
 								<RowValue {row} size="sm" />
@@ -177,7 +191,7 @@
 					data-marker-id="networks-section"
 				>
 					<div class="flex items-center gap-2">
-						<Network class="h-3.5 w-3.5" />
+						<PrvIcon iconKey={networkSubs.iconKey ?? 'net'} {iconUrlByKey} size={14} class="text-muted-foreground" />
 						<span>{networkSubs.title}</span>
 						{#each networkMarkers as marker}
 							<Tooltip.Root>
@@ -206,7 +220,12 @@
 						<div class="space-y-0.5 text-[11px]">
 							{#each networkSubs.rows as row}
 								<div class="flex items-center justify-between">
-									<span class="text-muted-foreground">{row.label}</span>
+									<span class="text-muted-foreground flex items-center gap-1">
+										{#if row.iconKey}
+											<PrvIcon iconKey={row.iconKey} {iconUrlByKey} size={12} class="text-muted-foreground" />
+										{/if}
+										{row.label}
+									</span>
 									<RowValue {row} size="sm" />
 								</div>
 							{/each}
@@ -224,7 +243,7 @@
 					data-marker-id="hdds-section"
 				>
 					<div class="flex items-center gap-2">
-						<HardDriveIcon class="h-3.5 w-3.5" />
+						<PrvIcon iconKey={hddSubs.iconKey ?? 'hdd'} {iconUrlByKey} size={14} class="text-muted-foreground" />
 						<span>{hddSubs.title}</span>
 						{#each hddMarkers as marker}
 							<Tooltip.Root>
@@ -282,7 +301,7 @@
 					data-marker-id="usbs-section"
 				>
 					<div class="flex items-center gap-2">
-						<Usb class="h-3.5 w-3.5" />
+						<PrvIcon iconKey={usbSubs.iconKey ?? 'usb'} {iconUrlByKey} size={14} class="text-muted-foreground" />
 						<span>{usbSubs.title}</span>
 						{#each usbMarkers as marker}
 							<Tooltip.Root>
@@ -326,7 +345,7 @@
 					data-marker-id="cds-section"
 				>
 					<div class="flex items-center gap-2">
-						<Disc class="h-3.5 w-3.5" />
+						<PrvIcon iconKey={cdSubs.iconKey ?? 'disc'} {iconUrlByKey} size={14} class="text-muted-foreground" />
 						<span>{cdSubs.title}</span>
 						{#each cdMarkers as marker}
 							<Tooltip.Root>

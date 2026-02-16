@@ -9,7 +9,8 @@ Parse `ps aux` output (and an optional `top` snapshot when present) to provide:
 ## Input
 
 - **Payload type:** plain text
-- **Primary source:** `window.__prv_allProcessesText`
+- **Primary source (userscript):** `window.__prv_allProcessesText`
+- **Primary source (web/MCP):** resolved via `fetchNodePayload(..., 'AllProcesses')` (Reportus attachment download)
 
 ## Output
 
@@ -24,4 +25,3 @@ Key fields:
 
 - Best-effort classification into `ProcessType` (macOS apps, Parallels Tools, Windows components, services, etc.).
 - Helper subprocesses are marked via `isHelper` for indentation/dimming in UI.
-

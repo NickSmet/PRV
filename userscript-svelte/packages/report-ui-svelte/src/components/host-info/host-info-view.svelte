@@ -12,6 +12,7 @@
 
   import HostInfoAudioSection from './host-info-audio-section.svelte';
   import HostInfoDiskCard from './host-info-disk-card.svelte';
+  import HostInfoCollapsibleSection from './host-info-collapsible-section.svelte';
   import HostInfoFlagsSummary from './host-info-flags-summary.svelte';
   import HostInfoInputDeviceRow from './host-info-input-device-row.svelte';
   import HostInfoNetworkCard from './host-info-network-card.svelte';
@@ -36,8 +37,7 @@
 
   <HostInfoSystemBanner system={summary.system} />
 
-  <div class="space-y-2">
-    <HostInfoSectionHeader title="Storage" count={disks.length} Icon={HardDrive} />
+  <HostInfoCollapsibleSection title="Storage devices" count={disks.length} Icon={HardDrive} openByDefault={false}>
     {#if disks.length === 0}
       <div class="rv-empty">No disks reported.</div>
     {:else}
@@ -47,10 +47,9 @@
         {/each}
       </div>
     {/if}
-  </div>
+  </HostInfoCollapsibleSection>
 
-  <div class="space-y-2">
-    <HostInfoSectionHeader title="Network Adapters" count={adapters.length} Icon={Network} />
+  <HostInfoCollapsibleSection title="Network adapters" count={adapters.length} Icon={Network} openByDefault={false}>
     {#if adapters.length === 0}
       <div class="rv-empty">No adapters reported.</div>
     {:else}
@@ -60,10 +59,9 @@
         {/each}
       </div>
     {/if}
-  </div>
+  </HostInfoCollapsibleSection>
 
-  <div class="space-y-2">
-    <HostInfoSectionHeader title="USB Devices" count={usbDevices.length} Icon={Usb} />
+  <HostInfoCollapsibleSection title="USB devices" count={usbDevices.length} Icon={Usb} openByDefault={false}>
     {#if usbDevices.length === 0}
       <div class="rv-empty">No USB devices reported.</div>
     {:else}
@@ -73,99 +71,79 @@
         {/each}
       </div>
     {/if}
-  </div>
+  </HostInfoCollapsibleSection>
 
-  <HostInfoAudioSection audio={summary.audio} />
+  <HostInfoCollapsibleSection title="Audio" openByDefault={false}>
+    {#snippet badges()}
+      <Badge variant="muted" class="text-[10px]">{summary.audio.outputs.length} out</Badge>
+      <Badge variant="muted" class="text-[10px]">{summary.audio.inputs.length} in</Badge>
+    {/snippet}
+    <HostInfoAudioSection audio={summary.audio} withHeader={false} />
+  </HostInfoCollapsibleSection>
 
-  <div class="space-y-2">
-    <HostInfoSectionHeader title="Input Devices" count={inputDevices.length} />
-    <div class="overflow-hidden rounded-xl border border-border bg-background">
-      <div class="px-4 py-2.5">
-        {#if inputDevices.length === 0}
-          <div class="text-[12px] text-muted-foreground">No HID devices reported.</div>
-        {:else}
-          {#each inputDevices as device, idx (device.identifier || device.name + ':' + idx)}
-            <HostInfoInputDeviceRow {device} />
-          {/each}
-        {/if}
-      </div>
-    </div>
-  </div>
+  <HostInfoCollapsibleSection title="Input devices" count={inputDevices.length} openByDefault={false}>
+    {#if inputDevices.length === 0}
+      <div class="text-[12px] text-muted-foreground">No HID devices reported.</div>
+    {:else}
+      {#each inputDevices as device, idx (device.identifier || device.name + ':' + idx)}
+        <HostInfoInputDeviceRow {device} />
+      {/each}
+    {/if}
+  </HostInfoCollapsibleSection>
 
   {#if bluetoothDevices.length > 0}
-    <div class="space-y-2">
-      <HostInfoSectionHeader title="Bluetooth (Serial)" count={bluetoothDevices.length} Icon={Bluetooth} />
-      <div class="overflow-hidden rounded-xl border border-border bg-background">
-        <div class="px-4 py-2.5">
-          {#each bluetoothDevices as d (d.port)}
-            <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
-              <Bluetooth class="size-4 text-muted-foreground" />
-              <span class="text-[12px] font-medium text-foreground">{d.name}</span>
-              <span class="ml-auto font-mono text-[11px] text-muted-foreground">{d.port}</span>
-            </div>
-          {/each}
+    <HostInfoCollapsibleSection title="Bluetooth (Serial)" count={bluetoothDevices.length} Icon={Bluetooth} openByDefault={false}>
+      {#each bluetoothDevices as d (d.port)}
+        <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
+          <Bluetooth class="size-4 text-muted-foreground" />
+          <span class="text-[12px] font-medium text-foreground">{d.name}</span>
+          <span class="ml-auto font-mono text-[11px] text-muted-foreground">{d.port}</span>
         </div>
-      </div>
-    </div>
+      {/each}
+    </HostInfoCollapsibleSection>
   {/if}
 
-  <div class="space-y-2">
-    <HostInfoSectionHeader title="Printers" count={printers.length} Icon={Printer} />
-    <div class="overflow-hidden rounded-xl border border-border bg-background">
-      <div class="px-4 py-2.5">
-        {#if printers.length === 0}
-          <div class="text-[12px] text-muted-foreground">None detected.</div>
-        {:else}
-          {#each printers as p, idx (p.name + ':' + idx)}
-            <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
-              <Printer class="size-4 text-muted-foreground" />
-              <span class="text-[12px] font-medium text-foreground">{p.name}</span>
-              {#if p.isDefault === true}
-                <Badge variant="success" class="text-[10px] ml-auto">Default</Badge>
-              {:else}
-                <span class="ml-auto"></span>
-              {/if}
-            </div>
-          {/each}
-        {/if}
-      </div>
-    </div>
-  </div>
+  <HostInfoCollapsibleSection title="Printers" count={printers.length} Icon={Printer} openByDefault={false}>
+    {#if printers.length === 0}
+      <div class="text-[12px] text-muted-foreground">None detected.</div>
+    {:else}
+      {#each printers as p, idx (p.name + ':' + idx)}
+        <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
+          <Printer class="size-4 text-muted-foreground" />
+          <span class="text-[12px] font-medium text-foreground">{p.name}</span>
+          {#if p.isDefault === true}
+            <Badge variant="success" class="text-[10px] ml-auto">Default</Badge>
+          {:else}
+            <span class="ml-auto"></span>
+          {/if}
+        </div>
+      {/each}
+    {/if}
+  </HostInfoCollapsibleSection>
 
-  <div class="space-y-2">
-    <HostInfoSectionHeader title="Cameras" count={cameras.length} Icon={Camera} />
+  <HostInfoCollapsibleSection title="Cameras" count={cameras.length} Icon={Camera} openByDefault={false}>
     {#if cameras.length === 0}
       <div class="text-[12px] text-muted-foreground">No dedicated cameras reported.</div>
     {:else}
-      <div class="overflow-hidden rounded-xl border border-border bg-background">
-        <div class="px-4 py-2.5">
-          {#each cameras as c, idx (c.name + ':' + idx)}
-            <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
-              <Camera class="size-4 text-muted-foreground" />
-              <span class="text-[12px] font-medium text-foreground">{c.name}</span>
-            </div>
-          {/each}
+      {#each cameras as c, idx (c.name + ':' + idx)}
+        <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
+          <Camera class="size-4 text-muted-foreground" />
+          <span class="text-[12px] font-medium text-foreground">{c.name}</span>
         </div>
-      </div>
+      {/each}
     {/if}
-  </div>
+  </HostInfoCollapsibleSection>
 
-  <div class="space-y-2">
-    <HostInfoSectionHeader title="Smart Card Readers" count={smartCardReaders.length} Icon={CreditCard} />
+  <HostInfoCollapsibleSection title="Smart Card Readers" count={smartCardReaders.length} Icon={CreditCard} openByDefault={false}>
     {#if smartCardReaders.length === 0}
       <div class="text-[12px] text-muted-foreground">None detected.</div>
     {:else}
-      <div class="overflow-hidden rounded-xl border border-border bg-background">
-        <div class="px-4 py-2.5">
-          {#each smartCardReaders as r, idx (r.name + ':' + idx)}
-            <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
-              <CreditCard class="size-4 text-muted-foreground" />
-              <span class="text-[12px] font-medium text-foreground">{r.name}</span>
-            </div>
-          {/each}
+      {#each smartCardReaders as r, idx (r.name + ':' + idx)}
+        <div class="flex items-center gap-2 border-b border-border/50 py-2 last:border-b-0">
+          <CreditCard class="size-4 text-muted-foreground" />
+          <span class="text-[12px] font-medium text-foreground">{r.name}</span>
         </div>
-      </div>
+      {/each}
     {/if}
-  </div>
+  </HostInfoCollapsibleSection>
 </div>
-

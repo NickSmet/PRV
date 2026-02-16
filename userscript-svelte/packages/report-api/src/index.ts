@@ -12,6 +12,19 @@ export interface ReportusReportIndex {
   filename: string;
   ap_info?: Record<string, unknown>;
   files: ReportusFileEntry[];
+  // Optional metadata fields returned by Reportus (may vary by environment/version).
+  md5?: string;
+  parsed?: string;
+  received?: string;
+  problem_code?: number;
+  problem_description?: string;
+  product?: string;
+  product_version?: string;
+  report_id?: number;
+  report_reason?: string;
+  report_type?: string;
+  server_uuid?: string;
+  computer_model?: string;
 }
 
 export interface ReportusClient {
@@ -28,6 +41,18 @@ export interface ReportusClient {
   ): Promise<{ bytes: Uint8Array; truncated: boolean }>;
 }
 
+export class ReportusHttpError extends Error {
+  readonly status: number;
+  readonly url: string;
+
+  constructor(opts: { status: number; url: string; message?: string }) {
+    super(opts.message ?? `Reportus HTTP ${opts.status}`);
+    this.name = 'ReportusHttpError';
+    this.status = opts.status;
+    this.url = opts.url;
+  }
+}
+
 export function createReportusClient(opts: { baseUrl: string; basicAuth: string }): ReportusClient {
   const baseUrl = opts.baseUrl.replace(/\/+$/, '');
   const authHeader = opts.basicAuth.startsWith('Basic ') ? opts.basicAuth : `Basic ${opts.basicAuth}`;
@@ -37,11 +62,12 @@ export function createReportusClient(opts: { baseUrl: string; basicAuth: string 
   }
 
   async function getReportIndex(reportId: ReportId): Promise<ReportusReportIndex> {
-    const res = await fetch(`${baseUrl}/api/reports/${encodeURIComponent(reportId)}`, {
+    const url = `${baseUrl}/api/reports/${encodeURIComponent(reportId)}`;
+    const res = await fetch(url, {
       headers: { Authorization: authHeader }
     });
     if (!res.ok) {
-      throw new Error(`Reportus getReportIndex failed: HTTP ${res.status}`);
+      throw new ReportusHttpError({ status: res.status, url, message: `Reportus getReportIndex failed: HTTP ${res.status}` });
     }
     return (await res.json()) as ReportusReportIndex;
   }
@@ -55,7 +81,11 @@ export function createReportusClient(opts: { baseUrl: string; basicAuth: string 
     const url = `${baseUrl}/api/reports/${encodeURIComponent(reportId)}/files/${encodeFilePathSegments(filePath)}/download`;
     const res = await fetch(url, { headers: { Authorization: authHeader } });
     if (!res.ok) {
-      throw new Error(`Reportus downloadFileBytes failed: HTTP ${res.status}`);
+      throw new ReportusHttpError({
+        status: res.status,
+        url,
+        message: `Reportus downloadFileBytes failed: HTTP ${res.status}`
+      });
     }
 
     const reader = res.body?.getReader();
@@ -115,4 +145,3 @@ export function createReportusClient(opts: { baseUrl: string; basicAuth: string 
 
   return { getReportIndex, downloadFileText, downloadFileBytes };
 }
-

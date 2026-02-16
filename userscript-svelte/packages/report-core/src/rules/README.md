@@ -39,6 +39,7 @@ interface CurrentVmModel extends CurrentVmSummary {
   isBootCamp?: boolean;           // Derived from HDD check
   isExternalVhdd?: boolean;       // vHDD outside PVM folder
   isCopied?: boolean;             // Source UUID != VM UUID
+  isImported?: boolean;           // Bogus creation date heuristic (1751-12-31)
   isOnExternalVolume?: boolean;   // /Volumes prefix
   hasDisconnectedAdapter?: boolean;
   // ... more derived fields
@@ -58,6 +59,14 @@ interface Marker {
   target: MarkerTarget;          // Where to display
 }
 ```
+
+### Label stability (important UX)
+
+Marker labels are part of the UI contract:
+- the UI deduplicates badges by `label` in several places (headers + summaries)
+- users learn to scan for consistent labels across reports
+
+When changing rule output, prefer keeping existing `label` strings stable and evolving the tooltip/details instead.
 
 ### Marker Targets (Hierarchy)
 Markers can target different levels of the UI:
@@ -234,6 +243,7 @@ That's it! All sections automatically render MAC addresses consistently.
 | `disconnected-adapter` | warn | NIC offline | `icons.adapterNotConnected` |
 | `network-conditioner` | warn/info | Net conditioner on | `markBullet('CurrentVm', icons['network conditioner...'])` |
 | `copied-vm` | warn | Source UUID != VM UUID | `markBullet("CurrentVm", 'copied vm')` |
+| `imported-vm` | warn | Bogus creation date (1751-12-31) | Legacy quirk (imported VM) |
 | `external-drive` | warn | VM on /Volumes | `markBullet("CurrentVm", "external drive")` |
 | `linked-clone` | info | Is linked clone | `markBullet('CurrentVm', icons["linked clone"])` |
 | `apple-hv` | info | Apple Hypervisor | `markBullet("CurrentVm", "AppleHV")` |
@@ -246,6 +256,7 @@ That's it! All sections automatically render MAC addresses consistently.
 | `resource-quota` | warn | Quota < 100% | `markBullet("CurrentVm", "resource quota")` |
 | `smart-guard` | info | Smart Guard on | `markBullet("CurrentVm", "smart guard")` |
 | `tpm` | info | TPM enabled | `markBullet("CurrentVm", icons.TPM)` |
+| `guest-commands-missing` | warn | GuestCommands missing on running VM report | Legacy behavior (tools/guest capture likely broken) |
 | `too-much-ram` | danger | VM RAM > host/2 | `markBullet("CurrentVm", 'bad')` |
 | `uneven-ram` | warn | RAM not multiple of 256 | `markBullet("CurrentVm", 'warning')` |
 | `not-pvmdefault` | warn | Chrome OS non-default VM | `markBullet('CurrentVm', 'not PvmDefault')` |

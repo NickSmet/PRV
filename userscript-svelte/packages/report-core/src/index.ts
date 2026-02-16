@@ -5,3 +5,4 @@ export * from './types/compact';
 export * from './rules/index';
 export * from './nodeRegistry';
 export * from './runtime';
+export * from './perVmDiscovery';

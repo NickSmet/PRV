@@ -36,3 +36,25 @@ Parsers intentionally preserve values as strings. The UI is responsible for huma
 - **Disk sizes**: when `virtualSize`/`actualSize` are numeric, treat them as **MB** and convert to human readable units (GiB/TiB).
 
 Implementation: `packages/report-viewmodel/src/units.ts` and `buildCurrentVmNode()` in `packages/report-viewmodel/src/nodeBuilder.ts`.
+
+## Derived fields (rules-first)
+
+The parser returns `CurrentVmSummary` (mostly strings). Rule evaluation relies on derived fields computed in:
+- `packages/report-core/src/types/report.ts` → `deriveCurrentVmFields(summary)`
+
+Examples:
+- detect Boot Camp / external vHDD / linked clone / copied VM
+- detect network conditioner limited vs full speed
+- imported VM heuristic: if `VmCreationDate` contains `1751-12-31`, set `currentVm.isImported = true`
+
+These derived fields are part of `CurrentVmModel` and are used by the rule engine (`packages/report-core/src/rules/currentVm.ts`).
+
+## Non-current VMs (per-VM config files)
+
+Reportus reports may include non-current VM configs as attachments:
+- `vm-{uuid}-config.pvs.log`
+
+These files contain the same `<ParallelsVirtualMachine>...</ParallelsVirtualMachine>` root element as `CurrentVm.xml`,
+so they are parsed with `parseCurrentVm()` and then normalized with `deriveCurrentVmFields()`.
+
+This reuse is intentional to avoid duplicating VM configuration parsing logic.

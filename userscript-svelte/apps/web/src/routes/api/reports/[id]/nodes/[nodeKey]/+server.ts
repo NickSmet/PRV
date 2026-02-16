@@ -1,7 +1,8 @@
-import { json } from '@sveltejs/kit';
+import { error as kitError, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getReportusClient } from '$lib/server/reportus';
 import { ensureDomParser, fetchNodePayload, nodeRegistry, type NodeKey, parseGuestOs } from '@prv/report-core';
+import { ReportusHttpError } from '@prv/report-api';
 
 function isNodeKey(value: string): value is NodeKey {
   return value in nodeRegistry;
@@ -18,7 +19,13 @@ export const GET: RequestHandler = async ({ params, url }) => {
   const client = getReportusClient();
   const maxBytes = Number(url.searchParams.get('maxBytes') ?? '2097152');
 
-  const index = await client.getReportIndex(params.id);
+  let index: Awaited<ReturnType<typeof client.getReportIndex>>;
+  try {
+    index = await client.getReportIndex(params.id);
+  } catch (e) {
+    if (e instanceof ReportusHttpError) throw kitError(e.status, e.message);
+    throw e;
+  }
 
   let guestOsType: string | undefined;
   if (nodeKey === 'GuestCommands') {
@@ -43,4 +50,3 @@ export const GET: RequestHandler = async ({ params, url }) => {
     sourceFile: payload.sourceFile
   });
 };
-

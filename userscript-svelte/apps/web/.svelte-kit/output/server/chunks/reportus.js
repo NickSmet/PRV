@@ -1,4 +1,12 @@
 import { b as private_env } from "./shared-server.js";
+class ReportusHttpError extends Error {
+  constructor(opts) {
+    super(opts.message ?? `Reportus HTTP ${opts.status}`);
+    this.name = "ReportusHttpError";
+    this.status = opts.status;
+    this.url = opts.url;
+  }
+}
 function createReportusClient(opts) {
   const baseUrl = opts.baseUrl.replace(/\/+$/, "");
   const authHeader = opts.basicAuth.startsWith("Basic ") ? opts.basicAuth : `Basic ${opts.basicAuth}`;
@@ -6,11 +14,12 @@ function createReportusClient(opts) {
     return filePath.split("/").map(encodeURIComponent).join("/");
   }
   async function getReportIndex(reportId) {
-    const res = await fetch(`${baseUrl}/api/reports/${encodeURIComponent(reportId)}`, {
+    const url = `${baseUrl}/api/reports/${encodeURIComponent(reportId)}`;
+    const res = await fetch(url, {
       headers: { Authorization: authHeader }
     });
     if (!res.ok) {
-      throw new Error(`Reportus getReportIndex failed: HTTP ${res.status}`);
+      throw new ReportusHttpError({ status: res.status, url, message: `Reportus getReportIndex failed: HTTP ${res.status}` });
     }
     return await res.json();
   }
@@ -19,7 +28,11 @@ function createReportusClient(opts) {
     const url = `${baseUrl}/api/reports/${encodeURIComponent(reportId)}/files/${encodeFilePathSegments(filePath)}/download`;
     const res = await fetch(url, { headers: { Authorization: authHeader } });
     if (!res.ok) {
-      throw new Error(`Reportus downloadFileBytes failed: HTTP ${res.status}`);
+      throw new ReportusHttpError({
+        status: res.status,
+        url,
+        message: `Reportus downloadFileBytes failed: HTTP ${res.status}`
+      });
     }
     const reader = res.body?.getReader();
     if (!reader) {
@@ -73,5 +86,6 @@ function getReportusClient() {
   return createReportusClient({ baseUrl, basicAuth });
 }
 export {
+  ReportusHttpError as R,
   getReportusClient as g
 };

@@ -9,6 +9,7 @@ import type { Rule, RuleEvaluationResult } from './types';
 import type { ReportModel } from '../types/report';
 import type { Marker } from '../types/markers';
 import { currentVmRules } from './currentVm';
+import { otherNodeRules } from './otherNodes';
 
 // ============================================================================
 // Rule Registry
@@ -19,6 +20,7 @@ import { currentVmRules } from './currentVm';
  */
 const allRules: Rule[] = [
   ...currentVmRules,
+  ...otherNodeRules,
   // Future: add more rule sets here
   // ...advancedVmRules,
   // ...hostInfoRules,
@@ -105,8 +107,8 @@ export function evaluateCurrentVmRules(report: ReportModel): Marker[] {
 // ============================================================================
 
 export { currentVmRules } from './currentVm';
+export { otherNodeRules } from './otherNodes';
 export type { Rule, NamedRule, RuleEvaluationResult } from './types';
-
 
 
 

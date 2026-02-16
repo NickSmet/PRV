@@ -14,7 +14,8 @@
     "parse:node": "tsx scripts/parse-node.ts",
     "web:dev": "npm -w apps/web run dev",
     "web:build": "npm -w apps/web run build",
-    "mcp:dev": "npm -w servers/mcp run dev"
+    "mcp:dev": "npm -w servers/mcp run dev",
+    "test": "tsx scripts/test.ts"
   },
   "devDependencies": {
     "chokidar": "^4.0.3",
@@ -23,4 +24,3 @@
     "typescript": "^5.7.3"
   }
 }
-

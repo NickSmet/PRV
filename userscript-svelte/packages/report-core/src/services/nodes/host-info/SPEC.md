@@ -16,7 +16,8 @@ This node is used for **host-side** troubleshooting context (not VM config).
 ## Input
 
 - **Payload type**: XML fragment (often CDATA-wrapped)
-- **Source**: `window.__prv_hostInfoXml`
+- **Primary source (userscript)**: `window.__prv_hostInfoXml`
+- **Primary source (web/MCP)**: resolved via `fetchNodePayload(..., 'HostInfo')` (Reportus attachment download)
 
 ## Output
 

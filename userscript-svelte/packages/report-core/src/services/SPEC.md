@@ -115,6 +115,20 @@ Parsers must:
 - accept “wrong” but plausible content (e.g. `CurrentVm` containing surrounding text, or a node containing only a filename) and attempt to extract the expected fragment where possible
 - preserve values as **strings** unless there is a strong reason to coerce
 
+### Node payload resolution caveats (web/MCP)
+
+When working from the Reportus API, node payloads are often not embedded directly and must be resolved from:
+- the Reportus index `files[]` list, and/or
+- `Report.xml` inline content (for some nodes)
+
+Contract (owned by `packages/report-core/src/nodeRegistry.ts`):
+- `fetchNodePayload()` resolves a node using `filenameHints` and the Reportus index list.
+- If the node file is missing, it may fall back to downloading `Report.xml` and extracting the node element payload.
+
+Important example:
+- `LicenseData` is expected to be JSON, but in some reports it is embedded inside `Report.xml` as CDATA under `<LicenseData>...</LicenseData>`.
+  In that case, `fetchNodePayload()` must return the inner payload, not the full `Report.xml`, otherwise JSON parsers will fail.
+
 ### Observed structure notes (real reports vary)
 
 Reports can differ in whether they embed node payloads or only reference them by filename.

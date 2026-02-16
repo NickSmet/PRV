@@ -10,7 +10,8 @@ Parse loaded kernel extensions / drivers output (e.g. `kextstat`) to detect:
 ## Input
 
 - **Payload type:** plain text
-- **Primary source:** `window.__prv_loadedDriversText`
+- **Primary source (userscript):** `window.__prv_loadedDriversText`
+- **Primary source (web/MCP):** resolved via `fetchNodePayload(..., 'LoadedDrivers')` (Reportus attachment download)
 
 ## Output
 
@@ -23,4 +24,3 @@ Key fields:
 ## Notes / heuristics
 
 - On Apple Silicon and/or “kextless” macOS, the meaning of “missing Parallels kexts” differs; the parser accepts host context to avoid false alarms.
-

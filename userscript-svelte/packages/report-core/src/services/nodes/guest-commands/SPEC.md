@@ -108,6 +108,15 @@ Other commands may be present in the node payload; they are ignored unless expli
 - No field is required; missing/partial outputs produce partial summaries.
 - The parser must not throw on unexpected formats.
 
+## Rule integration (important UX)
+
+Some report types indicate a “running VM report” (e.g. `UserDefinedOnRunningVmReport`).
+In that case, if `GuestCommands` is empty/missing, the UI should surface a warning because it often implies Parallels Tools or guest-side capture is not working.
+
+Implementation note:
+- The parser sets `GuestCommandsSummary.isEmpty`
+- The rule engine uses `report.meta.reportType` + `guestCommands.isEmpty` to generate a node-level marker (shown as a header badge) in `packages/report-core/src/rules/currentVm.ts`
+
 ### System environment (`cmd /c set`)
 
 Extract only:

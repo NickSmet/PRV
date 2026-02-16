@@ -11,6 +11,7 @@ import {
   fetchNodePayload,
   nodeRegistry,
   parseGuestOs,
+  type ReportModel,
   type NodeKey
 } from '@prv/report-core';
 import { toAgentSummary, truncateText } from '@prv/report-ai';
@@ -31,6 +32,14 @@ function getClient() {
 
 function isNodeKey(value: string): value is NodeKey {
   return value in nodeRegistry;
+}
+
+function enrichReportMetaFromIndex(report: ReportModel, index: Awaited<ReturnType<ReturnType<typeof getClient>['getReportIndex']>>, reportId: string) {
+  report.meta.productName = index.product ?? report.meta.productName;
+  report.meta.productVersion = index.product_version ?? report.meta.productVersion;
+  report.meta.reportId = String(index.report_id ?? reportId);
+  report.meta.reportType = index.report_type ?? report.meta.reportType;
+  report.meta.reportReason = index.report_reason ?? report.meta.reportReason;
 }
 
 const server = new McpServer({
@@ -131,6 +140,7 @@ tool(
     }
 
     const { report } = buildReportModelFromRawPayloads(raw);
+    enrichReportMetaFromIndex(report, index, reportId);
     const markers = evaluateRules(report);
     const nodeModels = buildNodesFromReport(report, markers);
     return {
@@ -160,6 +170,7 @@ tool(
     }
 
     const { report } = buildReportModelFromRawPayloads(raw);
+    enrichReportMetaFromIndex(report, index, reportId);
     const markers = evaluateRules(report);
     return { content: [{ type: 'text', text: JSON.stringify({ markers }, null, 2) }] };
   }
@@ -195,6 +206,7 @@ tool(
     }
 
     const { report } = buildReportModelFromRawPayloads(raw);
+    enrichReportMetaFromIndex(report, index, reportId);
     const summary = toAgentSummary(report);
     return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] };
   }

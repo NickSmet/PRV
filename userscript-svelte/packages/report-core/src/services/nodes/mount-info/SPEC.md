@@ -10,7 +10,8 @@ Parse macOS `mount` + `df -h` output and expose storage information for:
 ## Input
 
 - **Payload type**: plain text (often CDATA-wrapped)
-- **Source**: `window.__prv_mountInfoText`
+- **Primary source (userscript)**: `window.__prv_mountInfoText`
+- **Primary source (web/MCP)**: resolved via `fetchNodePayload(..., 'MountInfo')` (Reportus attachment download)
 
 The payload is typically a concatenation of:
 1. `mount` output (one line per filesystem)

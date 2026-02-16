@@ -9,7 +9,8 @@ Parse GPU + display information collected via `system_profiler -xml` to provide:
 ## Input
 
 - **Payload type:** XML (plist-like; may be malformed and require cleanup)
-- **Primary source:** `window.__prv_moreHostInfoXml`
+- **Primary source (userscript):** `window.__prv_moreHostInfoXml`
+- **Primary source (web/MCP):** resolved via `fetchNodePayload(..., 'MoreHostInfo')` (Reportus attachment download)
 
 ## Output
 
@@ -25,4 +26,3 @@ Key fields:
 - The parser performs normalization to strip broken headers/footers.
 - Skips Windows reports (payload may contain “Windows”).
 - Plist parsing is best-effort: only direct child key/value pairs inside dicts are considered.
-

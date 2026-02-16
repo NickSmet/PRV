@@ -9,6 +9,13 @@ apps/*/dist/
 packages/*/dist/
 servers/*/dist/
 
+# SvelteKit / Vite build output
+.svelte-kit/
+apps/*/.svelte-kit/
+apps/*/build/
+apps/*/.output/
+apps/*/.vercel_output/
+
 # Local parsing fixtures (reports + extracted attachments)
 fixtures/
 

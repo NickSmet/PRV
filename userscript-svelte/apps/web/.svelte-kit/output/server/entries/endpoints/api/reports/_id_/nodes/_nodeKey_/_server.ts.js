@@ -1,7 +1,7 @@
-import { json } from "@sveltejs/kit";
-import { g as getReportusClient } from "../../../../../../../chunks/reportus.js";
+import { json, error } from "@sveltejs/kit";
+import { g as getReportusClient, R as ReportusHttpError } from "../../../../../../../chunks/reportus.js";
 import "fast-xml-parser";
-import { e as ensureDomParser, f as fetchNodePayload, p as parseGuestOs, n as nodeRegistry } from "../../../../../../../chunks/runtime.js";
+import { e as ensureDomParser, f as fetchNodePayload, c as parseGuestOs, n as nodeRegistry } from "../../../../../../../chunks/runtime.js";
 function isNodeKey(value) {
   return value in nodeRegistry;
 }
@@ -13,7 +13,13 @@ const GET = async ({ params, url }) => {
   }
   const client = getReportusClient();
   const maxBytes = Number(url.searchParams.get("maxBytes") ?? "2097152");
-  const index = await client.getReportIndex(params.id);
+  let index;
+  try {
+    index = await client.getReportIndex(params.id);
+  } catch (e) {
+    if (e instanceof ReportusHttpError) throw error(e.status, e.message);
+    throw e;
+  }
   let guestOsType;
   if (nodeKey === "GuestCommands") {
     const guestPayload = await fetchNodePayload(client, params.id, index, "GuestOs", { maxBytes: 256 * 1024 });

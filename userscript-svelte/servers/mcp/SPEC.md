@@ -37,6 +37,7 @@ Implemented in `servers/mcp/src/index.ts`.
 ## Constraints
 
 - Size limits are enforced via `maxBytes` (download truncation) and `maxChars` (string shaping).
+- For parity with the web surface, model-building tools enrich `report.meta.*` from the Reportus index (report type/product/version), so rules can use real report context.
 - Never log auth values.
 
 ## Status

@@ -43,7 +43,7 @@ At the moment, the model still includes several “raw parser summary” types d
 | `host` | host-level derived info (RAM, CPU, display flags) | HostInfo / MoreHostInfo / rules |
 | `hostDevices` | host hardware/peripherals inventory | `HostInfo` |
 | `license` | license details | `LicenseData` |
-| `currentVm` | VM configuration (plus derived fields for rules) | `CurrentVm` |
+| `currentVm` | VM configuration (plus derived fields for rules) | `CurrentVm` / `vm-{uuid}-config.pvs.log` |
 | `guestOs` | guest OS version/type | `GuestOs` |
 | `drivers` | kext/driver diagnostics | `LoadedDrivers` |
 | `processes` | host process diagnostics | `AllProcesses` |
@@ -62,6 +62,26 @@ At the moment, the model still includes several “raw parser summary” types d
 | `systemLog` | system log diagnostics | `SystemLogs` attachment `parallels-system.log` |
 | `launchdInfo` | startup services | `LaunchdInfo` |
 | `autoStatisticInfo` | PD update/install history | `AutoStatisticInfo` |
+
+### Cross-surface metadata (Reportus index vs Report.xml)
+
+Some important report-level fields are provided by the **Reportus index API** (e.g. `report_type`, `product_version`, `received`, `parsed`, `problem_description`).
+
+Contract:
+- `apps/web` and `servers/mcp` may **enrich** `report.meta.*` from the Reportus index so the rule engine can make decisions using real report context.
+- The userscript surface may have partial metadata depending on what is available in the page payload.
+
+### Derived fields (rules-first)
+
+`CurrentVmModel` includes derived fields computed in `deriveCurrentVmFields()` to capture stable “know-how” for rules.
+
+Examples (non-exhaustive):
+- `isCopied` (Source UUID != VM UUID)
+- `isLinkedClone` / `linkedVmUuid`
+- `hasNetworkConditioner` / `hasNetworkConditionerLimited`
+- `hasDisconnectedAdapter`
+- `isExternalVhdd` (+ `externalVhddLocations`)
+- `isImported` (creation date quirk contains `1751-12-31`)
 
 ## Behavior
 

@@ -27,6 +27,19 @@ export interface ReportusReportIndex {
   filename: string;
   ap_info?: Record<string, unknown>;
   files: ReportusFileEntry[];
+  // Optional metadata fields returned by Reportus (may vary by environment/version).
+  md5?: string;
+  parsed?: string;
+  received?: string;
+  problem_code?: number;
+  problem_description?: string;
+  product?: string;
+  product_version?: string;
+  report_id?: number;
+  report_reason?: string;
+  report_type?: string;
+  server_uuid?: string;
+  computer_model?: string;
 }
 ```
 

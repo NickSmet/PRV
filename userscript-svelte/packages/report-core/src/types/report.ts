@@ -36,6 +36,8 @@ export interface ReportMeta {
   productName?: string;        // e.g., "Parallels Desktop", "Parallels Desktop for Chrome OS"
   productVersion?: string;
   reportId?: string;
+  reportType?: string;
+  reportReason?: string;
   timezone?: number;
   vendorInfo?: string;
 }
@@ -157,6 +159,11 @@ export interface CurrentVmModel extends CurrentVmSummary {
   isBootCamp?: boolean;
   isExternalVhdd?: boolean;
   /**
+   * Imported VM heuristic.
+   * Legacy quirk: some imported VMs report a bogus creation date like 1751-12-31.
+   */
+  isImported?: boolean;
+  /**
    * Normalized `.pvm` bundle root used for disk location comparisons.
    * (May be empty if VmHome is missing.)
    */
@@ -187,6 +194,18 @@ export function deriveCurrentVmFields(summary: CurrentVmSummary): CurrentVmModel
   const vmHomeRaw = summary.vmHome || '';
   const hdds = summary.hdds || [];
   const netAdapters = summary.netAdapters || [];
+
+  function isImportedCreationDate(value: string | undefined): boolean {
+    const raw = (value ?? '').trim();
+    if (!raw) return false;
+    // Most common legacy quirk string in reports.
+    if (raw.includes('1751-12-31')) return true;
+    // Some variants show slashes or different ordering.
+    if (raw.includes('1751/12/31')) return true;
+    if (raw.includes('12/31/1751')) return true;
+    if (raw.includes('31/12/1751')) return true;
+    return false;
+  }
 
   function normalizePosixPath(input: string): string {
     const trimmed = input.trim();
@@ -275,14 +294,34 @@ export function deriveCurrentVmFields(summary: CurrentVmSummary): CurrentVmModel
   // Check network adapters
   const hasDisconnectedAdapter = netAdapters.some((adapter) => adapter.connected === '0');
   const hasNetworkConditioner = netAdapters.some((adapter) => adapter.conditionerEnabled === '1');
-  const hasNetworkConditionerLimited = hasNetworkConditioner; // Would need more fields to determine limited vs fullspeed
+  function toInt(v: string | undefined): number {
+    if (!v) return 0;
+    const n = Number.parseInt(v, 10);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  const hasNetworkConditionerLimited = netAdapters.some((adapter) => {
+    if (adapter.conditionerEnabled !== '1') return false;
+    const sum =
+      toInt(adapter.conditionerTxBps) +
+      toInt(adapter.conditionerRxBps) +
+      toInt(adapter.conditionerTxLossPpm) +
+      toInt(adapter.conditionerRxLossPpm) +
+      toInt(adapter.conditionerTxDelayMs) +
+      toInt(adapter.conditionerRxDelayMs);
+    return sum !== 0;
+  });
   const isSharedNetwork = netAdapters.some((adapter) => adapter.mode?.toLowerCase().includes('shared'));
   const isBridgedNetwork = netAdapters.some((adapter) => adapter.mode?.toLowerCase().includes('bridged'));
+  const linkedVmUuid = summary.linkedVmUuid?.trim() || undefined;
+  const isLinkedClone = !!linkedVmUuid;
+  const isImported = isImportedCreationDate(summary.creationDate);
 
   return {
     ...summary,
     isBootCamp,
     isExternalVhdd,
+    isImported,
     pvmBundleRoot: vmHome || undefined,
     externalVhddLocations,
     isCopied,
@@ -295,8 +334,8 @@ export function deriveCurrentVmFields(summary: CurrentVmSummary): CurrentVmModel
     hasDisconnectedAdapter,
     isSharedNetwork,
     isBridgedNetwork,
-    isLinkedClone: false, // Would need linkedVmUuid field
-    linkedVmUuid: undefined
+    isLinkedClone,
+    linkedVmUuid
   };
 }
 
@@ -366,5 +405,3 @@ export function createEmptyReportModel(): ReportModel {
     autoStatisticInfo: null
   };
 }
-
-

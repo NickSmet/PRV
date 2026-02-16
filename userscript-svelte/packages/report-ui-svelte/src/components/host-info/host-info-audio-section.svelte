@@ -11,7 +11,7 @@
   import type { HostAudioDeviceType, HostInfoSummary } from '@prv/report-core';
   import { audioVariant } from './host-info-utils';
 
-  let { audio }: { audio: HostInfoSummary['audio'] } = $props();
+  let { audio, withHeader = true }: { audio: HostInfoSummary['audio']; withHeader?: boolean } = $props();
 
   function iconFor(type: HostAudioDeviceType) {
     switch (type) {
@@ -36,11 +36,13 @@
 </script>
 
 <div class="space-y-2">
-  <div class="flex items-center gap-2">
-    <div class="text-[13px] font-semibold text-foreground">Audio</div>
-    <Badge variant="muted" class="text-[10px]">{audio.outputs.length} out</Badge>
-    <Badge variant="muted" class="text-[10px]">{audio.inputs.length} in</Badge>
-  </div>
+  {#if withHeader}
+    <div class="flex items-center gap-2">
+      <div class="text-[13px] font-semibold text-foreground">Audio</div>
+      <Badge variant="muted" class="text-[10px]">{audio.outputs.length} out</Badge>
+      <Badge variant="muted" class="text-[10px]">{audio.inputs.length} in</Badge>
+    </div>
+  {/if}
 
   <div class="overflow-hidden rounded-xl border border-border bg-background">
     <div class="px-4 py-3">
@@ -78,4 +80,3 @@
     </div>
   </div>
 </div>
-

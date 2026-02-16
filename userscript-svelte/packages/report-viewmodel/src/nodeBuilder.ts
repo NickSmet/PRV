@@ -325,7 +325,8 @@ export function buildCurrentVmNode(summary?: CurrentVmModel | null): NodeModel {
     { label: 'PVM Location', value: summary.vmHome, type: 'path' as const },
     { label: 'Creation Date', value: summary.creationDate, type: 'datetime' as const },
     { label: 'VM UUID', value: summary.vmUuid, type: 'uuid' as const },
-    { label: 'Source UUID', value: summary.sourceVmUuid, type: 'uuid' as const }
+    { label: 'Source UUID', value: summary.sourceVmUuid, type: 'uuid' as const },
+    { label: 'Linked VM UUID', value: summary.linkedVmUuid, type: 'uuid' as const }
   ]);
 
   const hardwareRows: NodeRow[] = [
@@ -349,7 +350,16 @@ export function buildCurrentVmNode(summary?: CurrentVmModel | null): NodeModel {
     const netRows: NodeRow[] = summary.netAdapters.flatMap((adapter, index) => [
       { label: 'Type', value: adapter.adapterType, iconKey: 'net' } as NodeRow,
       { label: 'Connected', ...toBadge(adapter.connected, 'yesNo') } as NodeRow,
-      { label: 'Mode', value: adapter.mode } as NodeRow,
+      {
+        label: 'Mode',
+        value: adapter.mode,
+        iconKey:
+          typeof adapter.mode === 'string' && adapter.mode.toLowerCase().includes('bridged')
+            ? 'bridged'
+            : typeof adapter.mode === 'string' && adapter.mode.toLowerCase().includes('shared')
+              ? 'shared'
+              : 'net'
+      } as NodeRow,
       { label: 'Adapter name', value: adapter.adapterName } as NodeRow,
       { label: 'Mac', value: adapter.mac } as NodeRow,
       { label: 'Conditioner', ...toBadge(adapter.conditionerEnabled, 'enabled') } as NodeRow
@@ -503,8 +513,9 @@ export function buildCurrentVmNode(summary?: CurrentVmModel | null): NodeModel {
   // Legacy inline badges (kept for backwards compatibility)
   if (summary.travelMode?.state === '1') badges.push({ label: 'Travel Mode', tone: 'warn', iconKey: 'travel' });
   if (summary.macVm) badges.push({ label: 'Mac VM', tone: 'info', iconKey: 'vm' });
-  if (!summary.hdds?.length) badges.push({ label: 'No HDD!!!', tone: 'danger', iconKey: 'hdd' });
-  if (summary.netAdapters?.some((n) => n.connected === '0')) badges.push({ label: 'NIC offline', tone: 'warn', iconKey: 'net' });
+  if (!summary.hdds?.length && !summary.macVm) badges.push({ label: 'No HDD', tone: 'danger', iconKey: 'warn' });
+  if (summary.isImported) badges.push({ label: 'Imported', tone: 'warn', iconKey: 'clock' });
+  if (summary.netAdapters?.some((n) => n.connected === '0')) badges.push({ label: 'NIC Offline', tone: 'warn', iconKey: 'net' });
 
   return {
     id: 'current-vm',
@@ -542,6 +553,9 @@ export function buildGuestOsNode(summary?: GuestOsSummary | null): NodeModel {
       sections: [{ title: 'Info', rows: [{ label: 'Status', value: 'No data yet' }] }]
     };
   }
+
+  const label = summary.name ?? summary.version ?? summary.type ?? '';
+  if (label) badges.push({ label, tone: 'info', iconKey: 'vm' });
 
   const hasFriendlyName =
     !!summary.name && !!summary.version && summary.name !== summary.version;
@@ -836,6 +850,8 @@ export function buildLoadedDriversNode(
   if (summary.onlyApple) {
     kextRows.push({ label: 'Status', value: 'Only Apple kexts (as expected)' });
   } else {
+    // TODO: Consider rendering a dedicated list/table for non-Apple kexts (and highlighting suspicious ones),
+    // instead of a long flat list of rows.
     if (summary.nonAppleKexts.length > 0) {
       summary.nonAppleKexts.forEach((kext, index) => {
         const isBad = summary.badKexts.includes(kext);

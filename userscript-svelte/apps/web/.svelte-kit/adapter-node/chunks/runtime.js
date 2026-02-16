@@ -746,7 +746,13 @@ function parseNets(doc) {
     adapterName: text(el, "AdapterName"),
     mac: text(el, "MAC"),
     connected: text(el, "Connected"),
-    conditionerEnabled: text(el, "LinkRateLimit > Enable")
+    conditionerEnabled: text(el, "LinkRateLimit > Enable"),
+    conditionerTxBps: text(el, "LinkRateLimit > TxBps"),
+    conditionerRxBps: text(el, "LinkRateLimit > RxBps"),
+    conditionerTxLossPpm: text(el, "LinkRateLimit > TxLossPpm"),
+    conditionerRxLossPpm: text(el, "LinkRateLimit > RxLossPpm"),
+    conditionerTxDelayMs: text(el, "LinkRateLimit > TxDelayMs"),
+    conditionerRxDelayMs: text(el, "LinkRateLimit > RxDelayMs")
   }));
 }
 function parseTravelMode(doc) {
@@ -791,6 +797,7 @@ function parseCurrentVm(xml) {
     creationDate: text(root, "Identification > VmCreationDate"),
     vmUuid: text(root, "Identification > VmUuid"),
     sourceVmUuid: text(root, "Identification > SourceVmUuid"),
+    linkedVmUuid: text(root, "Identification > LinkedVmUuid"),
     macVm,
     startAutomatically: text(root, "Settings > Startup > AutoStart"),
     startupView: text(root, "Settings > Startup > WindowMode"),
@@ -2860,7 +2867,7 @@ function parseTimeZone(xmlData) {
   }
 }
 function parseToolsLog(textData, guestOsType) {
-  const isWindows = guestOsType ? /Windows/i.test(guestOsType) : true;
+  const isWindows = true;
   if (!textData || textData.trim().length === 0) {
     return {
       isWindows,
@@ -2967,6 +2974,15 @@ function deriveCurrentVmFields(summary) {
   const vmHomeRaw = summary.vmHome || "";
   const hdds = summary.hdds || [];
   const netAdapters = summary.netAdapters || [];
+  function isImportedCreationDate(value) {
+    const raw = (value ?? "").trim();
+    if (!raw) return false;
+    if (raw.includes("1751-12-31")) return true;
+    if (raw.includes("1751/12/31")) return true;
+    if (raw.includes("12/31/1751")) return true;
+    if (raw.includes("31/12/1751")) return true;
+    return false;
+  }
   function normalizePosixPath(input) {
     const trimmed = input.trim();
     if (!trimmed) return "";
@@ -3010,13 +3026,26 @@ function deriveCurrentVmFields(summary) {
   const hasTrimEnabled = hdds.some((hdd) => hdd.trim === "1");
   const hasDisconnectedAdapter = netAdapters.some((adapter) => adapter.connected === "0");
   const hasNetworkConditioner = netAdapters.some((adapter) => adapter.conditionerEnabled === "1");
-  const hasNetworkConditionerLimited = hasNetworkConditioner;
+  function toInt2(v) {
+    if (!v) return 0;
+    const n = Number.parseInt(v, 10);
+    return Number.isFinite(n) ? n : 0;
+  }
+  const hasNetworkConditionerLimited = netAdapters.some((adapter) => {
+    if (adapter.conditionerEnabled !== "1") return false;
+    const sum = toInt2(adapter.conditionerTxBps) + toInt2(adapter.conditionerRxBps) + toInt2(adapter.conditionerTxLossPpm) + toInt2(adapter.conditionerRxLossPpm) + toInt2(adapter.conditionerTxDelayMs) + toInt2(adapter.conditionerRxDelayMs);
+    return sum !== 0;
+  });
   const isSharedNetwork = netAdapters.some((adapter) => adapter.mode?.toLowerCase().includes("shared"));
   const isBridgedNetwork = netAdapters.some((adapter) => adapter.mode?.toLowerCase().includes("bridged"));
+  const linkedVmUuid = summary.linkedVmUuid?.trim() || void 0;
+  const isLinkedClone = !!linkedVmUuid;
+  const isImported = isImportedCreationDate(summary.creationDate);
   return {
     ...summary,
     isBootCamp,
     isExternalVhdd,
+    isImported,
     pvmBundleRoot: vmHome || void 0,
     externalVhddLocations,
     isCopied,
@@ -3029,9 +3058,8 @@ function deriveCurrentVmFields(summary) {
     hasDisconnectedAdapter,
     isSharedNetwork,
     isBridgedNetwork,
-    isLinkedClone: false,
-    // Would need linkedVmUuid field
-    linkedVmUuid: void 0
+    isLinkedClone,
+    linkedVmUuid
   };
 }
 function createEmptyReportModel() {
@@ -3198,9 +3226,12 @@ function ensureDomParser() {
   globalThis.XMLSerializer = window.XMLSerializer;
 }
 export {
+  parseToolsLog as a,
   buildReportModelFromRawPayloads as b,
+  parseGuestOs as c,
+  deriveCurrentVmFields as d,
   ensureDomParser as e,
   fetchNodePayload as f,
   nodeRegistry as n,
-  parseGuestOs as p
+  parseCurrentVm as p
 };

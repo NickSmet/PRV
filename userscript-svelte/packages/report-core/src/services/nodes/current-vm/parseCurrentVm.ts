@@ -26,6 +26,12 @@ export interface VmNetAdapter {
   mac?: string;
   connected?: string;
   conditionerEnabled?: string;
+  conditionerTxBps?: string;
+  conditionerRxBps?: string;
+  conditionerTxLossPpm?: string;
+  conditionerRxLossPpm?: string;
+  conditionerTxDelayMs?: string;
+  conditionerRxDelayMs?: string;
 }
 
 export interface TravelMode {
@@ -42,6 +48,7 @@ export interface CurrentVmSummary {
   creationDate?: string;
   vmUuid?: string;
   sourceVmUuid?: string;
+  linkedVmUuid?: string;
   macVm?: boolean;
   startAutomatically?: string;
   startupView?: string;
@@ -162,7 +169,13 @@ function parseNets(doc: Document): VmNetAdapter[] {
     adapterName: text(el, 'AdapterName'),
     mac: text(el, 'MAC'),
     connected: text(el, 'Connected'),
-    conditionerEnabled: text(el, 'LinkRateLimit > Enable')
+    conditionerEnabled: text(el, 'LinkRateLimit > Enable'),
+    conditionerTxBps: text(el, 'LinkRateLimit > TxBps'),
+    conditionerRxBps: text(el, 'LinkRateLimit > RxBps'),
+    conditionerTxLossPpm: text(el, 'LinkRateLimit > TxLossPpm'),
+    conditionerRxLossPpm: text(el, 'LinkRateLimit > RxLossPpm'),
+    conditionerTxDelayMs: text(el, 'LinkRateLimit > TxDelayMs'),
+    conditionerRxDelayMs: text(el, 'LinkRateLimit > RxDelayMs')
   }));
 }
 
@@ -215,6 +228,7 @@ export function parseCurrentVm(xml: string): CurrentVmSummary | null {
     creationDate: text(root, 'Identification > VmCreationDate'),
     vmUuid: text(root, 'Identification > VmUuid'),
     sourceVmUuid: text(root, 'Identification > SourceVmUuid'),
+    linkedVmUuid: text(root, 'Identification > LinkedVmUuid'),
     macVm,
     startAutomatically: text(root, 'Settings > Startup > AutoStart'),
     startupView: text(root, 'Settings > Startup > WindowMode'),

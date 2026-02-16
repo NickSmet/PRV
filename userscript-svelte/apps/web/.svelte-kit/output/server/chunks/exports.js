@@ -1,4 +1,4 @@
-import { n as noop } from "./index.js";
+import { n as noop } from "./index2.js";
 import { s as safe_not_equal } from "./events.js";
 import "clsx";
 const SCHEME = /^[a-z][a-z\d+\-.]+:/i;
