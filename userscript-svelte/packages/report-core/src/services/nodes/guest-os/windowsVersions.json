@@ -1,0 +1,398 @@
+[
+    {
+      "name": "Windows 11, Version 26H1",
+      "version": "10.0",
+      "build": "28000",
+      "releaseDate": "2026-02-10"
+    },
+    {
+      "name": "Windows 11, Version 25H2",
+      "version": "10.0",
+      "build": "26200",
+      "releaseDate": "2025-09-30"
+    },
+    {
+      "name": "Windows Server 2025 (LTSC)",
+      "version": "10.0",
+      "build": "26100",
+      "releaseDate": "2024-11-01"
+    },
+    {
+      "name": "Windows 11, Version 24H2",
+      "version": "10.0",
+      "build": "26100",
+      "releaseDate": "2024-10-01"
+    },
+    {
+      "name": "Windows 11, Version 23H2",
+      "version": "10.0",
+      "build": "22631",
+      "releaseDate": "2023-10-31"
+    },
+    {
+      "name": "Windows Server, Version 23H2",
+      "version": "10.0",
+      "build": "25398",
+      "releaseDate": "2023-10-24"
+    },
+    {
+      "name": "Windows 10, Version 22H2",
+      "version": "10.0",
+      "build": "19045",
+      "releaseDate": "2022-10-18"
+    },
+    {
+      "name": "Windows 11, Version 22H2",
+      "version": "10.0",
+      "build": "22621",
+      "releaseDate": "2022-09-20"
+    },
+    {
+      "name": "Windows 10, Version 21H2",
+      "version": "10.0",
+      "build": "19044",
+      "releaseDate": "2021-11-16"
+    },
+    {
+      "name": "Windows 11, Version 21H2",
+      "version": "10.0",
+      "build": "22000",
+      "releaseDate": "2021-10-04"
+    },
+    {
+      "name": "Windows Server 2022, Version 21H2",
+      "version": "10.0",
+      "build": "20348",
+      "releaseDate": "2021-08-18"
+    },
+    {
+      "name": "Windows 10, Version 21H1",
+      "version": "10.0",
+      "build": "19043",
+      "releaseDate": "2021-05-18"
+    },
+    {
+      "name": "Windows Server, Version 20H2",
+      "version": "10.0",
+      "build": "19042",
+      "releaseDate": "2020-10-20"
+    },
+    {
+      "name": "Windows 10, Version 20H2",
+      "version": "10.0",
+      "build": "19042",
+      "releaseDate": "2020-10-20"
+    },
+    {
+      "name": "Windows Server, Version 2004",
+      "version": "10.0",
+      "build": "19041",
+      "releaseDate": "2020-05-27"
+    },
+    {
+      "name": "Windows 10, Version 2004",
+      "version": "10.0",
+      "build": "19041",
+      "releaseDate": "2020-05-27"
+    },
+    {
+      "name": "Windows Server, Version 1909",
+      "version": "10.0",
+      "build": "18363",
+      "releaseDate": "2019-11-12"
+    },
+    {
+      "name": "Windows 10, Version 1909",
+      "version": "10.0",
+      "build": "18363",
+      "releaseDate": "2019-11-12"
+    },
+    {
+      "name": "Windows 10, Version 1903",
+      "version": "10.0",
+      "build": "18362",
+      "releaseDate": "2019-05-21"
+    },
+    {
+      "name": "Windows Server 2008, Service Pack 2, Rollup KB4489887",
+      "version": "6.0",
+      "build": "6003",
+      "releaseDate": "2019-03-19"
+    },
+    {
+      "name": "Windows 10, Version 1809",
+      "version": "10.0",
+      "build": "17763",
+      "releaseDate": "2018-11-13"
+    },
+    {
+      "name": "Windows Server 2019, Version 1809",
+      "version": "10.0",
+      "build": "17763",
+      "releaseDate": "2018-11-13"
+    },
+    {
+      "name": "Windows 10, Version 1803",
+      "version": "10.0",
+      "build": "17134",
+      "releaseDate": "2018-04-30"
+    },
+    {
+      "name": "Windows 10, Version 1709",
+      "version": "10.0",
+      "build": "16299",
+      "releaseDate": "2017-10-17"
+    },
+    {
+      "name": "Windows 10, Version 1703",
+      "version": "10.0",
+      "build": "15063",
+      "releaseDate": "2017-04-05"
+    },
+    {
+      "name": "Windows Server 2016, Version 1607",
+      "version": "10.0",
+      "build": "14393",
+      "releaseDate": "2016-10-15"
+    },
+    {
+      "name": "Windows 10, Version 1607",
+      "version": "10.0",
+      "build": "14393",
+      "releaseDate": "2016-08-02"
+    },
+    {
+      "name": "Windows 10, Version 1511",
+      "version": "10.0",
+      "build": "10586",
+      "releaseDate": "2015-11-10"
+    },
+    {
+      "name": "Windows 10, Version 1507",
+      "version": "10.0",
+      "build": "10240",
+      "releaseDate": "2015-07-29"
+    },
+    {
+      "name": "Windows Server 2012 R2",
+      "version": "6.3",
+      "build": "9600",
+      "releaseDate": "2013-10-18"
+    },
+    {
+      "name": "Windows 8.1",
+      "version": "6.3",
+      "build": "9600",
+      "releaseDate": "2013-08-27"
+    },
+    {
+      "name": "Windows 8",
+      "version": "6.2",
+      "build": "9200",
+      "releaseDate": "2012-10-26"
+    },
+    {
+      "name": "Windows Server 2012",
+      "version": "6.2",
+      "build": "9200",
+      "releaseDate": "2012-09-04"
+    },
+    {
+      "name": "Windows Home Server 2011",
+      "version": "6.1",
+      "build": "8400",
+      "releaseDate": "2011-04-06"
+    },
+    {
+      "name": "Windows Server 2008 R2, Service Pack 1",
+      "version": "6.1",
+      "build": "7601",
+      "releaseDate": "2011-02-22"
+    },
+    {
+      "name": "Windows 7, Service Pack 1",
+      "version": "6.1",
+      "build": "7601",
+      "releaseDate": "2011-02-22"
+    },
+    {
+      "name": "Windows Server 2008 R2",
+      "version": "6.1",
+      "build": "7600",
+      "releaseDate": "2009-10-22"
+    },
+    {
+      "name": "Windows 7",
+      "version": "6.1",
+      "build": "7600",
+      "releaseDate": "2009-10-22"
+    },
+    {
+      "name": "Windows Server 2008, Service Pack 2",
+      "version": "6.0",
+      "build": "6002",
+      "releaseDate": "2009-05-26"
+    },
+    {
+      "name": "Windows Vista, Service Pack 2",
+      "version": "6.0",
+      "build": "6002",
+      "releaseDate": "2009-05-26"
+    },
+    {
+      "name": "Windows XP, Service Pack 3",
+      "version": "5.1",
+      "build": "2600",
+      "releaseDate": "2008-04-21"
+    },
+    {
+      "name": "Windows Server 2008",
+      "version": "6.0",
+      "build": "6001",
+      "releaseDate": "2008-02-27"
+    },
+    {
+      "name": "Windows Vista, Service Pack 1",
+      "version": "6.0",
+      "build": "6001",
+      "releaseDate": "2008-02-04"
+    },
+    {
+      "name": "Windows Home Server",
+      "version": "5.2",
+      "build": "4500",
+      "releaseDate": "2007-11-04"
+    },
+    {
+      "name": "Windows Server 2003, Service Pack 2",
+      "version": "5.2",
+      "build": "3790",
+      "releaseDate": "2007-03-13"
+    },
+    {
+      "name": "Windows Vista",
+      "version": "6.0",
+      "build": "6000",
+      "releaseDate": "2007-01-30"
+    },
+    {
+      "name": "Windows Server 2003 R2",
+      "version": "5.2",
+      "build": "3790",
+      "releaseDate": "2005-12-06"
+    },
+    {
+      "name": "Windows Server 2003, Service Pack 1",
+      "version": "5.2",
+      "build": "3790.1180",
+      "releaseDate": "2005-03-30"
+    },
+    {
+      "name": "Windows XP, Service Pack 2",
+      "version": "5.1",
+      "build": "2600.2180",
+      "releaseDate": "2004-08-25"
+    },
+    {
+      "name": "Windows Server 2003",
+      "version": "5.2",
+      "build": "3790",
+      "releaseDate": "2003-04-24"
+    },
+    {
+      "name": "Windows XP, Service Pack 1",
+      "version": "5.1",
+      "build": "2600.1105-1106",
+      "releaseDate": "2002-09-09"
+    },
+    {
+      "name": "Windows XP",
+      "version": "5.1",
+      "build": "2600",
+      "releaseDate": "2001-10-25"
+    },
+    {
+      "name": "Windows Me",
+      "version": "4.90",
+      "build": "3000",
+      "releaseDate": "2000-09-14"
+    },
+    {
+      "name": "Windows 2000",
+      "version": "5.0",
+      "build": "2195",
+      "releaseDate": "2000-02-17"
+    },
+    {
+      "name": "Windows 98 Second Edition (SE)",
+      "version": "4.10",
+      "build": "2222",
+      "releaseDate": "1999-05-05"
+    },
+    {
+      "name": "Windows 98",
+      "version": "4.10",
+      "build": "1998",
+      "releaseDate": "1998-05-15"
+    },
+    {
+      "name": "Windows 95 OEM Service Release 2.5",
+      "version": "4.00",
+      "build": "950 C",
+      "releaseDate": "1997-11-26"
+    },
+    {
+      "name": "Windows 95 OEM Service Release 2.1",
+      "version": "4.00",
+      "build": "950 B",
+      "releaseDate": "1997-08-27"
+    },
+    {
+      "name": "Windows NT 4.0",
+      "version": "4.0",
+      "build": "1381",
+      "releaseDate": "1996-08-24"
+    },
+    {
+      "name": "Windows 95 OEM Service Release 2",
+      "version": "4.00",
+      "build": "950 B",
+      "releaseDate": "1996-08-24"
+    },
+    {
+      "name": "Windows 95 OEM Service Release 1",
+      "version": "4.00",
+      "build": "950 A",
+      "releaseDate": "1996-02-14"
+    },
+    {
+      "name": "Windows 95",
+      "version": "4.00",
+      "build": "950",
+      "releaseDate": "1995-08-24"
+    },
+    {
+      "name": "Windows NT 3.51",
+      "version": "3.51",
+      "build": "1057",
+      "releaseDate": "1995-05-30"
+    },
+    {
+      "name": "Windows NT 3.1, Service Pack 3",
+      "version": "3.10",
+      "build": "528",
+      "releaseDate": "1994-11"
+    },
+    {
+      "name": "Windows NT 3.5",
+      "version": "3.50",
+      "build": "807",
+      "releaseDate": "1994-09-21"
+    },
+    {
+      "name": "Windows NT 3.1",
+      "version": "3.10",
+      "build": "511",
+      "releaseDate": "1993-07-27"
+    }
+  ]

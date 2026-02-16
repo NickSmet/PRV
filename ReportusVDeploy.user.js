@@ -9,6 +9,9 @@
 // @include     https://reportus.prls.net/webapp/reports/*
 // @include        https://security-monitors.prls.net/user_audit/api/mail.py*
 
+// Must be first: beta toggle prelude (blocks legacy bootstrap when beta is enabled)
+// @require    https://raw.githubusercontent.com/NickSmet/PRV/master/RvPrelude.js?1
+
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
 
 // @resource    bootstrapCSS https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css?5
@@ -49,6 +52,10 @@
 // @grant          GM_getValue
 // @grant          GM_setClipboard
 
+// For update checks + beta bundle fetch
+// @connect      github.com
+// @connect      chatbotkbimages.blob.core.windows.net
+
 // ==/UserScript==
 
 
@@ -84,19 +91,34 @@ function checkVersion(currentVersion, updateUrl){
     
     
     
+    const isBeta = typeof GM_getValue === 'function' ? !!GM_getValue('prv_use_beta', false) : false
+    const toggleLabel = isBeta ? 'Switch to stable' : 'Switch to beta'
+
     if(versionCompare(newerVersion, currentVersion)==1){
 
     updateButton = $(`<div
     style='margin:1em'>   Reports Viewer ver. ${currentVersion} <button
     onclick="window.location.href='${updateUrl}'" style = "font-family:Arial; margin-left: 1em;
-    background-color: #f44336;">!!!Upgrade to ${newerVersion}!!!</button></div>`)
+    background-color: #f44336;">!!!Upgrade to ${newerVersion}!!!</button>
+    <button id="prv-beta-toggle" style="font-family:Arial; margin-left: 1em; background-color: #1976d2; color: white;">
+      ${toggleLabel}
+    </button>
+    </div>`)
     
     }else{
         updateButton = $(`<div
-    style='margin:1em'>   ver. ${currentVersion}</div>`)
+    style='margin:1em'>   ver. ${currentVersion}
+    <button id="prv-beta-toggle" style="font-family:Arial; margin-left: 1em; background-color: #1976d2; color: white;">
+      ${toggleLabel}
+    </button>
+    </div>`)
     }
     
     updateButton.insertBefore($("#app"))
+    $("#prv-beta-toggle").on("click", function () {
+      try { GM_setValue('prv_use_beta', !isBeta) } catch (e) {}
+      window.location.reload()
+    })
 
 
   }})
@@ -105,6 +127,29 @@ function checkVersion(currentVersion, updateUrl){
 }
 
 checkVersion(GM_info.script.version,GM_info.script.updateURL)
+
+// If beta is enabled, legacy bootstrap is blocked by `RvPrelude.js`.
+// Here we load the new Svelte userscript bundle in userscript context.
+if (typeof GM_getValue === 'function' && GM_getValue('prv_use_beta', false) && window.location.href.match(/reportus\.prls\.net/)) {
+  (function loadBetaBundle() {
+    const url = 'https://chatbotkbimages.blob.core.windows.net/reportus-parser-new/rv-userscript-svelte.user.js'
+    GM_xmlhttpRequest({
+      method: "GET",
+      url,
+      onload: function (response) {
+        try {
+          // eslint-disable-next-line no-eval
+          (0, eval)(`${response.responseText}\n//# sourceURL=${url}`)
+        } catch (e) {
+          console.error('[PRV] beta bundle eval failed', e)
+        }
+      },
+      onerror: function (e) {
+        console.error('[PRV] beta bundle load failed', e)
+      }
+    })
+  })()
+}
 
 
 GM_addStyle(GM_getResourceText('feedbackCSS'));

@@ -1,0 +1,99 @@
+function iconFile(name: string): string {
+	return new URL(`./static/reportus-parser-icons/${name}`, import.meta.url).href;
+}
+
+export const builtinSectionIcons = {
+	hostApple: iconFile('OS_Apple.webp'),
+	parallels: new URL('./static/icons/parallels.ico', import.meta.url).href,
+	vm: new URL('./static/icons/parallels.ico', import.meta.url).href
+} as const;
+
+export const reportusParserIcons = {
+	coherence: iconFile('coherence.png'),
+	macvm: iconFile('macvm.png'),
+	legacyBios: iconFile('legacyBios.png'),
+	rollbackMode: iconFile('121571351-9230ac80-ca2b-11eb-91e7-bd75ea4f6ae4.png'),
+	adapterNotConnected: iconFile('2183366.png'),
+	noNetwork: iconFile('2313811.png'),
+	apipa: iconFile('2333550.png'),
+	'Low storage': iconFile('lowStorage.png'),
+	'DisplayLink device!': iconFile('3273973.png'),
+	onedrive: iconFile('2335410.png'),
+	'network folder': iconFile('1930805.png'),
+	usb: iconFile('usb.png'),
+	keyboard: iconFile('2293934.png'),
+	mouse: iconFile('2817912.png'),
+	printers: iconFile('printer.png'),
+	'all good': iconFile('1828520.png'),
+	warning: iconFile('warning.png'),
+	'serious warning': iconFile('1200px-OOjs_UI_icon_alert-warning.svg.png'),
+	bad: iconFile('bad.png'),
+	headless: iconFile('1089503.png'),
+	'not headless': iconFile('3653500.png'),
+	isolated: iconFile('859521.png'),
+	flags: iconFile('2966844.png'),
+	nosnapshots: iconFile('snapshot.png'),
+	snapshots: iconFile('snapshot.png'),
+	screens: iconFile('96313515-5cf7ca00-1016-11eb-87d7-4eb1784e6eab.png'),
+	vms: iconFile('1503641514_parallels.png'),
+	vpn: iconFile('1451546.png'),
+	'external drive': iconFile('3796075.png'),
+	'copied vm': iconFile('3512155.png'),
+	AppleHV: iconFile('OS_Apple.webp'),
+	Nested: iconFile('5201125.png'),
+	splitted: iconFile('1443588.png'),
+	trim: iconFile('unnamed.png'),
+	webcam: iconFile('179879.png'),
+	gpu: iconFile('gpu2.png'),
+	ACL: iconFile('security_denied.png'),
+	fullscreen: iconFile('6504020.png'),
+	noTimeSync: iconFile('5123714.png'),
+	hdds: iconFile('hdd.png'),
+	cd: iconFile('2606574.png'),
+	networkAdapter: iconFile('networkAdapter.png'),
+	TPM: iconFile('3125811.png'),
+	'network conditioner fullspeed': iconFile('data-funnel-icon-5.jpg'),
+	'network conditioner limited': iconFile('118004041-c728e100-b351-11eb-9018-516a78e18a28.png'),
+	'plain vHDD': iconFile('4528584.png'),
+	'external vHDD': iconFile('External-Drive-Red-icon.png'),
+	'linked clone': iconFile('3634746.png'),
+	'smart guard': iconFile('595-5952790_download-svg-download-png-shield-icon-png.png'),
+	'Boot Camp': iconFile('96314275-97616700-1016-11eb-9990-8b2e92d49052.png'),
+	'root or unknown owner': iconFile('100492918-868e3000-3142-11eb-9ee6-44826cd637c7.png'),
+	'resource quota': iconFile('4643333.png'),
+	pirated: iconFile('972564.png'),
+	kext: iconFile('1978024.png'),
+	kextless: iconFile('2238506.png'),
+	// NOTE: `verbose logging` URL 404ed at time of download.
+	// 'verbose logging': iconFile('2400253.png'),
+	pvm: iconFile('pvm.png'),
+	shared: iconFile('5693296.png'),
+	bridged: iconFile('ethernet.png'),
+	install: iconFile('2756717-200.png'),
+	service: iconFile('71d177d628bca6aff2813176cba0c18f.png'),
+	apps: iconFile('4562583.png'),
+	installedApps: iconFile('Applications-Folder-Blue-icon.png'),
+	hotcpu: iconFile('2499379.png'),
+	docSearch: iconFile('3126554.png'),
+	'External Default VM folder': iconFile('3637372.png'),
+	'not PvmDefault': iconFile('983874.png'),
+	travelMode: iconFile('121824353-5ceabf80-ccb4-11eb-9120-b5cbd15e31e9.png'),
+	inputDevice: iconFile('input.png'),
+	CCID: iconFile('CCID.png')
+	// NOTE: `hackintosh` and `stopped_vm` URLs 404ed at time of download.
+	// hackintosh: iconFile('hackintosh.png'),
+	// stopped_vm: iconFile('stopped_vm.png')
+} as const;
+
+export type ReportusParserIconKey = keyof typeof reportusParserIcons;
+
+// Normalized key → URL mapping with legacy aliases.
+export const iconUrlByIconKey: Record<string, string> = {
+	...reportusParserIcons,
+	vm: reportusParserIcons.vms,
+	monitor: reportusParserIcons.gpu,
+	hdd: reportusParserIcons.hdds,
+	printer: reportusParserIcons.printers,
+	warn: reportusParserIcons.warning,
+	net: reportusParserIcons.networkAdapter
+};

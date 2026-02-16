@@ -1,0 +1,26 @@
+{
+  "name": "prv-report-tools",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "servers/*"
+  ],
+  "scripts": {
+    "dev": "npm -w apps/userscript run dev",
+    "dev:all": "npm -w apps/userscript run dev:all",
+    "build": "npm -w apps/userscript run build",
+    "parse:node": "tsx scripts/parse-node.ts",
+    "web:dev": "npm -w apps/web run dev",
+    "web:build": "npm -w apps/web run build",
+    "mcp:dev": "npm -w servers/mcp run dev",
+    "test": "tsx scripts/test.ts"
+  },
+  "devDependencies": {
+    "chokidar": "^4.0.3",
+    "linkedom": "^0.18.12",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.3"
+  }
+}

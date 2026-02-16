@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.DS_Store
+.env
+.env.*
+!.env.example
+apps/*/node_modules/
+apps/*/dist/
+packages/*/dist/
+servers/*/dist/
+
+# SvelteKit / Vite build output
+.svelte-kit/
+apps/*/.svelte-kit/
+apps/*/build/
+apps/*/.output/
+apps/*/.vercel_output/
+
+# Local parsing fixtures (reports + extracted attachments)
+fixtures/
+
+# Local parser outputs
+**/_out/
+
+# Storybook
+storybook-static/
+.cache-storybook/

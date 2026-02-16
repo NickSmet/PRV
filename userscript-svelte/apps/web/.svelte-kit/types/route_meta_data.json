@@ -1,0 +1,34 @@
+{
+	"/": [],
+	"/api/reports/[id]": [
+		"src/routes/api/reports/[id]/+server.ts"
+	],
+	"/api/reports/[id]/files-raw/[...filePath]": [
+		"src/routes/api/reports/[id]/files-raw/[...filePath]/+server.ts"
+	],
+	"/api/reports/[id]/files/[...filePath]": [
+		"src/routes/api/reports/[id]/files/[...filePath]/+server.ts"
+	],
+	"/api/reports/[id]/mental-model": [
+		"src/routes/api/reports/[id]/mental-model/+server.ts"
+	],
+	"/api/reports/[id]/model": [
+		"src/routes/api/reports/[id]/model/+server.ts"
+	],
+	"/api/reports/[id]/nodes/[nodeKey]": [
+		"src/routes/api/reports/[id]/nodes/[nodeKey]/+server.ts"
+	],
+	"/api/reports/[id]/raw/node/[nodeKey]": [
+		"src/routes/api/reports/[id]/raw/node/[nodeKey]/+server.ts"
+	],
+	"/lab/icons": [],
+	"/lab/[reportId=reportId]": [
+		"src/routes/lab/[reportId=reportId]/+page.ts"
+	],
+	"/nodes/[reportId=reportId]": [
+		"src/routes/nodes/[reportId=reportId]/+page.ts"
+	],
+	"/[reportId=reportId]": [
+		"src/routes/[reportId=reportId]/+page.ts"
+	]
+}

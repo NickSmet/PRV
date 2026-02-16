@@ -1,0 +1,24 @@
+{
+  "name": "@prv/mcp",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@prv/report-ai": "0.0.1",
+    "@prv/report-api": "0.0.1",
+    "@prv/report-core": "0.0.1",
+    "@prv/report-viewmodel": "0.0.1",
+    "dotenv": "^16.6.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.10",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.3"
+  }
+}
