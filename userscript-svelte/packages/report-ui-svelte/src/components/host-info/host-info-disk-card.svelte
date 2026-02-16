@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Collapsible from '../ui/collapsible';
   import { Badge } from '../ui/badge';
-  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import DenseChevron from '../dense/DenseChevron.svelte';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
 
   import type { HostInfoSummary } from '@prv/report-core';
@@ -16,103 +16,75 @@
   const isExternal = $derived(disk.external === true);
   const isVirtual = $derived(disk.isVirtualDisk === true);
   const parentStore = $derived(disk.parentStore);
-  const schemeTitle = $derived(() => {
-    switch (disk.partitionScheme) {
-      case 'GPT':
-        return 'GPT (GUID Partition Table)';
-      case 'MBR':
-        return 'MBR (Master Boot Record)';
-      case 'APFS':
-        return 'APFS container / synthesized disk';
-      default:
-        return 'Partition scheme';
-    }
-  });
 </script>
 
-<div class="overflow-hidden rounded-xl border border-border bg-background">
-  <Collapsible.Root bind:open>
-    <Collapsible.Trigger class="flex w-full items-center gap-2 px-4 py-2.5 text-left select-none">
-      <ChevronRight class={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-90' : 'rotate-0'}`} />
-
-      <HardDrive class="size-4 text-muted-foreground" />
-
-      <span class="text-[13px] font-semibold text-foreground truncate">
-        {disk.name}
-      </span>
-
-      <Badge variant="outline" class="text-[10px]" title={schemeTitle}>
-        {disk.partitionScheme}
-      </Badge>
+<Collapsible.Root bind:open>
+  <Collapsible.Trigger class="w-full">
+    <div
+      class={`flex items-center gap-1.5 py-[4px] px-1 pl-1 min-h-[26px] cursor-pointer select-none border-b border-slate-100
+        ${open ? 'bg-slate-50/80' : 'bg-transparent'}
+        hover:bg-slate-50/50`}
+    >
+      <DenseChevron {open} />
+      <HardDrive class="size-3 text-muted-foreground shrink-0 opacity-60" />
+      <span class="text-[11.5px] font-medium text-foreground truncate">{disk.name}</span>
+      <Badge variant="outline" class="text-[9px]">{disk.partitionScheme}</Badge>
       {#if isExternal}
-        <Badge variant="default" class="text-[10px]">External</Badge>
+        <Badge variant="default" class="text-[9px]">External</Badge>
       {/if}
       {#if isVirtual}
-        <Badge variant="secondary" class="text-[10px]">Container</Badge>
+        <Badge variant="dim" class="text-[9px]">Container</Badge>
       {/if}
+      <div class="flex-1"></div>
+      <span class="font-mono text-[11px] text-foreground/70 shrink-0">{sizeLabel}</span>
+    </div>
+  </Collapsible.Trigger>
 
-      <span class="ml-auto font-mono text-[12px] text-foreground/80">
-        {sizeLabel}
-      </span>
-    </Collapsible.Trigger>
-
-    <Collapsible.Content class="border-t border-border/50 bg-muted/15 px-4 py-3 space-y-2">
-      <div class="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 text-[12px]">
-        <span class="text-muted-foreground/80 font-medium">Identifier</span>
+  <Collapsible.Content>
+    <div class="py-1 px-2 pl-6 border-b border-slate-100 bg-slate-50/30 space-y-1">
+      <div class="grid grid-cols-[90px_1fr] gap-x-2 gap-y-0.5 text-[11px]">
+        <span class="text-muted-foreground font-medium">Identifier</span>
         <span class="font-mono text-foreground/80">{disk.identifier || '—'}</span>
 
         {#if parentStore}
-          <span class="text-muted-foreground/80 font-medium">Backed by</span>
+          <span class="text-muted-foreground font-medium">Backed by</span>
           <span class="font-mono text-foreground/80">/dev/{parentStore}</span>
         {/if}
 
         {#if disk.logicalSectorSize !== null}
-          <span class="text-muted-foreground/80 font-medium">Sector size</span>
+          <span class="text-muted-foreground font-medium">Sector size</span>
           <span class="font-mono text-foreground/80">{disk.logicalSectorSize} bytes</span>
         {/if}
 
         {#if disk.removable !== null}
-          <span class="text-muted-foreground/80 font-medium">Removable</span>
+          <span class="text-muted-foreground font-medium">Removable</span>
           <span class="font-mono text-foreground/80">{disk.removable ? 'Yes' : 'No'}</span>
         {/if}
       </div>
 
       {#if partitions.length > 0}
-        <div class="pt-1">
-          <div class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Partitions ({partitions.length})
-          </div>
-          <div class="mt-2 space-y-1">
-            {#each partitions as p, idx (p.systemName ?? p.name + ':' + idx)}
-              <div class="flex items-center gap-2 rounded-md border border-border/50 bg-background px-3 py-2">
-                <span class="min-w-0 flex-1">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-mono text-[11px] text-muted-foreground">
-                      {p.systemName ? p.systemName.split('../../ui/').pop() : '—'}
-                    </span>
-                    <span class="text-[12px] font-medium text-foreground">{p.name}</span>
-                    {#if p.typeName}
-                      <Badge variant="muted" class="text-[10px]">{p.typeName}</Badge>
-                    {/if}
-                  </div>
-                  {#if p.gptType}
-                    <div class="mt-0.5 font-mono text-[10px] text-muted-foreground break-all">{p.gptType}</div>
-                  {/if}
-                </span>
-
-                <span class="ml-auto flex flex-col items-end gap-0.5">
-                  <span class="font-mono text-[11px] text-foreground/80">{fmtBytes(p.sizeBytes)}</span>
-                  {#if p.freeSizeBytes !== null && p.freeSizeBytes >= 0}
-                    <span class="font-mono text-[10px] text-muted-foreground">{fmtBytes(p.freeSizeBytes)} free</span>
-                  {/if}
-                </span>
-              </div>
-            {/each}
-          </div>
+        <div class="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground pt-0.5">
+          Partitions ({partitions.length})
         </div>
+        {#each partitions as p, idx (p.systemName ?? p.name + ':' + idx)}
+          <div class="flex items-center gap-1.5 py-[2px] text-[11px]">
+            <span class="font-mono text-[10px] text-muted-foreground shrink-0">
+              {p.systemName ? p.systemName.split('/').pop() : '—'}
+            </span>
+            <span class="font-medium text-foreground truncate">{p.name}</span>
+            {#if p.typeName}
+              <Badge variant="dim" class="text-[9px]">{p.typeName}</Badge>
+            {/if}
+            <div class="flex-1"></div>
+            <span class="font-mono text-[10px] text-foreground/70 shrink-0">{fmtBytes(p.sizeBytes)}</span>
+            {#if p.freeSizeBytes !== null && p.freeSizeBytes >= 0}
+              <span class="font-mono text-[10px] text-muted-foreground shrink-0">{fmtBytes(p.freeSizeBytes)} free</span>
+            {/if}
+          </div>
+        {/each}
       {:else}
-        <div class="text-[12px] text-muted-foreground">No partition data.</div>
+        <div class="text-[11px] text-muted-foreground">No partition data.</div>
       {/if}
-    </Collapsible.Content>
-  </Collapsible.Root>
-</div>
+    </div>
+  </Collapsible.Content>
+</Collapsible.Root>

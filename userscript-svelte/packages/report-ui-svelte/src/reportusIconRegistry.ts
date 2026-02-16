@@ -86,3 +86,14 @@ export const reportusParserIcons = {
 } as const;
 
 export type ReportusParserIconKey = keyof typeof reportusParserIcons;
+
+// Normalized key → URL mapping with legacy aliases.
+export const iconUrlByIconKey: Record<string, string> = {
+	...reportusParserIcons,
+	vm: reportusParserIcons.vms,
+	monitor: reportusParserIcons.gpu,
+	hdd: reportusParserIcons.hdds,
+	printer: reportusParserIcons.printers,
+	warn: reportusParserIcons.warning,
+	net: reportusParserIcons.networkAdapter
+};

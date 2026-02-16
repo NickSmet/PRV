@@ -5,7 +5,7 @@ const macVmRule = (report) => {
     return [
       createNodeMarker("macvm", NODE_ID, "info", "Mac VM", {
         tooltip: "This is a macOS virtual machine",
-        iconKey: "apple"
+        iconKey: "macvm"
       })
     ];
   }
@@ -17,7 +17,7 @@ const noHddRule = (report) => {
     return [
       createNodeMarker("no-hdd", NODE_ID, "danger", "No HDD", {
         tooltip: "No HDD attached to VM!",
-        iconKey: "alert-triangle"
+        iconKey: "bad"
       }),
       createSubSectionMarker("no-hdd-subsection", NODE_ID, "Hardware", "hdds", "danger", "Empty", {
         tooltip: "No HDD attached to VM!"
@@ -31,7 +31,7 @@ const bootCampRule = (report) => {
     return [
       createNodeMarker("boot-camp", NODE_ID, "info", "Boot Camp", {
         tooltip: "This VM uses a Boot Camp partition",
-        iconKey: "hard-drive"
+        iconKey: "Boot Camp"
       })
     ];
   }
@@ -42,7 +42,7 @@ const trimEnabledRule = (report) => {
     return [
       createNodeMarker("trim-enabled", NODE_ID, "info", "TRIM", {
         tooltip: "TRIM is enabled on virtual disk",
-        iconKey: "hard-drive"
+        iconKey: "trim"
       })
     ];
   }
@@ -53,7 +53,7 @@ const splittedDiskRule = (report) => {
     return [
       createNodeMarker("splitted-disk", NODE_ID, "info", "Splitted", {
         tooltip: "Virtual disk is split into multiple files",
-        iconKey: "hard-drive"
+        iconKey: "splitted"
       })
     ];
   }
@@ -64,7 +64,7 @@ const plainDiskRule = (report) => {
     return [
       createNodeMarker("plain-disk", NODE_ID, "info", "Plain Disk", {
         tooltip: "Non-expanding (pre-allocated) virtual disk",
-        iconKey: "hard-drive"
+        iconKey: "plain vHDD"
       })
     ];
   }
@@ -78,7 +78,7 @@ const externalVhddRule = (report) => {
     return [
       createNodeMarker("external-vhdd", NODE_ID, "warn", externalCount > 1 ? `External vHDD (${externalCount})` : "External vHDD", {
         tooltip: externalCount > 0 ? `Virtual HDD is located outside the PVM bundle (${externalCount} disk${externalCount === 1 ? "" : "s"}).${externalSample ? ` Example: ${externalSample}` : ""}` : "Virtual HDD is located outside the PVM bundle",
-        iconKey: "hard-drive"
+        iconKey: "external vHDD"
       }),
       createSubSectionMarker("external-vhdd-subsection", NODE_ID, "Hardware", "hdds", "warn", "External", {
         tooltip: "Virtual HDD is located outside the PVM bundle"
@@ -92,7 +92,7 @@ const rollbackModeRule = (report) => {
     return [
       createNodeMarker("rollback-mode", NODE_ID, "warn", "Rollback Mode", {
         tooltip: "Rollback Mode is enabled - changes are discarded on shutdown",
-        iconKey: "rotate-ccw"
+        iconKey: "rollbackMode"
       })
     ];
   }
@@ -103,7 +103,7 @@ const sharedNetworkRule = (report) => {
     return [
       createNodeMarker("shared-network", NODE_ID, "info", "Shared", {
         tooltip: "Using Shared Networking mode",
-        iconKey: "network"
+        iconKey: "shared"
       })
     ];
   }
@@ -114,7 +114,7 @@ const bridgedNetworkRule = (report) => {
     return [
       createNodeMarker("bridged-network", NODE_ID, "info", "Bridged", {
         tooltip: "Using Bridged Networking mode",
-        iconKey: "network"
+        iconKey: "bridged"
       })
     ];
   }
@@ -125,7 +125,7 @@ const disconnectedAdapterRule = (report) => {
     return [
       createNodeMarker("disconnected-adapter", NODE_ID, "warn", "NIC Offline", {
         tooltip: "One or more network adapters are disconnected",
-        iconKey: "wifi-off"
+        iconKey: "adapterNotConnected"
       }),
       createSubSectionMarker("disconnected-adapter-subsection", NODE_ID, "Hardware", "networks", "warn", "Disconnected", {
         tooltip: "Network adapter is disconnected"
@@ -145,7 +145,7 @@ const networkConditionerRule = (report) => {
         isLimited ? "Net Limited" : "Net Conditioner",
         {
           tooltip: isLimited ? "Network Conditioner is limiting bandwidth" : "Network Conditioner is enabled (full speed)",
-          iconKey: "activity"
+          iconKey: isLimited ? "network conditioner limited" : "network conditioner fullspeed"
         }
       )
     ];
@@ -157,7 +157,7 @@ const copiedVmRule = (report) => {
     return [
       createNodeMarker("copied-vm", NODE_ID, "warn", "Copied VM", {
         tooltip: "This VM was copied from another VM (Source UUID differs from VM UUID)",
-        iconKey: "copy"
+        iconKey: "copied vm"
       }),
       createRowMarker("copied-vm-detail", NODE_ID, "General.Source UUID", "warn", "Copied", {
         tooltip: "Source UUID differs from VM UUID"
@@ -185,7 +185,7 @@ const externalDriveRule = (report) => {
     return [
       createNodeMarker("external-drive", NODE_ID, "warn", "External Drive", {
         tooltip: "VM is located on an external volume (/Volumes/...)",
-        iconKey: "hard-drive"
+        iconKey: "external drive"
       })
     ];
   }
@@ -196,7 +196,7 @@ const linkedCloneRule = (report) => {
     return [
       createNodeMarker("linked-clone", NODE_ID, "info", "Linked Clone", {
         tooltip: "This is a linked clone VM",
-        iconKey: "link"
+        iconKey: "linked clone"
       })
     ];
   }
@@ -208,7 +208,7 @@ const appleHvRule = (report) => {
     return [
       createNodeMarker("apple-hv", NODE_ID, "info", "Apple HV", {
         tooltip: "Using Apple Hypervisor Framework",
-        iconKey: "cpu"
+        iconKey: "AppleHV"
       })
     ];
   }
@@ -219,7 +219,7 @@ const nestedVirtRule = (report) => {
     return [
       createNodeMarker("nested-virt", NODE_ID, "info", "Nested", {
         tooltip: "Nested Virtualization is enabled",
-        iconKey: "layers"
+        iconKey: "Nested"
       })
     ];
   }
@@ -232,7 +232,7 @@ const headlessModeRule = (report) => {
     return [
       createNodeMarker("headless", NODE_ID, "info", "Headless", {
         tooltip: "VM runs in headless mode (no window)",
-        iconKey: "monitor-off"
+        iconKey: "headless"
       })
     ];
   }
@@ -243,7 +243,7 @@ const travelModeRule = (report) => {
     return [
       createNodeMarker("travel-mode", NODE_ID, "warn", "Travel Mode", {
         tooltip: "Travel Mode is enabled",
-        iconKey: "plane"
+        iconKey: "travelMode"
       })
     ];
   }
@@ -254,7 +254,7 @@ const isolatedVmRule = (report) => {
     return [
       createNodeMarker("isolated", NODE_ID, "info", "Isolated", {
         tooltip: "VM is running in isolated mode",
-        iconKey: "shield"
+        iconKey: "isolated"
       })
     ];
   }
@@ -265,7 +265,7 @@ const noTimeSyncRule = (report) => {
     return [
       createNodeMarker("no-time-sync", NODE_ID, "warn", "No Time Sync", {
         tooltip: "Time synchronization with host is disabled",
-        iconKey: "clock"
+        iconKey: "noTimeSync"
       })
     ];
   }
@@ -276,7 +276,7 @@ const bootFlagsRule = (report) => {
     return [
       createNodeMarker("boot-flags", NODE_ID, "warn", "Boot Flags", {
         tooltip: `Boot flags set: ${report.currentVm.bootFlags}`,
-        iconKey: "flag"
+        iconKey: "flags"
       })
     ];
   }
@@ -288,7 +288,7 @@ const resourceQuotaRule = (report) => {
     return [
       createNodeMarker("resource-quota", NODE_ID, "warn", `Quota ${quota}%`, {
         tooltip: `Resource quota is limited to ${quota}%`,
-        iconKey: "gauge"
+        iconKey: "resource quota"
       })
     ];
   }
@@ -299,7 +299,7 @@ const smartGuardRule = (report) => {
     return [
       createNodeMarker("smart-guard", NODE_ID, "info", "Smart Guard", {
         tooltip: "Smart Guard (automatic snapshots) is enabled",
-        iconKey: "shield"
+        iconKey: "smart guard"
       })
     ];
   }
@@ -311,7 +311,7 @@ const tpmRule = (report) => {
     return [
       createNodeMarker("tpm", NODE_ID, "info", "TPM", {
         tooltip: `TPM ${tpm} is enabled`,
-        iconKey: "key"
+        iconKey: "TPM"
       })
     ];
   }
@@ -327,7 +327,7 @@ const missingGuestCommandsOnRunningVmReportRule = (report) => {
     return [
       createNodeMarker("guest-commands-missing", NODE_ID, "warn", "No GuestCommands", {
         tooltip: type === "UserDefinedOnRunningVmReport" ? "GuestCommands is empty for a running VM report; this often indicates Parallels Tools is not working." : `GuestCommands is empty for report type "${type}"; this often indicates Parallels Tools is not working.`,
-        iconKey: "alert-triangle"
+        iconKey: "warning"
       })
     ];
   }
@@ -340,7 +340,7 @@ const tooMuchRamRule = (report) => {
     return [
       createNodeMarker("too-much-ram", NODE_ID, "danger", "Too Much RAM", {
         tooltip: `VM has ${vmRam}MB but host only has ${hostRam}MB (less than 6GB left for host)`,
-        iconKey: "memory-stick"
+        iconKey: "bad"
       }),
       createRowMarker("too-much-ram-detail", NODE_ID, "Hardware.RAM (MB)", "danger", "!!", {
         tooltip: "VM RAM exceeds safe limits"
@@ -355,7 +355,7 @@ const unevenRamRule = (report) => {
     return [
       createNodeMarker("uneven-ram", NODE_ID, "warn", "Uneven RAM", {
         tooltip: `RAM (${vmRam}MB) is not a multiple of 256MB`,
-        iconKey: "memory-stick"
+        iconKey: "warning"
       })
     ];
   }
@@ -366,7 +366,7 @@ const notPvmDefaultRule = (report) => {
     return [
       createNodeMarker("not-pvmdefault", NODE_ID, "warn", "Not PvmDefault", {
         tooltip: "VM name is not PvmDefault (unexpected for Chrome OS)",
-        iconKey: "alert-triangle"
+        iconKey: "not PvmDefault"
       })
     ];
   }
@@ -436,7 +436,7 @@ const licenseRules = [
       return [
         createNodeMarker("license.pirated", LICENSE_NODE, "danger", "Pirated", {
           tooltip: "License expiration is far in the future (suspicious / likely pirated)",
-          iconKey: "alert-triangle"
+          iconKey: "pirated"
         })
       ];
     }
@@ -452,14 +452,14 @@ const netConfigRules = [
       out.push(
         createNodeMarker("netconfig.kextless", NETCONFIG_NODE, "info", "Kextless", {
           tooltip: "Virtual networking is running in kextless mode",
-          iconKey: "network"
+          iconKey: "kextless"
         })
       );
     } else if (s.kextlessMode === "kext") {
       out.push(
         createNodeMarker("netconfig.kext", NETCONFIG_NODE, "info", "Kext", {
           tooltip: "Virtual networking uses kernel extensions",
-          iconKey: "network"
+          iconKey: "kext"
         })
       );
     }
@@ -467,7 +467,7 @@ const netConfigRules = [
       out.push(
         createNodeMarker("netconfig.network-missing", NETCONFIG_NODE, "warn", "Network missing", {
           tooltip: "Shared or Host-Only virtual network is missing",
-          iconKey: "alert-triangle"
+          iconKey: "warning"
         })
       );
     }
@@ -482,14 +482,14 @@ const clientProxyRules = [
       return [
         createNodeMarker("proxy.http-enabled", PROXY_NODE, "warn", "HTTP proxy enabled", {
           tooltip: "HTTP proxy is enabled in client settings",
-          iconKey: "alert-triangle"
+          iconKey: "vpn"
         })
       ];
     }
     return [
       createNodeMarker("proxy.none", PROXY_NODE, "info", "No proxy", {
         tooltip: "No HTTP proxy detected in client settings",
-        iconKey: "network"
+        iconKey: "networkAdapter"
       })
     ];
   }
@@ -499,12 +499,12 @@ const advancedVmInfoRules = [
     const s = report.advancedVm;
     if (!s) return [];
     const out = [];
-    if (s.snapshotCount === 0) out.push(createNodeMarker("adv.no-snapshots", ADV_NODE, "info", "No snapshots"));
-    if ((s.snapshotCount ?? 0) > 0) out.push(createNodeMarker("adv.snapshots", ADV_NODE, "info", `${s.snapshotCount} snapshots`));
-    if (s.hasAclIssues) out.push(createNodeMarker("adv.acl", ADV_NODE, "warn", "ACL issues", { iconKey: "alert-triangle" }));
-    if (s.hasRootOwner) out.push(createNodeMarker("adv.root-owner", ADV_NODE, "warn", "Root owner", { iconKey: "alert-triangle" }));
-    if (s.hasDeleteSnapshotOp) out.push(createNodeMarker("adv.delete-snapshot", ADV_NODE, "danger", "Delete snapshot op", { iconKey: "alert-triangle" }));
-    if (s.mainSnapshotMissing) out.push(createNodeMarker("adv.main-snapshot-missing", ADV_NODE, "danger", "Main snapshot missing", { iconKey: "alert-triangle" }));
+    if (s.snapshotCount === 0) out.push(createNodeMarker("adv.no-snapshots", ADV_NODE, "info", "No snapshots", { iconKey: "nosnapshots" }));
+    if ((s.snapshotCount ?? 0) > 0) out.push(createNodeMarker("adv.snapshots", ADV_NODE, "info", `${s.snapshotCount} snapshots`, { iconKey: "snapshots" }));
+    if (s.hasAclIssues) out.push(createNodeMarker("adv.acl", ADV_NODE, "warn", "ACL issues", { iconKey: "ACL" }));
+    if (s.hasRootOwner) out.push(createNodeMarker("adv.root-owner", ADV_NODE, "warn", "Root owner", { iconKey: "root or unknown owner" }));
+    if (s.hasDeleteSnapshotOp) out.push(createNodeMarker("adv.delete-snapshot", ADV_NODE, "danger", "Delete snapshot op", { iconKey: "bad" }));
+    if (s.mainSnapshotMissing) out.push(createNodeMarker("adv.main-snapshot-missing", ADV_NODE, "danger", "Main snapshot missing", { iconKey: "bad" }));
     return out;
   }
 ];
@@ -513,12 +513,12 @@ const hostInfoRules = [
     const s = report.hostDevices;
     if (!s) return [];
     const out = [];
-    if (s.flags.lowMemory) out.push(createNodeMarker("host.low-memory", HOST_NODE, "warn", "High memory usage", { iconKey: "alert-triangle" }));
-    if (s.flags.privacyRestricted) out.push(createNodeMarker("host.privacy", HOST_NODE, "warn", "Privacy restricted", { iconKey: "shield" }));
-    if (s.hasDisplayLink) out.push(createNodeMarker("host.displaylink", HOST_NODE, "warn", "DisplayLink", { iconKey: "monitor" }));
-    if (s.flags.hasExternalDisks) out.push(createNodeMarker("host.external-disk", HOST_NODE, "info", "External disk", { iconKey: "hard-drive" }));
+    if (s.flags.lowMemory) out.push(createNodeMarker("host.low-memory", HOST_NODE, "warn", "High memory usage", { iconKey: "warning" }));
+    if (s.flags.privacyRestricted) out.push(createNodeMarker("host.privacy", HOST_NODE, "warn", "Privacy restricted", { iconKey: "isolated" }));
+    if (s.hasDisplayLink) out.push(createNodeMarker("host.displaylink", HOST_NODE, "warn", "DisplayLink", { iconKey: "DisplayLink device!" }));
+    if (s.flags.hasExternalDisks) out.push(createNodeMarker("host.external-disk", HOST_NODE, "info", "External disk", { iconKey: "external drive" }));
     if (s.flags.hasUsbCamera) out.push(createNodeMarker("host.usb-camera", HOST_NODE, "info", "USB camera", { iconKey: "webcam" }));
-    if (s.flags.hasBluetoothAudio) out.push(createNodeMarker("host.bt-audio", HOST_NODE, "info", "BT audio", { iconKey: "bluetooth" }));
+    if (s.flags.hasBluetoothAudio) out.push(createNodeMarker("host.bt-audio", HOST_NODE, "info", "BT audio"));
     return out;
   }
 ];
@@ -527,9 +527,9 @@ const moreHostInfoRules = [
     const s = report.moreHostInfo;
     if (!s) return [];
     if (s.hasNoDisplays) {
-      return [createNodeMarker("morehost.no-displays", MORE_HOST_NODE, "warn", "No displays", { iconKey: "alert-triangle" })];
+      return [createNodeMarker("morehost.no-displays", MORE_HOST_NODE, "warn", "No displays", { iconKey: "screens" })];
     }
-    return [createNodeMarker("morehost.displays", MORE_HOST_NODE, "info", `${s.displayCount} displays`, { iconKey: "monitor" })];
+    return [createNodeMarker("morehost.displays", MORE_HOST_NODE, "info", `${s.displayCount} displays`, { iconKey: "screens" })];
   }
 ];
 const loadedDriversRules = [
@@ -537,10 +537,10 @@ const loadedDriversRules = [
     const s = report.drivers;
     if (!s) return [];
     const out = [];
-    if (s.isHackintosh) out.push(createNodeMarker("drivers.hackintosh", DRIVERS_NODE, "danger", "Hackintosh", { iconKey: "alert-triangle" }));
-    if (s.hasNonAppleKexts && !s.hasPrlKexts && !s.isHackintosh) out.push(createNodeMarker("drivers.no-prl", DRIVERS_NODE, "warn", "No PRL kexts", { iconKey: "alert-triangle" }));
-    if (s.onlyApple) out.push(createNodeMarker("drivers.only-apple", DRIVERS_NODE, "info", "Only Apple", { iconKey: "shield" }));
-    if (s.hasNonAppleKexts && !s.onlyApple && !s.isHackintosh) out.push(createNodeMarker("drivers.non-apple", DRIVERS_NODE, "warn", "Non-Apple kexts", { iconKey: "alert-triangle" }));
+    if (s.isHackintosh) out.push(createNodeMarker("drivers.hackintosh", DRIVERS_NODE, "danger", "Hackintosh", { iconKey: "bad" }));
+    if (s.hasNonAppleKexts && !s.hasPrlKexts && !s.isHackintosh) out.push(createNodeMarker("drivers.no-prl", DRIVERS_NODE, "warn", "No PRL kexts", { iconKey: "kext" }));
+    if (s.onlyApple) out.push(createNodeMarker("drivers.only-apple", DRIVERS_NODE, "info", "Only Apple", { iconKey: "all good" }));
+    if (s.hasNonAppleKexts && !s.onlyApple && !s.isHackintosh) out.push(createNodeMarker("drivers.non-apple", DRIVERS_NODE, "warn", "Non-Apple kexts", { iconKey: "kext" }));
     return out;
   }
 ];
@@ -549,9 +549,9 @@ const mountInfoRules = [
     const s = report.storage;
     if (!s) return [];
     const out = [];
-    if (s.hddFull) out.push(createNodeMarker("storage.full", STORAGE_NODE, "danger", "HDD FULL!", { iconKey: "alert-triangle" }));
-    if (!s.hddFull && s.lowStorage) out.push(createNodeMarker("storage.low", STORAGE_NODE, "warn", "Low storage", { iconKey: "alert-triangle" }));
-    if (s.hasNtfsVolumes) out.push(createNodeMarker("storage.ntfs", STORAGE_NODE, "info", "NTFS detected", { iconKey: "hard-drive" }));
+    if (s.hddFull) out.push(createNodeMarker("storage.full", STORAGE_NODE, "danger", "HDD FULL!", { iconKey: "bad" }));
+    if (!s.hddFull && s.lowStorage) out.push(createNodeMarker("storage.low", STORAGE_NODE, "warn", "Low storage", { iconKey: "Low storage" }));
+    if (s.hasNtfsVolumes) out.push(createNodeMarker("storage.ntfs", STORAGE_NODE, "info", "NTFS detected", { iconKey: "hdds" }));
     return out;
   }
 ];
@@ -563,7 +563,7 @@ const allProcessesRules = [
       return [
         createNodeMarker("processes.bsdtar", PROCESSES_NODE, "danger", "bsdtar", {
           tooltip: "Known bsdtar issue detected in process list",
-          iconKey: "alert-triangle"
+          iconKey: "bad"
         })
       ];
     }
@@ -577,13 +577,13 @@ const toolsLogRules = [
     const out = [];
     if (!s.isWindows) out.push(createNodeMarker("tools.not-windows", TOOLS_NODE, "info", "Not Windows"));
     if (s.isWindows) {
-      if (s.status === "success") out.push(createNodeMarker("tools.success", TOOLS_NODE, "info", "Successful"));
-      if (s.status === "warning") out.push(createNodeMarker("tools.warning", TOOLS_NODE, "warn", "Warning", { iconKey: "alert-triangle" }));
-      if (s.status === "error") out.push(createNodeMarker("tools.failed", TOOLS_NODE, "danger", "Failed", { iconKey: "alert-triangle" }));
-      if (s.status === "empty") out.push(createNodeMarker("tools.empty", TOOLS_NODE, "warn", "Empty", { iconKey: "alert-triangle" }));
+      if (s.status === "success") out.push(createNodeMarker("tools.success", TOOLS_NODE, "info", "Successful", { iconKey: "all good" }));
+      if (s.status === "warning") out.push(createNodeMarker("tools.warning", TOOLS_NODE, "warn", "Warning", { iconKey: "warning" }));
+      if (s.status === "error") out.push(createNodeMarker("tools.failed", TOOLS_NODE, "danger", "Failed", { iconKey: "bad" }));
+      if (s.status === "empty") out.push(createNodeMarker("tools.empty", TOOLS_NODE, "warn", "Empty", { iconKey: "warning" }));
     }
-    if (s.hasCorruptRegistry) out.push(createNodeMarker("tools.corrupt-reg", TOOLS_NODE, "danger", "Corrupt Registry", { iconKey: "alert-triangle" }));
-    if (s.hasPrlDdIssue && s.kbArticle) out.push(createNodeMarker("tools.kb", TOOLS_NODE, "danger", s.kbArticle, { iconKey: "alert-triangle" }));
+    if (s.hasCorruptRegistry) out.push(createNodeMarker("tools.corrupt-reg", TOOLS_NODE, "danger", "Corrupt Registry", { iconKey: "bad" }));
+    if (s.hasPrlDdIssue && s.kbArticle) out.push(createNodeMarker("tools.kb", TOOLS_NODE, "danger", s.kbArticle, { iconKey: "bad" }));
     return out;
   }
 ];
@@ -595,7 +595,7 @@ const systemLogRules = [
       return [
         createNodeMarker("syslog.coherence", SYSLOG_NODE, "warn", "Coherence dumps", {
           tooltip: `Coherence state dumps found (${s.coherenceDumpCount})`,
-          iconKey: "alert-triangle"
+          iconKey: "coherence"
         })
       ];
     }
@@ -607,9 +607,9 @@ const vmDirectoryRules = [
     const s = report.vmDirectory;
     if (!s) return [];
     if (s.vmCount > 0) {
-      return [createNodeMarker("vmdir.count", VMDIR_NODE, "info", `${s.vmCount} VMs`)];
+      return [createNodeMarker("vmdir.count", VMDIR_NODE, "info", `${s.vmCount} VMs`, { iconKey: "vms" })];
     }
-    return [createNodeMarker("vmdir.none", VMDIR_NODE, "warn", "No VMs", { iconKey: "alert-triangle" })];
+    return [createNodeMarker("vmdir.none", VMDIR_NODE, "warn", "No VMs", { iconKey: "warning" })];
   }
 ];
 const guestCommandsRules = [
@@ -620,7 +620,7 @@ const guestCommandsRules = [
       return [createNodeMarker("guestcmd.linux", GUEST_COMMANDS_NODE, "info", "Linux")];
     }
     if (s.isEmpty) {
-      return [createNodeMarker("guestcmd.empty", GUEST_COMMANDS_NODE, "warn", "Empty", { iconKey: "alert-triangle" })];
+      return [createNodeMarker("guestcmd.empty", GUEST_COMMANDS_NODE, "warn", "Empty", { iconKey: "warning" })];
     }
     return [];
   }
@@ -631,12 +631,12 @@ const appConfigRules = [
     if (!s) return [];
     const out = [];
     if (s.isUserDefinedOnDisconnectedServer) {
-      out.push(createNodeMarker("appcfg.disconnected", APP_CONFIG_NODE, "warn", "Disconnected", { iconKey: "alert-triangle" }));
+      out.push(createNodeMarker("appcfg.disconnected", APP_CONFIG_NODE, "warn", "Disconnected", { iconKey: "warning" }));
       return out;
     }
     if (s.verboseLoggingEnabled) out.push(createNodeMarker("appcfg.verbose", APP_CONFIG_NODE, "info", "Verbose logging"));
-    if (s.hasExternalVmFolder) out.push(createNodeMarker("appcfg.external-vm-folder", APP_CONFIG_NODE, "info", "External VM folder"));
-    if ((s.usbPermanentAssignments?.length ?? 0) > 0) out.push(createNodeMarker("appcfg.usb-assign", APP_CONFIG_NODE, "info", "USB assignments"));
+    if (s.hasExternalVmFolder) out.push(createNodeMarker("appcfg.external-vm-folder", APP_CONFIG_NODE, "info", "External VM folder", { iconKey: "External Default VM folder" }));
+    if ((s.usbPermanentAssignments?.length ?? 0) > 0) out.push(createNodeMarker("appcfg.usb-assign", APP_CONFIG_NODE, "info", "USB assignments", { iconKey: "usb" }));
     return out;
   }
 ];
@@ -644,15 +644,15 @@ const installedSoftwareRules = [
   (report) => {
     const s = report.installedSoftware;
     if (!s) return [];
-    return [createNodeMarker("software.count", INSTALLED_SOFTWARE_NODE, "info", `${s.appCount} apps`)];
+    return [createNodeMarker("software.count", INSTALLED_SOFTWARE_NODE, "info", `${s.appCount} apps`, { iconKey: "installedApps" })];
   }
 ];
 const launchdRules = [
   (report) => {
     const s = report.launchdInfo;
     if (!s?.stats) return [];
-    const out = [createNodeMarker("launchd.files", LAUNCHD_NODE, "info", `${s.stats.files} files`)];
-    if (s.stats.rootOwnedFiles > 0) out.push(createNodeMarker("launchd.root-owned", LAUNCHD_NODE, "warn", `${s.stats.rootOwnedFiles} root-owned`, { iconKey: "alert-triangle" }));
+    const out = [createNodeMarker("launchd.files", LAUNCHD_NODE, "info", `${s.stats.files} files`, { iconKey: "service" })];
+    if (s.stats.rootOwnedFiles > 0) out.push(createNodeMarker("launchd.root-owned", LAUNCHD_NODE, "warn", `${s.stats.rootOwnedFiles} root-owned`, { iconKey: "root or unknown owner" }));
     return out;
   }
 ];
@@ -661,7 +661,7 @@ const autoStatisticRules = [
     const s = report.autoStatisticInfo;
     if (!s) return [];
     if (s.installationCount > 0) {
-      return [createNodeMarker("autostat.count", AUTOSTAT_NODE, "info", `${s.installationCount} installations`)];
+      return [createNodeMarker("autostat.count", AUTOSTAT_NODE, "info", `${s.installationCount} installations`, { iconKey: "install" })];
     }
     return [];
   }

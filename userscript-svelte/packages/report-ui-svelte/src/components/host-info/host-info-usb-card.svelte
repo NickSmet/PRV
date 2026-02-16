@@ -2,7 +2,7 @@
   import * as Collapsible from '../ui/collapsible';
   import { Badge } from '../ui/badge';
   import CopyButton from '../../ui/copy-button/copy-button.svelte';
-  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import DenseChevron from '../dense/DenseChevron.svelte';
   import Usb from '@lucide/svelte/icons/usb';
 
   import type { HostInfoSummary } from '@prv/report-core';
@@ -16,68 +16,58 @@
   const speedVariant = $derived(usbSpeedVariant(device.speed));
 </script>
 
-<div class="overflow-hidden rounded-xl border border-border bg-background">
-  <Collapsible.Root bind:open>
-    <Collapsible.Trigger class="flex w-full items-center gap-2 px-4 py-2.5 text-left select-none">
-      <ChevronRight class={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-90' : 'rotate-0'}`} />
-      <Usb class="size-4 text-muted-foreground" />
-
-      <span class="text-[13px] font-semibold text-foreground truncate">
-        {device.name}
-      </span>
-
-      <Badge variant={speedVariant} class="text-[10px]">{speedText}</Badge>
+<Collapsible.Root bind:open>
+  <Collapsible.Trigger class="w-full">
+    <div
+      class={`flex items-center gap-1.5 py-[4px] px-1 pl-1 min-h-[26px] cursor-pointer select-none border-b border-slate-100
+        ${open ? 'bg-slate-50/80' : 'bg-transparent'}
+        hover:bg-slate-50/50`}
+    >
+      <DenseChevron {open} />
+      <Usb class="size-3 text-muted-foreground shrink-0 opacity-60" />
+      <span class="text-[11.5px] font-medium text-foreground truncate">{device.name}</span>
+      <Badge variant={speedVariant} class="text-[9px]">{speedText}</Badge>
       {#if device.vfSupported === true}
-        <Badge
-          variant="success"
-          class="text-[10px]"
-          title="Supported by macOS Virtualization Framework (SupportedByVirtualizationFramework=1)"
-        >
-          Apple VF
-        </Badge>
+        <Badge variant="green" class="text-[9px]" title="Supported by macOS Virtualization Framework">Apple VF</Badge>
       {:else if device.vfSupported === false}
-        <Badge
-          variant="muted"
-          class="text-[10px]"
-          title="Not supported by macOS Virtualization Framework (SupportedByVirtualizationFramework=0)"
-        >
-          No Apple VF
-        </Badge>
+        <Badge variant="dim" class="text-[9px]" title="Not supported by macOS Virtualization Framework">No VF</Badge>
       {/if}
-
+      <div class="flex-1"></div>
       {#if device.state}
-        <span class="ml-auto font-mono text-[12px] text-muted-foreground">{device.state}</span>
+        <span class="font-mono text-[10px] text-muted-foreground shrink-0">{device.state}</span>
       {/if}
-    </Collapsible.Trigger>
+    </div>
+  </Collapsible.Trigger>
 
-    <Collapsible.Content class="border-t border-border/50 bg-muted/15 px-4 py-3 space-y-2">
-      <div class="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1 text-[12px]">
-        <span class="text-muted-foreground/80 font-medium">Vendor</span>
+  <Collapsible.Content>
+    <div class="py-1 px-2 pl-6 border-b border-slate-100 bg-slate-50/30 space-y-1">
+      <div class="grid grid-cols-[70px_1fr] gap-x-2 gap-y-0.5 text-[11px]">
+        <span class="text-muted-foreground font-medium">Vendor</span>
         <span class="font-mono text-foreground/80">{device.vendorId ?? '—'}</span>
 
-        <span class="text-muted-foreground/80 font-medium">Product</span>
+        <span class="text-muted-foreground font-medium">Product</span>
         <span class="font-mono text-foreground/80">{device.productId ?? '—'}</span>
 
-        <span class="text-muted-foreground/80 font-medium">Location</span>
+        <span class="text-muted-foreground font-medium">Location</span>
         <span class="font-mono text-foreground/80 break-all">{device.location ?? '—'}</span>
 
-        <span class="text-muted-foreground/80 font-medium">Serial</span>
+        <span class="text-muted-foreground font-medium">Serial</span>
         <span class="font-mono text-foreground/80 break-all">{device.serial ?? '—'}</span>
       </div>
 
       {#if device.rawUuid}
-        <div>
-          <div class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Raw UUID</div>
+        <div class="flex items-center gap-1 text-[10px]">
+          <span class="text-muted-foreground font-medium shrink-0">UUID</span>
           <CopyButton
             text={device.rawUuid}
             size="sm"
             variant="ghost"
-            class="mt-1 h-auto min-h-6 px-2 font-mono text-[11px] text-muted-foreground hover:text-foreground whitespace-normal break-all text-left"
+            class="h-auto min-h-5 px-1 font-mono text-[10px] text-muted-foreground hover:text-foreground break-all text-left"
           >
             {device.rawUuid}
           </CopyButton>
         </div>
       {/if}
-    </Collapsible.Content>
-  </Collapsible.Root>
-</div>
+    </div>
+  </Collapsible.Content>
+</Collapsible.Root>

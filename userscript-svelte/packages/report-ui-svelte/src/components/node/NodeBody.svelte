@@ -1,6 +1,8 @@
 <script lang="ts">
   import Badge from '../ui/badge.svelte';
   import { CopyButton } from '../../ui/copy-button';
+  import * as Collapsible from '../ui/collapsible';
+  import DenseChevron from '../dense/DenseChevron.svelte';
 
   import CompactCurrentVm from '../compact/CompactCurrentVm.svelte';
   import AdvancedVmInfoView from '../advanced-vm-info/advanced-vm-info-view.svelte';
@@ -49,6 +51,14 @@
   function getSubSectionKey(nodeId: string, sectionTitle: string, subId: string): string {
     return `${nodeId}::${sectionTitle}::${subId}`;
   }
+
+  function toggleSubSection(key: string) {
+    if (subSectionStates) {
+      subSectionStates[key] = !subSectionStates[key];
+    } else {
+      internalSubSectionStates[key] = !internalSubSectionStates[key];
+    }
+  }
 </script>
 
 {#if node.id === 'current-vm'}
@@ -58,84 +68,85 @@
   {#if summary}
     <AdvancedVmInfoView {summary} />
   {:else}
-    <div class="rv-empty">No AdvancedVmInfo data</div>
+    <div class="text-[11px] text-muted-foreground">No AdvancedVmInfo data</div>
   {/if}
 {:else if node.id === 'mount-info'}
   {@const summary = node.data as any}
   {#if summary}
     <MountInfoView {summary} />
   {:else}
-    <div class="rv-empty">No MountInfo data</div>
+    <div class="text-[11px] text-muted-foreground">No MountInfo data</div>
   {/if}
 {:else if node.id === 'all-processes'}
   {@const summary = node.data as any}
   {#if summary}
     <AllProcessesView {summary} />
   {:else}
-    <div class="rv-empty">No AllProcesses data</div>
+    <div class="text-[11px] text-muted-foreground">No AllProcesses data</div>
   {/if}
 {:else if node.id === 'guest-commands'}
   {@const summary = node.data as any}
   {#if summary}
     <GuestCommandsView {summary} />
   {:else}
-    <div class="rv-empty">No GuestCommands data</div>
+    <div class="text-[11px] text-muted-foreground">No GuestCommands data</div>
   {/if}
 {:else if node.id === 'more-host-info'}
   {@const summary = node.data as any}
   {#if summary}
     <MoreHostInfoView {summary} />
   {:else}
-    <div class="rv-empty">No MoreHostInfo data</div>
+    <div class="text-[11px] text-muted-foreground">No MoreHostInfo data</div>
   {/if}
 {:else if node.id === 'host-info'}
   {@const summary = node.data as any}
   {#if summary}
     <HostInfoView {summary} />
   {:else}
-    <div class="rv-empty">No HostInfo data</div>
+    <div class="text-[11px] text-muted-foreground">No HostInfo data</div>
   {/if}
 {:else if node.id === 'vm-directory'}
   {@const summary = node.data as any}
   {#if summary}
     <VmDirectoryView {summary} />
   {:else}
-    <div class="rv-empty">No VmDirectory data</div>
+    <div class="text-[11px] text-muted-foreground">No VmDirectory data</div>
   {/if}
 {:else if node.id === 'net-config'}
   {@const summary = node.data as any}
   {#if summary}
     <NetConfigView {summary} />
   {:else}
-    <div class="rv-empty">No NetConfig data</div>
+    <div class="text-[11px] text-muted-foreground">No NetConfig data</div>
   {/if}
 {:else if node.id === 'launchd-info'}
   {@const summary = node.data as any}
   {#if summary}
     <LaunchdInfoView {summary} />
   {:else}
-    <div class="rv-empty">No LaunchdInfo data</div>
+    <div class="text-[11px] text-muted-foreground">No LaunchdInfo data</div>
   {/if}
 {:else}
+  <!-- Generic node renderer -->
   {#each node.sections as section (section.title)}
-    <div class="rv-section-block">
-      <div class="rv-section-heading">{section.title}</div>
+    <div class="space-y-0">
+      <div class="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground py-1 border-b border-slate-100">
+        {section.title}
+      </div>
       {#if section.rows.filter((r) => matchesFilter(node, r)).length === 0}
-        <div class="rv-empty">No matches</div>
+        <div class="text-[11px] text-muted-foreground py-1 px-1">No matches</div>
       {:else}
         {#each section.rows.filter((r) => matchesFilter(node, r)) as row, idx (row.label + '::' + (row.value ?? '') + '::' + idx)}
-          <div class="rv-row">
-            <div class="rv-row-label">
+          <div class="flex items-center justify-between py-[2px] px-1 text-[11px]">
+            <span class="text-muted-foreground flex items-center gap-1">
               {#if row.iconKey}
-                <span class="inline-block mr-1.5 -mt-0.5 align-middle">
-                  <PrvIcon iconKey={row.iconKey} {iconUrlByKey} size={14} />
-                </span>
+                <PrvIcon iconKey={row.iconKey} {iconUrlByKey} size={13} class="text-muted-foreground" />
               {/if}
               {row.label}
-            </div>
-            <div class="rv-row-value">
+            </span>
+            <span class="text-right">
               {#if row.badge}
-                <Badge variant={row.badge.variant} class="text-[11px]">
+                <Badge variant={row.badge.variant} class="text-[9px]">
                   {row.badge.label}
                 </Badge>
               {:else if row.value && (row.type === 'path' || row.type === 'uuid')}
@@ -143,16 +154,16 @@
                   text={row.value}
                   size="sm"
                   variant="ghost"
-                  class="h-auto min-h-6 px-2 font-mono text-[11px] text-muted-foreground hover:text-foreground whitespace-normal break-all text-left"
+                  class="h-auto min-h-5 px-1 font-mono text-[10px] text-muted-foreground hover:text-foreground whitespace-normal break-all text-right"
                 >
                   {row.value}
                 </CopyButton>
               {:else if row.value && row.type === 'datetime'}
-                <span class="font-mono text-[11px] text-muted-foreground">{row.value}</span>
+                <span class="font-mono text-[10px] text-muted-foreground">{row.value}</span>
               {:else}
-                {row.value}
+                <span class="font-medium">{row.value}</span>
               {/if}
-            </div>
+            </span>
           </div>
         {/each}
       {/if}
@@ -160,34 +171,30 @@
       {#if section.subSections && section.subSections.length}
         {#each section.subSections as sub (sub.id)}
           {@const subKey = getSubSectionKey(node.id, section.title, sub.id)}
-          <div class="rv-sub-section">
-            <div
-              class="rv-sub-header"
-              role="button"
-              tabindex="0"
-              onclick={() => {
-                states[subKey] = !states[subKey];
-              }}
-              onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  states[subKey] = !states[subKey];
-                }
-              }}
-            >
-              <div class="rv-sub-title">
-                <PrvIcon iconKey={sub.iconKey} {iconUrlByKey} size={13} class="text-muted-foreground" />
-                <span>{sub.title}</span>
+          {@const isOpen = !!states[subKey]}
+          <Collapsible.Root open={isOpen} onOpenChange={() => toggleSubSection(subKey)}>
+            <Collapsible.Trigger class="w-full">
+              <div
+                class={`flex items-center gap-1.5 py-[5px] px-1 pl-2 min-h-[28px] cursor-pointer select-none border-b border-slate-100
+                  ${isOpen ? 'bg-slate-50/80' : 'bg-transparent'}
+                  hover:bg-slate-50/50`}
+              >
+                <DenseChevron open={isOpen} />
+                {#if sub.iconKey}
+                  <PrvIcon iconKey={sub.iconKey} {iconUrlByKey} size={13} class="text-muted-foreground opacity-70" />
+                {/if}
+                <span class="text-[12px] font-semibold text-slate-700 shrink-0">{sub.title}</span>
+                <div class="flex-1"></div>
               </div>
-              <span class="rv-sub-toggle">{states[subKey] ? '−' : '+'}</span>
-            </div>
-            {#if states[subKey]}
-              <div class="rv-sub-body">
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <div class="py-0.5 px-2 pl-6 border-b border-slate-100 bg-slate-50/30">
                 {#each sub.rows.filter((r) => matchesFilter(node, r)) as row, idx (row.label + '::' + (row.value ?? '') + '::' + idx)}
-                  <div class="rv-row">
-                    <div class="rv-row-label">{row.label}</div>
-                    <div class="rv-row-value">
+                  <div class="flex items-center justify-between py-[2px] text-[11px]">
+                    <span class="text-muted-foreground">{row.label}</span>
+                    <span class="text-right">
                       {#if row.badge}
-                        <Badge variant={row.badge.variant} class="text-[11px]">
+                        <Badge variant={row.badge.variant} class="text-[9px]">
                           {row.badge.label}
                         </Badge>
                       {:else if row.value && (row.type === 'path' || row.type === 'uuid')}
@@ -195,21 +202,21 @@
                           text={row.value}
                           size="sm"
                           variant="ghost"
-                          class="h-auto min-h-6 px-2 font-mono text-[11px] text-muted-foreground hover:text-foreground whitespace-normal break-all text-left"
+                          class="h-auto min-h-5 px-1 font-mono text-[10px] text-muted-foreground hover:text-foreground whitespace-normal break-all text-right"
                         >
                           {row.value}
                         </CopyButton>
                       {:else if row.value && row.type === 'datetime'}
-                        <span class="font-mono text-[11px] text-muted-foreground">{row.value}</span>
+                        <span class="font-mono text-[10px] text-muted-foreground">{row.value}</span>
                       {:else}
-                        {row.value}
+                        <span class="font-medium">{row.value}</span>
                       {/if}
-                    </div>
+                    </span>
                   </div>
                 {/each}
               </div>
-            {/if}
-          </div>
+            </Collapsible.Content>
+          </Collapsible.Root>
         {/each}
       {/if}
     </div>

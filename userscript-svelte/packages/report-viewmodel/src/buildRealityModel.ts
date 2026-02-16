@@ -5,10 +5,11 @@ import type { RealityCardModel, RealityModel, RealityVmModel } from './realityMo
 export function buildRealityModel(opts: {
   reportId: string;
   report: ReportModel;
-  index: ReportusReportIndex;
-  perVm: PerVmDiscoveredFiles;
+  index?: ReportusReportIndex;
+  perVm?: PerVmDiscoveredFiles;
 }): RealityModel {
-  const { reportId, report, perVm } = opts;
+  const { reportId, report } = opts;
+  const perVm: PerVmDiscoveredFiles = opts.perVm ?? { vmConfigByUuid: {}, vmLogByUuid: {}, toolsLogByUuid: {}, screenshots: [] };
 
   const currentUuid = (report.currentVm?.vmUuid ?? '').toLowerCase();
   const vms = report.vmDirectory?.vms ?? [];
@@ -27,7 +28,7 @@ export function buildRealityModel(opts: {
         cards.push({
           id: `vm.${uuid}.settings`,
           title: 'Settings',
-          iconKey: 'folder',
+          iconKey: 'pvm',
           openByDefault: false,
           sources: isCurrent
             ? [{ kind: 'node', nodeKey: 'CurrentVm' }]
@@ -40,9 +41,18 @@ export function buildRealityModel(opts: {
 
       if (isCurrent) {
         cards.push({
+          id: `vm.${uuid}.guest-commands`,
+          title: 'Inside the VM (GuestCommands)',
+          iconKey: 'vms',
+          openByDefault: false,
+          sources: [{ kind: 'node', nodeKey: 'GuestCommands' }],
+          render: { kind: 'nodeKey', nodeKey: 'GuestCommands' }
+        });
+
+        cards.push({
           id: `vm.${uuid}.advanced`,
           title: 'Storage & Snapshots',
-          iconKey: 'hdd',
+          iconKey: 'hdds',
           openByDefault: false,
           sources: [
             { kind: 'node', nodeKey: 'CurrentVm' },
@@ -54,19 +64,10 @@ export function buildRealityModel(opts: {
         cards.push({
           id: `vm.${uuid}.guest-os`,
           title: 'Guest OS',
-          iconKey: 'vm',
+          iconKey: 'vms',
           openByDefault: false,
           sources: [{ kind: 'node', nodeKey: 'GuestOs' }],
           render: { kind: 'nodeKey', nodeKey: 'GuestOs' }
-        });
-
-        cards.push({
-          id: `vm.${uuid}.guest-commands`,
-          title: 'Inside the VM',
-          iconKey: 'vm',
-          openByDefault: false,
-          sources: [{ kind: 'node', nodeKey: 'GuestCommands' }],
-          render: { kind: 'nodeKey', nodeKey: 'GuestCommands' }
         });
       }
 
@@ -124,7 +125,7 @@ export function buildRealityModel(opts: {
     {
       id: 'host.hardware',
       title: 'Hardware & OS',
-      iconKey: 'cpu',
+      iconKey: 'hotcpu',
       openByDefault: false,
       sources: [
         { kind: 'node', nodeKey: 'HostInfo' },
@@ -143,7 +144,7 @@ export function buildRealityModel(opts: {
     {
       id: 'host.storage',
       title: 'Storage',
-      iconKey: 'hdd',
+      iconKey: 'hdds',
       openByDefault: false,
       sources: [
         { kind: 'node', nodeKey: 'MountInfo' },
@@ -154,7 +155,7 @@ export function buildRealityModel(opts: {
     {
       id: 'host.kexts',
       title: 'Kernel Extensions',
-      iconKey: 'shield',
+      iconKey: 'kext',
       openByDefault: false,
       sources: [{ kind: 'node', nodeKey: 'LoadedDrivers' }],
       render: { kind: 'nodeKey', nodeKey: 'LoadedDrivers' }
@@ -162,7 +163,7 @@ export function buildRealityModel(opts: {
     {
       id: 'host.processes',
       title: 'Running Processes',
-      iconKey: 'clipboard',
+      iconKey: 'apps',
       openByDefault: false,
       sources: [{ kind: 'node', nodeKey: 'AllProcesses' }],
       render: { kind: 'nodeKey', nodeKey: 'AllProcesses' }
@@ -170,7 +171,7 @@ export function buildRealityModel(opts: {
     {
       id: 'host.services',
       title: 'Services (launchd)',
-      iconKey: 'folder',
+      iconKey: 'service',
       openByDefault: false,
       sources: [{ kind: 'node', nodeKey: 'LaunchdInfo' }],
       render: { kind: 'nodeKey', nodeKey: 'LaunchdInfo' }
@@ -178,7 +179,7 @@ export function buildRealityModel(opts: {
     {
       id: 'host.software',
       title: 'Installed Software',
-      iconKey: 'folder',
+      iconKey: 'installedApps',
       openByDefault: false,
       sources: [{ kind: 'node', nodeKey: 'InstalledSoftware' }],
       render: { kind: 'nodeKey', nodeKey: 'InstalledSoftware' }
@@ -197,7 +198,7 @@ export function buildRealityModel(opts: {
     {
       id: 'pd.network',
       title: 'Virtual Networking',
-      iconKey: 'net',
+      iconKey: 'networkAdapter',
       openByDefault: false,
       sources: [{ kind: 'node', nodeKey: 'NetConfig' }],
       render: { kind: 'nodeKey', nodeKey: 'NetConfig' }
@@ -205,7 +206,7 @@ export function buildRealityModel(opts: {
     {
       id: 'pd.config',
       title: 'App Configuration',
-      iconKey: 'folder',
+      iconKey: 'pvm',
       openByDefault: false,
       sources: [{ kind: 'node', nodeKey: 'AppConfig' }],
       render: { kind: 'nodeKey', nodeKey: 'AppConfig' }
@@ -213,7 +214,7 @@ export function buildRealityModel(opts: {
     {
       id: 'pd.client',
       title: 'Client & Proxy',
-      iconKey: 'cloud',
+      iconKey: 'vpn',
       openByDefault: false,
       sources: [
         { kind: 'node', nodeKey: 'ClientInfo' },
@@ -224,7 +225,7 @@ export function buildRealityModel(opts: {
     {
       id: 'pd.history',
       title: 'Installation History',
-      iconKey: 'clock',
+      iconKey: 'install',
       openByDefault: false,
       sources: [{ kind: 'node', nodeKey: 'AutoStatisticInfo' }],
       render: { kind: 'nodeKey', nodeKey: 'AutoStatisticInfo' }
@@ -252,7 +253,7 @@ export function buildRealityModel(opts: {
           {
             id: 'raw.index',
             title: 'Raw Report Nodes',
-            iconKey: 'folder',
+            iconKey: 'docSearch',
             openByDefault: false,
             sources: [],
             render: { kind: 'rawIndex' }

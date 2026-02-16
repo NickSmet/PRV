@@ -1,11 +1,13 @@
 <script lang="ts">
   import * as Collapsible from '../ui/collapsible';
-  import { ChevronRight } from '@lucide/svelte';
+  import DenseChevron from '../dense/DenseChevron.svelte';
   import PrvIcon from '../PrvIcon.svelte';
   import SourceChips from './SourceChips.svelte';
   import type { RealitySourceRef } from '@prv/report-viewmodel';
   import type { Snippet } from 'svelte';
   import Badge from '../ui/badge.svelte';
+
+  type BadgeVariant = 'default' | 'destructive' | 'outline' | 'gold' | 'dim' | 'green' | 'blue' | 'purple' | 'amber';
 
   let {
     title,
@@ -15,6 +17,8 @@
     openByDefault = false,
     sources = [],
     onOpenSource,
+    highlight = false,
+    indent = 0,
     meta,
     children
   }: {
@@ -25,16 +29,18 @@
     openByDefault?: boolean;
     sources?: RealitySourceRef[];
     onOpenSource: (src: RealitySourceRef) => void;
+    highlight?: boolean;
+    indent?: number;
     meta?: Snippet;
     children: Snippet;
   } = $props();
 
   let open = $state(openByDefault);
 
-  function badgeVariant(tone: string | undefined): 'destructive' | 'default' | 'outline' {
+  function badgeVariant(tone: string | undefined): BadgeVariant {
     if (tone === 'danger') return 'destructive';
-    if (tone === 'warn') return 'default';
-    return 'outline';
+    if (tone === 'warn') return 'amber';
+    return 'dim';
   }
 
   function iconClass(tone: string | undefined): string {
@@ -48,40 +54,45 @@
   const badgeOverflow = $derived(Math.max(0, headerBadges.length - badgeItems.length));
 </script>
 
-<div class="border border-border rounded-lg bg-background overflow-hidden">
+<div style={indent ? `margin-left: ${indent}px` : ''}>
   <Collapsible.Root bind:open>
     <Collapsible.Trigger class="w-full">
-      <div class="flex items-start gap-2 px-3 py-2 hover:bg-muted/20">
-        <ChevronRight class={`mt-0.5 h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`} />
-        <PrvIcon {iconKey} {iconUrlByKey} size={16} class="mt-0.5 text-muted-foreground" />
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center justify-between gap-2">
-            <div class="text-[13px] font-semibold">{title}</div>
-            <div class="shrink-0">
-              <SourceChips sources={sources} onOpen={onOpenSource} />
-            </div>
+      <div
+        class={`flex items-center gap-1.5 py-[5px] px-1 pl-2 min-h-[30px] cursor-pointer select-none border-b border-slate-100
+          ${highlight ? 'bg-amber-50' : open ? 'bg-slate-50/80' : 'bg-transparent'}
+          hover:bg-slate-50/50`}
+      >
+        <DenseChevron {open} />
+        {#if iconKey}
+          <PrvIcon {iconKey} {iconUrlByKey} size={12} class="opacity-70 shrink-0" />
+        {/if}
+        <span class="text-[12.5px] font-semibold text-slate-800 shrink-0">{title}</span>
+
+        {#if badgeItems.length}
+          <div class="flex gap-0.5 flex-wrap items-center">
+            {#each badgeItems as b (b.label)}
+              <Badge variant={badgeVariant(b.tone)} class="gap-0.5">
+                {#if b.iconKey}
+                  <PrvIcon iconKey={b.iconKey} {iconUrlByKey} size={10} class={iconClass(b.tone)} />
+                {/if}
+                {b.label}
+              </Badge>
+            {/each}
+            {#if badgeOverflow > 0}
+              <Badge variant="dim">+{badgeOverflow}</Badge>
+            {/if}
           </div>
-          {#if badgeItems.length}
-            <div class="mt-1 flex items-center gap-1 flex-wrap">
-              {#each badgeItems as b (b.label)}
-                <Badge variant={badgeVariant(b.tone)} class="text-[10px] gap-1">
-                  {#if b.iconKey}
-                    <PrvIcon iconKey={b.iconKey} {iconUrlByKey} size={12} class={iconClass(b.tone)} />
-                  {/if}
-                  {b.label}
-                </Badge>
-              {/each}
-              {#if badgeOverflow > 0}
-                <Badge variant="outline" class="text-[10px]">+{badgeOverflow} more</Badge>
-              {/if}
-            </div>
-          {/if}
-          {@render meta?.()}
-        </div>
+        {/if}
+
+        <div class="flex-1"></div>
+
+        <SourceChips {sources} onOpen={onOpenSource} />
       </div>
     </Collapsible.Trigger>
+
     <Collapsible.Content>
-      <div class="border-t border-border bg-muted/10 px-3 py-3">
+      <div class="py-1.5 px-2 pl-7 border-b border-slate-100 bg-slate-50/50">
+        {@render meta?.()}
         {@render children()}
       </div>
     </Collapsible.Content>

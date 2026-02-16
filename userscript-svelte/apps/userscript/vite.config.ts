@@ -42,5 +42,5 @@ export default defineConfig({
     'process.env.NODE_ENV': JSON.stringify('production'),
     'import.meta.env.SSR': 'false'
   },
-  build: { target: 'esnext', minify: false, ssr: false }
+  build: { target: 'esnext', minify: false, ssr: false, assetsInlineLimit: 100_000 }
 });

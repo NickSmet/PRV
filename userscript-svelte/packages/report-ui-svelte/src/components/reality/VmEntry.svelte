@@ -1,8 +1,10 @@
 <script lang="ts">
   import * as Collapsible from '../ui/collapsible';
   import Badge from '../ui/badge.svelte';
-  import { ChevronRight } from '@lucide/svelte';
+  import DenseChevron from '../dense/DenseChevron.svelte';
   import PrvIcon from '../PrvIcon.svelte';
+
+  type BadgeVariant = 'default' | 'destructive' | 'outline' | 'gold' | 'dim' | 'green' | 'blue' | 'purple' | 'amber';
 
   let {
     name,
@@ -26,10 +28,10 @@
 
   let open = $state(openByDefault);
 
-  function badgeVariant(tone: string | undefined): 'destructive' | 'default' | 'outline' {
+  function badgeVariant(tone: string | undefined): BadgeVariant {
     if (tone === 'danger') return 'destructive';
-    if (tone === 'warn') return 'default';
-    return 'outline';
+    if (tone === 'warn') return 'amber';
+    return 'dim';
   }
 
   function iconClass(tone: string | undefined): string {
@@ -42,38 +44,49 @@
   const badgeOverflow = $derived(Math.max(0, headerBadges.length - badgeItems.length));
 </script>
 
-<div class={`border rounded-xl bg-background overflow-hidden ${isCurrent ? 'border-blue-400' : 'border-border'}`}>
+<div class={`mb-px ${isCurrent ? 'border-l-[3px] border-l-blue-500' : 'border-l-[3px] border-l-transparent'}`}>
   <Collapsible.Root bind:open>
     <Collapsible.Trigger class="w-full">
-      <div class="flex items-center gap-2 px-4 py-3 hover:bg-muted/20">
-        <ChevronRight class={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`} />
+      <div
+        class={`flex items-center gap-1.5 py-1.5 px-1 pl-2 min-h-[32px] cursor-pointer select-none border-b border-slate-200
+          ${isCurrent ? 'bg-blue-50/30' : 'bg-white'}`}
+      >
+        <DenseChevron {open} />
         {#if iconUrl}
-          <img src={iconUrl} alt="" class="w-4 h-4" />
+          <img src={iconUrl} alt="" class="w-[13px] h-[13px] shrink-0" />
+        {:else}
+          <span class="text-[13px]">💻</span>
         {/if}
-        <div class="text-[13px] font-bold truncate">{name}</div>
+        <span class="text-[13px] font-bold text-slate-900 truncate">{name}</span>
+
         {#if isCurrent}
-          <Badge variant="outline" class="text-[10px]">CURRENT</Badge>
+          <Badge variant="gold">★ CURRENT</Badge>
         {/if}
+
         {#if badgeItems.length}
-          <div class="flex items-center gap-1 flex-wrap">
+          <div class="flex gap-0.5 flex-wrap items-center">
             {#each badgeItems as b (b.label)}
-              <Badge variant={badgeVariant(b.tone)} class="text-[10px] gap-1">
+              <Badge variant={badgeVariant(b.tone)} class="gap-0.5">
                 {#if b.iconKey}
-                  <PrvIcon iconKey={b.iconKey} {iconUrlByKey} size={12} class={iconClass(b.tone)} />
+                  <PrvIcon iconKey={b.iconKey} {iconUrlByKey} size={10} class={iconClass(b.tone)} />
                 {/if}
                 {b.label}
               </Badge>
             {/each}
             {#if badgeOverflow > 0}
-              <Badge variant="outline" class="text-[10px]">+{badgeOverflow}</Badge>
+              <Badge variant="dim">+{badgeOverflow}</Badge>
             {/if}
           </div>
         {/if}
-        <div class="ml-auto text-[11px] text-muted-foreground font-mono truncate">{uuid}</div>
+
+        <div class="flex-1"></div>
+
+        <span class="text-[9.5px] text-zinc-400 font-mono truncate max-w-[200px]">{uuid}</span>
       </div>
     </Collapsible.Trigger>
+
     <Collapsible.Content>
-      <div class="p-4 space-y-2 border-t border-border bg-muted/10">
+      <div class="border-b border-slate-200">
         {@render children()}
       </div>
     </Collapsible.Content>

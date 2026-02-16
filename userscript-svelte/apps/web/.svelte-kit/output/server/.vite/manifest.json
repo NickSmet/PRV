@@ -54,9 +54,9 @@
     "file": "chunks/attributes.js",
     "name": "attributes"
   },
-  "_button.SoROrkMy.css": {
-    "file": "_app/immutable/assets/button.SoROrkMy.css",
-    "src": "_button.SoROrkMy.css"
+  "_button.ce4x9ijs.css": {
+    "file": "_app/immutable/assets/button.ce4x9ijs.css",
+    "src": "_button.ce4x9ijs.css"
   },
   "_button.js": {
     "file": "chunks/button.js",
@@ -68,7 +68,7 @@
       "_markers.js"
     ],
     "css": [
-      "_app/immutable/assets/button.SoROrkMy.css"
+      "_app/immutable/assets/button.ce4x9ijs.css"
     ]
   },
   "_cache.js": {
@@ -196,7 +196,7 @@
       "_index2.js"
     ],
     "css": [
-      "_app/immutable/assets/_layout.Cnojfg3S.css"
+      "_app/immutable/assets/_layout.CF4vxKhj.css"
     ]
   },
   "src/routes/+page.svelte": {

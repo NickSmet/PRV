@@ -85,19 +85,18 @@ export const reportusParserIcons = {
 
 export type ReportusParserIconKey = keyof typeof reportusParserIcons;
 
-// Map existing `iconKey` strings used by `@prv/report-viewmodel` → colorful legacy icon URLs.
-// This is web-only (served from `apps/web/static`).
+// Map `iconKey` strings → colorful legacy icon URLs.
+// All reportus parser icons are available directly by their key.
+// Legacy aliases (e.g. 'hdd' → hdds icon) are kept for backwards compat.
 export const iconUrlByIconKey: Record<string, string> = {
+  // All reportus parser icons (identity mappings)
+  ...reportusParserIcons,
+
+  // Legacy aliases from viewmodel/nodeBuilder
   vm: reportusParserIcons.vms,
   monitor: reportusParserIcons.gpu,
-  gpu: reportusParserIcons.gpu,
   hdd: reportusParserIcons.hdds,
-  usb: reportusParserIcons.usb,
-  keyboard: reportusParserIcons.keyboard,
-  mouse: reportusParserIcons.mouse,
   printer: reportusParserIcons.printers,
   warn: reportusParserIcons.warning,
-  net: reportusParserIcons.networkAdapter,
-  bridged: reportusParserIcons.bridged,
-  shared: reportusParserIcons.shared
+  net: reportusParserIcons.networkAdapter
 };

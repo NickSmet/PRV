@@ -184,70 +184,74 @@ function getReportIdFromUrl(): string | null {
 }
 
 /**
- * Build report download URL
+ * Discover the archive directory name (e.g. "PrlProblemReport-2021.06.25-14.08.26.729")
+ * by scanning the current page for download links or known text patterns.
  */
-function buildReportDownloadUrl(reportId: string): string {
-  const host = window.location.hostname;
-  return `https://${host}/webapp/reports/${reportId}/report_xml/download`;
+function discoverArchiveName(): string | null {
+  // 1. Look for links containing /files/ on the current page
+  const links = document.querySelectorAll<HTMLAnchorElement>('a[href*="/files/"]');
+  for (const link of links) {
+    const match = link.href.match(/\/files\/([^/]+)\//);
+    if (match) return match[1];
+  }
+
+  // 2. Fallback: scan page text for the archive name pattern
+  const pageText = document.body?.textContent ?? '';
+  const archiveMatch = pageText.match(/PrlProblemReport-[\d.]+/);
+  if (archiveMatch) return archiveMatch[0];
+
+  return null;
 }
 
 /**
- * Build attachment URL (scaffolding for future implementation)
+ * Build a file download URL using the webapp file endpoint.
+ * Pattern: /webapp/reports/{id}/files/{archiveName}/{filename}/download
  */
-function buildAttachmentUrl(reportId: string, type: 'logs' | 'screenshots' | 'attachments' | 'memory_dumps', filename: string): string {
-  const host = window.location.hostname;
-  return `https://${host}/webapp/reports/${reportId}/${type}/${filename}`;
+function buildFileUrl(reportId: string, archiveName: string, filename: string): string {
+  const origin = window.location.origin;
+  const safeName = filename.split('/').map(encodeURIComponent).join('/');
+  return `${origin}/webapp/reports/${reportId}/files/${encodeURIComponent(archiveName)}/${safeName}/download`;
 }
 
 /**
- * Fetch attachment (scaffolding - to be implemented)
+ * Fetch a file from the report archive.
  */
-async function fetchAttachment(reportId: string, type: 'logs' | 'screenshots' | 'attachments' | 'memory_dumps', filename: string): Promise<string | null> {
-  const safeFilename = encodeURIComponent(filename);
-  const url = buildAttachmentUrl(reportId, type, safeFilename);
-  console.log('[PRV] [ATTACHMENT] Fetching:', url);
+async function fetchFile(reportId: string, archiveName: string, filename: string): Promise<string | null> {
+  const url = buildFileUrl(reportId, archiveName, filename);
+  console.log('[PRV] Fetching file:', url);
 
   try {
     const response = await fetch(url, { credentials: 'include' });
     if (!response.ok) {
-      console.warn('[PRV] [ATTACHMENT] Failed:', response.status, response.statusText, url);
+      console.warn('[PRV] File fetch failed:', response.status, response.statusText, url);
       return null;
     }
     return await response.text();
   } catch (error) {
-    console.warn('[PRV] [ATTACHMENT] Error fetching:', url, error);
+    console.warn('[PRV] File fetch error:', url, error);
     return null;
   }
 }
 
 /**
- * Load all log attachments (scaffolding - to be implemented)
+ * Load log attachments from the report archive.
  */
-async function loadLogAttachments(reportId: string): Promise<void> {
-  console.log('[PRV] [ATTACHMENTS] Loading log attachments for report', reportId);
+async function loadLogAttachments(reportId: string, archiveName: string): Promise<void> {
+  console.log('[PRV] Loading log attachments for report', reportId);
 
-  // Fetch these logs separately (SystemLogs <Data/> is empty in report XML)
-  const logFiles = [
-    'tools.log',
-    'parallels-system.log',
-    'vm.log',
-    'dispatcher.log',
-    'prl_client_app.log'
+  const logMappings: Array<{ filename: string; global: string }> = [
+    { filename: 'tools.log', global: '__prv_toolsLogText' },
+    { filename: 'parallels-system.log', global: '__prv_parallelsSystemLogText' }
   ];
 
-  for (const logFile of logFiles) {
-    const content = await fetchAttachment(reportId, 'logs', logFile);
-
-    if (content) {
-      // Map to appropriate global based on log file name
-      if (logFile === 'tools.log') {
-        (window as any).__prv_toolsLogText = content;
-      } else if (logFile === 'parallels-system.log') {
-        (window as any).__prv_parallelsSystemLogText = content;
+  await Promise.all(
+    logMappings.map(async ({ filename, global }) => {
+      const content = await fetchFile(reportId, archiveName, filename);
+      if (content) {
+        (window as any)[global] = content;
       }
-      // Add more mappings as needed
-    }
-  }
+    })
+  );
 }
 
 /**
@@ -386,6 +390,26 @@ export function extractReportData(xmlText: string): void {
 }
 
 /**
+ * Fetch the full Report XML using the legacy report_xml endpoint.
+ */
+async function fetchReportXml(reportId: string): Promise<string | null> {
+  const url = `${window.location.origin}/webapp/reports/${reportId}/report_xml/download`;
+  console.log('[PRV] Fetching report XML from:', url);
+
+  try {
+    const response = await fetch(url, { credentials: 'include' });
+    if (!response.ok) {
+      console.warn('[PRV] Report XML fetch failed:', response.status, response.statusText);
+      return null;
+    }
+    return await response.text();
+  } catch (error) {
+    console.warn('[PRV] Report XML fetch error:', error);
+    return null;
+  }
+}
+
+/**
  * Load full report XML and extract all data
  */
 export async function loadFullReport(): Promise<boolean> {
@@ -396,25 +420,26 @@ export async function loadFullReport(): Promise<boolean> {
     return false;
   }
 
-  const url = buildReportDownloadUrl(reportId);
-  console.log('[PRV] Fetching full report XML from:', url);
-
   try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error('[PRV] Failed to fetch report XML:', response.status, response.statusText);
+    // 1. Fetch the main Report XML (uses its own endpoint)
+    const xmlText = await fetchReportXml(reportId);
+    if (!xmlText) {
+      console.error('[PRV] Failed to fetch Report.xml');
       return false;
     }
-
-    const xmlText = await response.text();
     console.log('[PRV] Received report XML, size:', xmlText.length, 'bytes');
 
-    // Extract all node data
+    // Extract all node data from the XML
     extractReportData(xmlText);
 
-    // Load log attachments (scaffolding - currently just logs intent)
-    await loadLogAttachments(reportId);
+    // 2. Fetch log attachments (need archive name for file endpoint)
+    const archiveName = discoverArchiveName();
+    if (archiveName) {
+      console.log('[PRV] Discovered archive:', archiveName);
+      await loadLogAttachments(reportId, archiveName);
+    } else {
+      console.warn('[PRV] Could not discover archive name — log attachments skipped');
+    }
 
     return true;
   } catch (error) {

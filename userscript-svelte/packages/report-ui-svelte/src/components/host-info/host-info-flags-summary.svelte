@@ -12,30 +12,30 @@
 
   const items = $derived.by(() => {
     const out: Array<{ key: string; tone: 'danger' | 'warn' | 'info'; text: string; Icon: any }> = [];
-    if (flags.lowMemory) out.push({ key: 'lowMemory', tone: 'warn', text: 'High memory usage (active+wired)', Icon: TriangleAlert });
+    if (flags.lowMemory) out.push({ key: 'lowMemory', tone: 'warn', text: 'High mem usage', Icon: TriangleAlert });
     if (flags.privacyRestricted)
-      out.push({ key: 'privacy', tone: 'warn', text: 'Privacy restrictions may block devices', Icon: ShieldAlert });
-    if (hasDisplayLink) out.push({ key: 'displaylink', tone: 'warn', text: 'DisplayLink detected', Icon: Monitor });
-    if (flags.hasExternalDisks) out.push({ key: 'external', tone: 'info', text: 'External disk connected', Icon: HardDrive });
-    if (flags.hasUsbCamera) out.push({ key: 'camera', tone: 'info', text: 'USB camera present', Icon: Camera });
-    if (flags.hasBluetoothAudio) out.push({ key: 'btaudio', tone: 'info', text: 'Bluetooth audio present', Icon: Headphones });
+      out.push({ key: 'privacy', tone: 'warn', text: 'Privacy restricted', Icon: ShieldAlert });
+    if (hasDisplayLink) out.push({ key: 'displaylink', tone: 'warn', text: 'DisplayLink', Icon: Monitor });
+    if (flags.hasExternalDisks) out.push({ key: 'external', tone: 'info', text: 'External disk', Icon: HardDrive });
+    if (flags.hasUsbCamera) out.push({ key: 'camera', tone: 'info', text: 'USB cam', Icon: Camera });
+    if (flags.hasBluetoothAudio) out.push({ key: 'btaudio', tone: 'info', text: 'BT audio', Icon: Headphones });
     return out;
   });
 
   function toneClass(tone: 'danger' | 'warn' | 'info') {
-    if (tone === 'danger') return 'border-red-200 bg-red-50/60 text-red-800';
-    if (tone === 'warn') return 'border-amber-200 bg-amber-50/60 text-amber-800';
-    return 'border-sky-200 bg-sky-50/60 text-sky-800';
+    if (tone === 'danger') return 'border-red-200 bg-red-50/80 text-red-700';
+    if (tone === 'warn') return 'border-amber-200 bg-amber-50/80 text-amber-700';
+    return 'border-sky-100 bg-sky-50/60 text-sky-700';
   }
 </script>
 
 {#if items.length > 0}
-  <div class="space-y-2">
+  <div class="flex flex-wrap items-center gap-1 py-1 px-0.5">
     {#each items as item (item.key)}
-      <div class={`flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] ${toneClass(item.tone)}`}>
-        <item.Icon class="size-4" />
-        <span class="font-medium">{item.text}</span>
-      </div>
+      <span class={`inline-flex items-center gap-1 rounded-[3px] border px-1.5 py-[1px] text-[10px] font-medium ${toneClass(item.tone)}`}>
+        <item.Icon class="size-2.5" />
+        {item.text}
+      </span>
     {/each}
   </div>
 {/if}

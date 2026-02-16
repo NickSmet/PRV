@@ -35,48 +35,46 @@
   }
 </script>
 
-<div class="space-y-2">
-  {#if withHeader}
-    <div class="flex items-center gap-2">
-      <div class="text-[13px] font-semibold text-foreground">Audio</div>
-      <Badge variant="muted" class="text-[10px]">{audio.outputs.length} out</Badge>
-      <Badge variant="muted" class="text-[10px]">{audio.inputs.length} in</Badge>
-    </div>
-  {/if}
+{#if withHeader}
+  <div class="flex items-center gap-1.5 mb-1">
+    <span class="text-[12px] font-semibold text-foreground">Audio</span>
+    <Badge variant="dim" class="text-[9px]">{audio.outputs.length} out</Badge>
+    <Badge variant="dim" class="text-[9px]">{audio.inputs.length} in</Badge>
+  </div>
+{/if}
 
-  <div class="overflow-hidden rounded-xl border border-border bg-background">
-    <div class="px-4 py-3">
-      <div class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Output</div>
-      {#if audio.outputs.length === 0}
-        <div class="mt-1 text-[12px] text-muted-foreground">No output devices.</div>
-      {:else}
-        <div class="mt-2 space-y-1">
-          {#each audio.outputs as d, idx (d.id ?? d.name + ':' + idx)}
-            {@const Icon = iconFor(d.type)}
-            <div class="flex items-center gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-2">
-              <Icon class="size-4 text-muted-foreground" />
-              <span class="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground">{d.name}</span>
-              <Badge variant={audioVariant(d.type)} class="text-[10px]">{d.type}</Badge>
-            </div>
-          {/each}
+<div class="grid grid-cols-2 gap-3">
+  <!-- Output column -->
+  <div>
+    <div class="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">Output</div>
+    {#if audio.outputs.length === 0}
+      <div class="text-[11px] text-muted-foreground">None</div>
+    {:else}
+      {#each audio.outputs as d, idx (d.id ?? d.name + ':' + idx)}
+        {@const Icon = iconFor(d.type)}
+        <div class="flex items-center gap-1.5 py-[3px] border-b border-slate-50 last:border-b-0">
+          <Icon class="size-3 text-muted-foreground shrink-0 opacity-60" />
+          <span class="min-w-0 flex-1 truncate text-[11px] text-foreground">{d.name}</span>
+          <Badge variant={audioVariant(d.type)} class="text-[9px] shrink-0">{d.type}</Badge>
         </div>
-      {/if}
+      {/each}
+    {/if}
+  </div>
 
-      <div class="mt-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Input</div>
-      {#if audio.inputs.length === 0}
-        <div class="mt-1 text-[12px] text-muted-foreground">No input devices.</div>
-      {:else}
-        <div class="mt-2 space-y-1">
-          {#each audio.inputs as d, idx (d.id ?? d.name + ':' + idx)}
-            {@const Icon = iconFor(d.type)}
-            <div class="flex items-center gap-2 rounded-md border border-border/50 bg-muted/10 px-3 py-2">
-              <Icon class="size-4 text-muted-foreground" />
-              <span class="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground">{d.name}</span>
-              <Badge variant={audioVariant(d.type)} class="text-[10px]">{d.type}</Badge>
-            </div>
-          {/each}
+  <!-- Input column -->
+  <div>
+    <div class="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">Input</div>
+    {#if audio.inputs.length === 0}
+      <div class="text-[11px] text-muted-foreground">None</div>
+    {:else}
+      {#each audio.inputs as d, idx (d.id ?? d.name + ':' + idx)}
+        {@const Icon = iconFor(d.type)}
+        <div class="flex items-center gap-1.5 py-[3px] border-b border-slate-50 last:border-b-0">
+          <Icon class="size-3 text-muted-foreground shrink-0 opacity-60" />
+          <span class="min-w-0 flex-1 truncate text-[11px] text-foreground">{d.name}</span>
+          <Badge variant={audioVariant(d.type)} class="text-[9px] shrink-0">{d.type}</Badge>
         </div>
-      {/if}
-    </div>
+      {/each}
+    {/if}
   </div>
 </div>

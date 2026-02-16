@@ -3,11 +3,15 @@
 
   import Badge from './components/ui/badge.svelte';
   import RealityCard from './components/reality/RealityCard.svelte';
-  import RawModal from './components/reality/RawModal.svelte';
+  import RawModal, { type FetchContentFn } from './components/reality/RawModal.svelte';
   import VmEntry from './components/reality/VmEntry.svelte';
   import NodeBody from './components/node/NodeBody.svelte';
+  import DenseChevron from './components/dense/DenseChevron.svelte';
+  import DenseDivider from './components/dense/DenseDivider.svelte';
+  import HostInfoFlagsSummary from './components/host-info/host-info-flags-summary.svelte';
+  import HostInfoSystemBanner from './components/host-info/host-info-system-banner.svelte';
 
-  import type { Marker, CurrentVmModel } from '@prv/report-core';
+  import type { Marker, CurrentVmModel, ParsedMountInfoDisk } from '@prv/report-core';
   import type {
     NodeModel,
     RealityModel,
@@ -39,7 +43,8 @@
     toolsLogMetaByUuid = {},
     sectionIconUrls = {},
     vmIconUrl,
-    iconUrlByKey
+    iconUrlByKey,
+    fetchContent
   }: {
     reportId: string;
     reality: RealityModel;
@@ -73,7 +78,14 @@
     sectionIconUrls?: { host?: string; parallels?: string; vms?: string };
     vmIconUrl?: string;
     iconUrlByKey?: Record<string, string>;
+    fetchContent?: FetchContentFn;
   } = $props();
+
+  // Section collapse states
+  let hostOpen = $state(false);
+  let parallelsOpen = $state(false);
+  let vmsOpen = $state(true);
+  let rawOpen = $state(false);
 
   let rawModalOpen = $state(false);
   let rawModalItem = $state<null | { kind: 'node'; nodeKey: string; title: string } | { kind: 'file'; filePath: string; filename: string; title: string }>(null);
@@ -81,7 +93,6 @@
   let subSectionStates = $state<Record<string, boolean>>({});
 
   function nodeForKey(nodeKey: string): NodeModel | null {
-    // NodeModel.title usually equals NodeKey, except a few log nodes.
     const direct = nodes.find((n) => n.title === nodeKey);
     if (direct) return direct;
     if (nodeKey === 'ToolsLog') return nodes.find((n) => n.id === 'tools-log') ?? null;
@@ -122,14 +133,7 @@
       arr.push(it);
       map.set(group, arr);
     }
-    const ordered = [
-      'Nodes',
-      'VM configs',
-      'VM logs',
-      'Tools logs',
-      'Screenshots/images',
-      'Other'
-    ];
+    const ordered = ['Nodes', 'VM configs', 'VM logs', 'Tools logs', 'Screenshots/images', 'Other'];
     const out: Array<{ group: string; items: RealityRawItem[] }> = [];
     for (const key of ordered) {
       const arr = map.get(key);
@@ -192,327 +196,392 @@
     if (status === 'warning' || status === 'empty') return 'warn';
     return 'info';
   }
+
+  // Count files in rawItems
+  const fileCount = $derived(rawItems.filter(it => it.kind === 'file').length);
+  const nodeCount = $derived(rawItems.filter(it => it.kind === 'node').length);
+
+  // Host-level system data (cross-node lookup)
+  const hostInfoNode = $derived(nodes.find((n) => n.id === 'host-info') ?? null);
+  const hostInfoData = $derived(hostInfoNode?.data as any);
+  const hostInfoSystem = $derived(hostInfoData?.system ?? null);
+  const hostInfoFlags = $derived(hostInfoData?.flags ?? null);
+  const hostInfoHasDisplayLink = $derived(hostInfoData?.hasDisplayLink ?? false);
+
+  // System disk from mount-info (cross-node)
+  const mountInfoNode = $derived(nodes.find((n) => n.id === 'mount-info') ?? null);
+  const mountInfoSystemDisk = $derived.by((): ParsedMountInfoDisk | undefined => {
+    const parsed = (mountInfoNode?.data as any)?.parsed;
+    if (!parsed?.localDisks) return undefined;
+    return (parsed.localDisks as ParsedMountInfoDisk[]).find((d: ParsedMountInfoDisk) => d.label === 'System Disk');
+  });
+
+  // System disk fallback from host-info
+  const hostInfoSystemDisk = $derived.by(() => {
+    if (!hostInfoData) return undefined;
+    const disks = hostInfoData.hardDisks ?? [];
+    for (const disk of disks) {
+      if (disk.external === true || disk.isVirtualDisk === true) continue;
+      const totalSize = disk.sizeBytes;
+      let totalFree: number | null = null;
+      for (const p of disk.partitions) {
+        if (p.freeSizeBytes !== null && p.freeSizeBytes >= 0) {
+          totalFree = (totalFree ?? 0) + p.freeSizeBytes;
+        }
+      }
+      if (totalSize && totalFree !== null) {
+        return { name: disk.name, sizeBytes: totalSize, freeBytes: totalFree, partitionScheme: disk.partitionScheme };
+      }
+    }
+    return undefined;
+  });
 </script>
 
-<div class="max-w-5xl">
-  <!-- Report header -->
-  <div class="mb-4">
-    <div class="text-[12px] text-muted-foreground">Report</div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <h1 class="text-[18px] font-bold">#{String(reportMeta.report_id ?? reportId)}</h1>
-      {#if reportMeta.report_type}
-        <Badge variant="outline" class="text-[11px]">{reportMeta.report_type}</Badge>
-      {/if}
-      {#if reportMeta.product_version}
-        <Badge variant="outline" class="text-[11px]">{reportMeta.product_version}</Badge>
-      {/if}
-    </div>
-    <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-[12px]">
-      {#if reportMeta.received}
-        <div class="rounded-lg border border-border bg-background px-3 py-2">
-          <div class="text-muted-foreground text-[11px]">Received</div>
-          <div class="font-mono">{reportMeta.received}</div>
-        </div>
-      {/if}
-      {#if reportMeta.parsed}
-        <div class="rounded-lg border border-border bg-background px-3 py-2">
-          <div class="text-muted-foreground text-[11px]">Parsed</div>
-          <div class="font-mono">{reportMeta.parsed}</div>
-        </div>
-      {/if}
-      {#if reportMeta.problem_description}
-        <div class="md:col-span-2 rounded-lg border border-border bg-background px-3 py-2">
-          <div class="text-muted-foreground text-[11px]">User description</div>
-          <div class="whitespace-pre-wrap break-words">{reportMeta.problem_description}</div>
-        </div>
-      {/if}
-    </div>
+<div class="max-w-[860px] mx-auto px-4 py-3 text-[12.5px] leading-[1.35] text-slate-900 bg-white">
+  <!-- Report header (compact) -->
+  <div class="flex items-baseline gap-1.5 flex-wrap mb-0.5">
+    <span class="text-[15px] font-extrabold">Report #{String(reportMeta.report_id ?? reportId)}</span>
+    {#if reportMeta.report_type}
+      <Badge variant="blue">{reportMeta.report_type}</Badge>
+    {/if}
+    {#if reportMeta.product_version}
+      <Badge variant="outline">{reportMeta.product_version}</Badge>
+    {/if}
+    {#if reportMeta.received}
+      <span class="text-[11px] text-zinc-400 font-mono">{reportMeta.received}</span>
+    {/if}
   </div>
 
-  <!-- Host (flat section) -->
-  <section class="mb-5">
-    <div class="flex items-baseline justify-between gap-2 flex-wrap mb-2">
-      <h2 class={`text-[15px] font-bold ${sectionIconUrls.host ? 'flex items-center gap-2' : ''}`}>
-        {#if sectionIconUrls.host}
-          <img src={sectionIconUrls.host} alt="" class="w-5 h-5" />
-        {/if}
-        Host
-      </h2>
-      <div class="flex items-center gap-1.5 flex-wrap">
-        {#if hostSummary.os}
-          <Badge variant="outline" class="text-[11px]">{hostSummary.os}</Badge>
-        {/if}
-        {#if hostSummary.ramGb !== null}
-          <Badge variant="outline" class="text-[11px]">{hostSummary.ramGb} GB RAM</Badge>
-        {/if}
-        {#if hostSummary.systemDisk?.capacity}
-          <Badge variant="outline" class="text-[11px]">/ {hostSummary.systemDisk.capacity}</Badge>
-        {/if}
-      </div>
+  {#if reportMeta.problem_description}
+    <div class="px-2 py-1 mb-3 bg-slate-50 rounded text-[12px] border border-slate-100">
+      <span class="text-zinc-400 text-[10px] font-semibold uppercase mr-1.5">User description</span>
+      <span class="text-blue-600 font-mono text-[11.5px]">{reportMeta.problem_description}</span>
     </div>
-    <div class="mb-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-[12px]">
-      {#if hostSummary.computerModel}
-        <div class="rounded-lg border border-border bg-background px-3 py-2">
-          <div class="text-muted-foreground text-[11px]">Model</div>
-          <div class="font-mono">{hostSummary.computerModel}</div>
+  {/if}
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       HOST SECTION
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="mb-2">
+    <!-- Group Header -->
+    <button
+      type="button"
+      class="w-full flex items-center gap-1.5 py-[7px] cursor-pointer select-none border-b-2 border-slate-200"
+      class:mb-0={hostOpen}
+      class:mb-2={!hostOpen}
+      onclick={() => (hostOpen = !hostOpen)}
+    >
+      <DenseChevron open={hostOpen} />
+      {#if sectionIconUrls.host}
+        <img src={sectionIconUrls.host} alt="" class="w-[14px] h-[14px]" />
+      {:else}
+        <span class="text-[14px]">🍎</span>
+      {/if}
+      <span class="text-[14px] font-bold text-slate-900">Host</span>
+      <div class="flex-1"></div>
+    </button>
+
+    {#if hostOpen}
+      <!-- Host system summary (flags + CPU/RAM/Disk) at top level -->
+      {#if hostInfoFlags}
+        <div class="pl-5">
+          <HostInfoFlagsSummary flags={hostInfoFlags} hasDisplayLink={hostInfoHasDisplayLink} />
         </div>
       {/if}
-      {#if hostSummary.cpu}
-        <div class="rounded-lg border border-border bg-background px-3 py-2">
-          <div class="text-muted-foreground text-[11px]">CPU</div>
-          <div class="font-mono">{hostSummary.cpu}</div>
+      {#if hostInfoSystem}
+        <div class="pl-5">
+          <HostInfoSystemBanner system={hostInfoSystem} systemDisk={hostInfoSystemDisk} mountInfoDisk={mountInfoSystemDisk} />
         </div>
       {/if}
-    </div>
 
-    <div class="space-y-2">
-      {#each cardListForSection('host') as card (card.id)}
-        {@const node = renderNodeCard(card)}
-        <RealityCard
-          title={card.title}
-          iconKey={card.iconKey}
-          iconUrlByKey={iconUrlByKey}
-          headerBadges={selectHeaderBadges(node)}
-          openByDefault={card.openByDefault}
-          sources={card.sources}
-          onOpenSource={openSource}
-        >
-          {#if card.render.kind === 'nodeKey'}
-            {#if node}
-              <NodeBody {node} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
-            {:else}
-              <div class="text-sm text-muted-foreground">No {card.render.nodeKey} data.</div>
-            {/if}
-          {:else}
-            <div class="text-sm text-muted-foreground">Not implemented.</div>
-          {/if}
-        </RealityCard>
-      {/each}
-    </div>
-  </section>
-
-  <!-- Parallels Desktop (flat section) -->
-  <section class="mb-5">
-    <div class="flex items-baseline justify-between gap-2 flex-wrap mb-2">
-      <h2 class={`text-[15px] font-bold ${sectionIconUrls.parallels ? 'flex items-center gap-2' : ''}`}>
-        {#if sectionIconUrls.parallels}
-          <img src={sectionIconUrls.parallels} alt="" class="w-5 h-5" />
-        {/if}
-        Parallels Desktop
-      </h2>
-      <div class="flex items-center gap-1.5 flex-wrap">
-        {#if reportMeta.product_version}
-          <Badge variant="outline" class="text-[11px]">{reportMeta.product_version}</Badge>
-        {/if}
-      </div>
-    </div>
-
-    <div class="space-y-2">
-      {#each cardListForSection('parallels') as card (card.id)}
-        {@const node = renderNodeCard(card)}
-        <RealityCard
-          title={card.title}
-          iconKey={card.iconKey}
-          iconUrlByKey={iconUrlByKey}
-          headerBadges={selectHeaderBadges(node)}
-          openByDefault={card.openByDefault}
-          sources={card.sources}
-          onOpenSource={openSource}
-        >
-          {#if card.render.kind === 'nodeKey'}
-            {#if node}
-              <NodeBody {node} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
-            {:else}
-              <div class="text-sm text-muted-foreground">No {card.render.nodeKey} data.</div>
-            {/if}
-          {:else}
-            <div class="text-sm text-muted-foreground">Not implemented.</div>
-          {/if}
-        </RealityCard>
-      {/each}
-    </div>
-  </section>
-
-  <!-- Virtual Machines (flat section) -->
-  <section class="mb-5">
-    <div class="flex items-baseline justify-between gap-2 flex-wrap mb-2">
-      <h2 class={`text-[15px] font-bold ${sectionIconUrls.vms ? 'flex items-center gap-2' : ''}`}>
-        {#if sectionIconUrls.vms}
-          <img src={sectionIconUrls.vms} alt="" class="w-5 h-5" />
-        {/if}
-        Virtual Machines
-      </h2>
-      <div class="text-[12px] text-muted-foreground">{vmSection?.vms?.length ?? 0} VMs</div>
-    </div>
-
-    {#if !vmSection?.vms || vmSection.vms.length === 0}
-      <div class="text-sm text-muted-foreground">No VM directory data.</div>
-    {:else}
-      <div class="space-y-2">
-        {#each vmSection.vms as vm (vm.uuid)}
-          {@const cfg = vmConfigByUuid[vm.uuid] ?? null}
-          {@const ips = vmIpsByUuid[vm.uuid] ?? []}
-          {@const cfgNode = cfg ? buildCurrentVmNode(cfg) : null}
-          {@const currentVmNode = vm.isCurrent ? (nodes.find((n) => n.id === 'current-vm') ?? null) : null}
-          {@const guestOsNode = vm.isCurrent ? (nodes.find((n) => n.id === 'guest-os') ?? null) : null}
-          {@const vmHeaderBadges =
-            vm.isCurrent
-              ? mergeBadges(selectHeaderBadges(guestOsNode), selectHeaderBadges(currentVmNode))
-              : selectHeaderBadges(cfgNode)}
-          <VmEntry
-            name={vm.name}
-            uuid={vm.uuid}
-            isCurrent={vm.isCurrent}
-            openByDefault={false}
-            iconUrl={vmIconUrl}
-            headerBadges={vmHeaderBadges}
+      <!-- Host cards -->
+      <div>
+        {#each cardListForSection('host') as card (card.id)}
+          {@const node = renderNodeCard(card)}
+          <RealityCard
+            title={card.title}
+            iconKey={card.iconKey}
             iconUrlByKey={iconUrlByKey}
+            headerBadges={selectHeaderBadges(node)}
+            openByDefault={card.openByDefault}
+            sources={card.sources}
+            onOpenSource={openSource}
           >
-            <div class="mb-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-[12px]">
-              {#if cfg?.vmHome}
-                <div class="rounded-lg border border-border bg-background px-3 py-2">
-                  <div class="text-muted-foreground text-[11px]">Location</div>
-                  <div class="font-mono break-all">{cfg.vmHome}</div>
-                </div>
+            {#if card.render.kind === 'nodeKey'}
+              {#if node}
+                <NodeBody {node} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
+              {:else}
+                <div class="text-[11px] text-zinc-400">No {card.render.nodeKey} data.</div>
               {/if}
-              {#if cfg?.creationDate}
-                <div class="rounded-lg border border-border bg-background px-3 py-2">
-                  <div class="text-muted-foreground text-[11px]">Created</div>
-                  <div class="font-mono">{cfg.creationDate}</div>
-                </div>
-              {/if}
-              {#if ips.length}
-                <div class="md:col-span-2 rounded-lg border border-border bg-background px-3 py-2">
-                  <div class="text-muted-foreground text-[11px]">IP addresses</div>
-                  <div class="font-mono">{ips.join(', ')}</div>
-                </div>
-              {/if}
-            </div>
-
-            {#each vm.cards as card (card.id)}
-              {@const vmCardNode =
-                card.render.kind === 'nodeKey'
-                  ? renderNodeCard(card)
-                  : card.render.kind === 'vmSettings' && cfg
-                    ? cfgNode
-                    : card.render.kind === 'vmSettings' && vm.isCurrent
-                      ? (nodes.find((n) => n.id === 'current-vm') ?? null)
-                      : null}
-              {@const vmLogMeta = toolsLogMetaByUuid[vm.uuid] ?? null}
-              <RealityCard
-                title={card.title}
-                iconKey={card.iconKey}
-                iconUrlByKey={iconUrlByKey}
-                headerBadges={
-                  card.render.kind === 'vmLogs' && vmLogMeta
-                    ? [
-                        { label: vmLogMeta.status ?? 'Tools', tone: toolsStatusTone(vmLogMeta.status), iconKey: 'clipboard' },
-                        ...(vmLogMeta.hasCorruptRegistry
-                          ? [{ label: 'Corrupt Registry', tone: 'danger', iconKey: 'warn' }]
-                          : []),
-                        ...(vmLogMeta.hasPrlDdIssue
-                          ? [{ label: vmLogMeta.kbArticle ?? 'KB125243', tone: 'danger', iconKey: 'warn' }]
-                          : [])
-                      ]
-                    : card.render.kind === 'vmSettings' && vm.isCurrent
-                      ? mergeBadges(selectHeaderBadges(guestOsNode), selectHeaderBadges(vmCardNode))
-                    : selectHeaderBadges(vmCardNode)
-                }
-                openByDefault={card.openByDefault}
-                sources={card.sources}
-                onOpenSource={openSource}
-              >
-                {#if card.render.kind === 'vmSettings'}
-                  {#if vm.isCurrent}
-                    {@const node = nodes.find((n) => n.id === 'current-vm') ?? null}
-                    {#if node}
-                      <NodeBody {node} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
-                    {:else}
-                      <div class="text-sm text-muted-foreground">No CurrentVm data.</div>
-                    {/if}
-                  {:else}
-                    {#if cfg}
-                      {@const node = buildCurrentVmNode(cfg)}
-                      <NodeBody {node} markers={[]} subSectionStates={subSectionStates} {iconUrlByKey} />
-                    {:else}
-                      <div class="text-sm text-muted-foreground">No config for this VM in report.</div>
-                    {/if}
-                  {/if}
-                {:else if card.render.kind === 'vmLogs'}
-                  <div class="space-y-2">
-                    {#if toolsLogMetaByUuid[vm.uuid]}
-                      {@const m = toolsLogMetaByUuid[vm.uuid]}
-                      {#if m}
-                        <div class="flex items-center gap-2 flex-wrap text-[12px]">
-                          <span class="text-muted-foreground">Tools:</span>
-                          <Badge variant="outline" class="text-[10px]">{m.status ?? 'unknown'}</Badge>
-                          {#if m.hasCorruptRegistry}
-                            <Badge variant="destructive" class="text-[10px]">Corrupt Registry</Badge>
-                          {/if}
-                          {#if m.hasPrlDdIssue}
-                            <Badge variant="destructive" class="text-[10px]">{m.kbArticle ?? 'prl_dd.inf'}</Badge>
-                          {/if}
-                        </div>
-                      {/if}
-                    {/if}
-                    {#if card.sources.length === 0}
-                      <div class="text-sm text-muted-foreground">No discovered per-VM logs.</div>
-                    {:else}
-                      <div class="flex flex-col gap-1">
-                        {#each card.sources as src}
-                          {#if src.kind === 'file'}
-                            <button
-                              type="button"
-                              class="text-left text-[12px] font-mono text-muted-foreground hover:text-foreground underline underline-offset-2"
-                              onclick={() => openSource(src)}
-                            >
-                              {src.filename}
-                            </button>
-                          {/if}
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
-                {:else if card.render.kind === 'nodeKey'}
-                  {#if vmCardNode}
-                    <NodeBody node={vmCardNode} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
-                  {:else}
-                    <div class="text-sm text-muted-foreground">No {card.render.nodeKey} data.</div>
-                  {/if}
-                {:else}
-                  <div class="text-sm text-muted-foreground">Not implemented.</div>
-                {/if}
-              </RealityCard>
-            {/each}
-          </VmEntry>
+            {:else}
+              <div class="text-[11px] text-zinc-400">Not implemented.</div>
+            {/if}
+          </RealityCard>
         {/each}
       </div>
     {/if}
   </section>
 
-  <!-- Raw escape hatch -->
-  <section class="mb-6">
-    <RealityCard
-      title="Raw report nodes"
-      iconKey="folder"
-      iconUrlByKey={iconUrlByKey}
-      headerBadges={[]}
-      openByDefault={false}
-      sources={[]}
-      onOpenSource={() => {}}
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PARALLELS DESKTOP SECTION
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="mb-2">
+    <!-- Group Header -->
+    <button
+      type="button"
+      class="w-full flex items-center gap-1.5 py-[7px] cursor-pointer select-none border-b-2 border-slate-200"
+      class:mb-0={parallelsOpen}
+      class:mb-2={!parallelsOpen}
+      onclick={() => (parallelsOpen = !parallelsOpen)}
     >
+      <DenseChevron open={parallelsOpen} />
+      {#if sectionIconUrls.parallels}
+        <img src={sectionIconUrls.parallels} alt="" class="w-[14px] h-[14px]" />
+      {:else}
+        <span class="text-[14px]">▶️</span>
+      {/if}
+      <span class="text-[14px] font-bold text-slate-900">Parallels Desktop</span>
+      {#if reportMeta.product_version}
+        <Badge variant="blue">{reportMeta.product_version}</Badge>
+      {/if}
+      <div class="flex-1"></div>
+    </button>
+
+    {#if parallelsOpen}
+      <div>
+        {#each cardListForSection('parallels') as card (card.id)}
+          {@const node = renderNodeCard(card)}
+          <RealityCard
+            title={card.title}
+            iconKey={card.iconKey}
+            iconUrlByKey={iconUrlByKey}
+            headerBadges={selectHeaderBadges(node)}
+            openByDefault={card.openByDefault}
+            sources={card.sources}
+            onOpenSource={openSource}
+          >
+            {#if card.render.kind === 'nodeKey'}
+              {#if node}
+                <NodeBody {node} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
+              {:else}
+                <div class="text-[11px] text-zinc-400">No {card.render.nodeKey} data.</div>
+              {/if}
+            {:else}
+              <div class="text-[11px] text-zinc-400">Not implemented.</div>
+            {/if}
+          </RealityCard>
+        {/each}
+      </div>
+    {/if}
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VIRTUAL MACHINES SECTION
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="mb-2">
+    <!-- Group Header -->
+    <button
+      type="button"
+      class="w-full flex items-center gap-1.5 py-[7px] cursor-pointer select-none border-b-2 border-slate-200"
+      class:mb-0={vmsOpen}
+      class:mb-2={!vmsOpen}
+      onclick={() => (vmsOpen = !vmsOpen)}
+    >
+      <DenseChevron open={vmsOpen} />
+      {#if sectionIconUrls.vms}
+        <img src={sectionIconUrls.vms} alt="" class="w-[14px] h-[14px]" />
+      {:else}
+        <span class="text-[14px]">🗂</span>
+      {/if}
+      <span class="text-[14px] font-bold text-slate-900">Virtual Machines</span>
+      <div class="flex-1"></div>
+      <span class="text-[12px] text-zinc-400">{vmSection?.vms?.length ?? 0} VMs</span>
+    </button>
+
+    {#if vmsOpen}
+      {#if !vmSection?.vms || vmSection.vms.length === 0}
+        <div class="py-2 px-7 text-[11px] text-zinc-400">No VM directory data.</div>
+      {:else}
+        <div>
+          {#each vmSection.vms as vm (vm.uuid)}
+            {@const cfg = vmConfigByUuid[vm.uuid] ?? null}
+            {@const ips = vmIpsByUuid[vm.uuid] ?? []}
+            {@const cfgNode = cfg ? buildCurrentVmNode(cfg) : null}
+            {@const currentVmNode = vm.isCurrent ? (nodes.find((n) => n.id === 'current-vm') ?? null) : null}
+            {@const guestOsNode = vm.isCurrent ? (nodes.find((n) => n.id === 'guest-os') ?? null) : null}
+            {@const vmHeaderBadges =
+              vm.isCurrent
+                ? mergeBadges(selectHeaderBadges(guestOsNode), selectHeaderBadges(currentVmNode))
+                : selectHeaderBadges(cfgNode)}
+            <VmEntry
+              name={vm.name}
+              uuid={vm.uuid}
+              isCurrent={vm.isCurrent}
+              openByDefault={vm.isCurrent}
+              iconUrl={vmIconUrl}
+              headerBadges={vmHeaderBadges}
+              iconUrlByKey={iconUrlByKey}
+            >
+              <!-- VM quick info -->
+              {#if cfg?.vmHome || cfg?.creationDate || ips.length}
+                <div class="py-1.5 px-2 pl-7 border-b border-slate-100 text-[11px]">
+                  <div class="flex flex-wrap gap-x-4 gap-y-0.5">
+                    {#if cfg?.vmHome}
+                      <div><span class="text-zinc-400">Home:</span> <span class="font-mono text-[10px] text-zinc-600">{cfg.vmHome}</span></div>
+                    {/if}
+                    {#if cfg?.creationDate}
+                      <div><span class="text-zinc-400">Created:</span> <span class="font-mono text-zinc-600">{cfg.creationDate}</span></div>
+                    {/if}
+                    {#if ips.length}
+                      <div><span class="text-zinc-400">IP:</span> <span class="font-mono text-zinc-600">{ips.join(', ')}</span></div>
+                    {/if}
+                  </div>
+                </div>
+              {/if}
+
+              <!-- VM cards -->
+              {#each vm.cards as card (card.id)}
+                {@const vmCardNode =
+                  card.render.kind === 'nodeKey'
+                    ? renderNodeCard(card)
+                    : card.render.kind === 'vmSettings' && cfg
+                      ? cfgNode
+                      : card.render.kind === 'vmSettings' && vm.isCurrent
+                        ? (nodes.find((n) => n.id === 'current-vm') ?? null)
+                        : null}
+                {@const vmLogMeta = toolsLogMetaByUuid[vm.uuid] ?? null}
+
+                {#if card.render.kind === 'vmLogs'}
+                  <DenseDivider label="VM Logs" />
+                {/if}
+
+                <RealityCard
+                  title={card.title}
+                  iconKey={card.iconKey}
+                  iconUrlByKey={iconUrlByKey}
+                  headerBadges={
+                    card.render.kind === 'vmLogs' && vmLogMeta
+                      ? [
+                          { label: vmLogMeta.status ?? 'Tools', tone: toolsStatusTone(vmLogMeta.status), iconKey: 'clipboard' },
+                          ...(vmLogMeta.hasCorruptRegistry
+                            ? [{ label: 'Corrupt Registry', tone: 'danger' as const, iconKey: 'warn' }]
+                            : []),
+                          ...(vmLogMeta.hasPrlDdIssue
+                            ? [{ label: vmLogMeta.kbArticle ?? 'KB125243', tone: 'danger' as const, iconKey: 'warn' }]
+                            : [])
+                        ]
+                      : card.render.kind === 'vmSettings' && vm.isCurrent
+                        ? mergeBadges(selectHeaderBadges(guestOsNode), selectHeaderBadges(vmCardNode))
+                        : selectHeaderBadges(vmCardNode)
+                  }
+                  openByDefault={card.openByDefault}
+                  sources={card.sources}
+                  onOpenSource={openSource}
+                  indent={12}
+                >
+                  {#if card.render.kind === 'vmSettings'}
+                    {#if vm.isCurrent}
+                      {@const node = nodes.find((n) => n.id === 'current-vm') ?? null}
+                      {#if node}
+                        <NodeBody {node} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
+                      {:else}
+                        <div class="text-[11px] text-zinc-400">No CurrentVm data.</div>
+                      {/if}
+                    {:else}
+                      {#if cfg}
+                        {@const node = buildCurrentVmNode(cfg)}
+                        <NodeBody {node} markers={[]} subSectionStates={subSectionStates} {iconUrlByKey} />
+                      {:else}
+                        <div class="text-[11px] text-zinc-400">No config for this VM in report.</div>
+                      {/if}
+                    {/if}
+                  {:else if card.render.kind === 'vmLogs'}
+                    <div class="space-y-1">
+                      {#if toolsLogMetaByUuid[vm.uuid]}
+                        {@const m = toolsLogMetaByUuid[vm.uuid]}
+                        {#if m}
+                          <div class="flex items-center gap-2 flex-wrap text-[11px]">
+                            <span class="text-zinc-400">Tools:</span>
+                            <Badge variant="outline">{m.status ?? 'unknown'}</Badge>
+                            {#if m.hasCorruptRegistry}
+                              <Badge variant="destructive">Corrupt Registry</Badge>
+                            {/if}
+                            {#if m.hasPrlDdIssue}
+                              <Badge variant="destructive">{m.kbArticle ?? 'prl_dd.inf'}</Badge>
+                            {/if}
+                          </div>
+                        {/if}
+                      {/if}
+                      {#if card.sources.length === 0}
+                        <div class="text-[11px] text-zinc-400">No discovered per-VM logs.</div>
+                      {:else}
+                        <div class="flex flex-col gap-0.5">
+                          {#each card.sources as src}
+                            {#if src.kind === 'file'}
+                              <button
+                                type="button"
+                                class="text-left text-[11px] font-mono text-zinc-500 hover:text-zinc-800 underline underline-offset-2"
+                                onclick={() => openSource(src)}
+                              >
+                                {src.filename}
+                              </button>
+                            {/if}
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
+                  {:else if card.render.kind === 'nodeKey'}
+                    {#if vmCardNode}
+                      <NodeBody node={vmCardNode} {markers} subSectionStates={subSectionStates} {iconUrlByKey} />
+                    {:else}
+                      <div class="text-[11px] text-zinc-400">No {card.render.nodeKey} data.</div>
+                    {/if}
+                  {:else}
+                    <div class="text-[11px] text-zinc-400">Not implemented.</div>
+                  {/if}
+                </RealityCard>
+              {/each}
+
+              {#if !vm.isCurrent}
+                <div class="py-1 px-3 pl-8 text-[10.5px] text-zinc-400 italic border-b border-slate-100">
+                  No guest diagnostics — not the reported VM
+                </div>
+              {/if}
+            </VmEntry>
+          {/each}
+        </div>
+      {/if}
+    {/if}
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       RAW ESCAPE HATCH
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="border-t border-slate-100">
+    <button
+      type="button"
+      class="w-full flex items-center gap-1.5 py-1.5 text-[11.5px] text-zinc-400 cursor-pointer hover:text-zinc-600"
+      onclick={() => (rawOpen = !rawOpen)}
+    >
+      <DenseChevron open={rawOpen} />
+      <span>📋</span>
+      <span>Raw Report Nodes</span>
+      <span class="font-mono text-[10px]">· {nodeCount} nodes · {fileCount} files</span>
+    </button>
+
+    {#if rawOpen}
       {@const grouped = groupRawItems(rawItems)}
-      <div class="space-y-3">
+      <div class="py-2 px-2 pl-7 space-y-3 border-t border-slate-100 bg-slate-50/50">
         {#each grouped as g (g.group)}
           <div>
-            <div class="text-[11px] uppercase tracking-wide text-muted-foreground font-bold mb-1">
+            <div class="text-[10px] uppercase tracking-wide text-zinc-400 font-bold mb-1">
               {g.group}
             </div>
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-0.5">
               {#each g.items as it}
                 <button
                   type="button"
-                  class="text-left text-[12px] font-mono text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  class="text-left text-[11px] font-mono text-zinc-500 hover:text-zinc-800 underline underline-offset-2"
                   onclick={() => openRawItem(it)}
                 >
                   {#if it.kind === 'node'}
@@ -526,14 +595,15 @@
           </div>
         {/each}
       </div>
-    </RealityCard>
-  </section>
+    {/if}
+  </div>
 </div>
 
 <RawModal
   {reportId}
   open={rawModalOpen}
   item={rawModalItem}
+  {fetchContent}
   onClose={() => {
     rawModalOpen = false;
     rawModalItem = null;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Collapsible from '../ui/collapsible';
+  import DenseChevron from '../dense/DenseChevron.svelte';
   import type { IconComponent } from '../../icon';
-  import { ChevronRight } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
   let {
@@ -23,27 +23,30 @@
   let open = $state(openByDefault);
 </script>
 
-<div class="overflow-hidden rounded-xl border border-border bg-background">
-  <Collapsible.Root bind:open>
-    <Collapsible.Trigger class="w-full">
-      <div class="flex items-center gap-2 px-3 py-2.5 hover:bg-muted/20">
-        <ChevronRight class={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`} />
-        {#if Icon}
-          <Icon class="h-4 w-4 text-muted-foreground" />
-        {/if}
-        <div class="text-[12px] font-semibold">{title}</div>
-        <div class="ml-auto flex items-center gap-1.5">
-          {@render badges?.()}
-          {#if typeof count === 'number'}
-            <div class="text-[11px] text-muted-foreground">{count}</div>
-          {/if}
-        </div>
+<Collapsible.Root bind:open>
+  <Collapsible.Trigger class="w-full">
+    <div
+      class={`flex items-center gap-1.5 py-[5px] px-1 pl-2 min-h-[28px] cursor-pointer select-none border-b border-slate-100
+        ${open ? 'bg-slate-50/80' : 'bg-transparent'}
+        hover:bg-slate-50/50`}
+    >
+      <DenseChevron {open} />
+      {#if Icon}
+        <Icon class="size-3.5 text-muted-foreground shrink-0 opacity-70" />
+      {/if}
+      <span class="text-[12px] font-semibold text-slate-700 shrink-0">{title}</span>
+      <div class="flex items-center gap-1">
+        {@render badges?.()}
       </div>
-    </Collapsible.Trigger>
-    <Collapsible.Content>
-      <div class="border-t border-border bg-muted/10 px-4 py-3">
-        {@render children()}
-      </div>
-    </Collapsible.Content>
-  </Collapsible.Root>
-</div>
+      <div class="flex-1"></div>
+      {#if typeof count === 'number'}
+        <span class="text-[11px] font-mono text-muted-foreground tabular-nums">{count}</span>
+      {/if}
+    </div>
+  </Collapsible.Trigger>
+  <Collapsible.Content>
+    <div class="py-1 px-2 pl-6 border-b border-slate-100 bg-slate-50/30">
+      {@render children()}
+    </div>
+  </Collapsible.Content>
+</Collapsible.Root>

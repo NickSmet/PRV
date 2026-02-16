@@ -8,16 +8,23 @@
     | { kind: 'node'; nodeKey: string; title: string }
     | { kind: 'file'; filePath: string; filename: string; title: string };
 
+  export type FetchContentFn = (
+    item: ModalItem,
+    maxBytes: number
+  ) => Promise<{ text: string; truncated: boolean; source?: string | null } | null>;
+
   let {
     reportId,
     open,
     item,
-    onClose
+    onClose,
+    fetchContent
   }: {
     reportId: string;
     open: boolean;
     item: ModalItem | null;
     onClose: () => void;
+    fetchContent?: FetchContentFn;
   } = $props();
 
   const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
@@ -89,6 +96,19 @@
     }
 
     try {
+      // Custom fetch override (e.g. userscript reading from window globals)
+      if (fetchContent) {
+        const result = await fetchContent(item, maxBytes);
+        if (result) {
+          text = result.text;
+          truncated = result.truncated;
+          source = result.source ?? null;
+        } else {
+          error = 'Content not available';
+        }
+        return;
+      }
+
       if (item.kind === 'node') {
         const url = `/api/reports/${encodeURIComponent(reportId)}/raw/node/${encodeURIComponent(item.nodeKey)}?maxBytes=${maxBytes}`;
         const res = await fetchText(url);

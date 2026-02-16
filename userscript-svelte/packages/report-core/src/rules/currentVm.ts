@@ -28,7 +28,7 @@ const macVmRule: Rule = (report) => {
     return [
       createNodeMarker('macvm', NODE_ID, 'info', 'Mac VM', {
         tooltip: 'This is a macOS virtual machine',
-        iconKey: 'apple'
+        iconKey: 'macvm'
       })
     ];
   }
@@ -49,7 +49,7 @@ const noHddRule: Rule = (report) => {
     return [
       createNodeMarker('no-hdd', NODE_ID, 'danger', 'No HDD', {
         tooltip: 'No HDD attached to VM!',
-        iconKey: 'alert-triangle'
+        iconKey: 'bad'
       }),
       createSubSectionMarker('no-hdd-subsection', NODE_ID, 'Hardware', 'hdds', 'danger', 'Empty', {
         tooltip: 'No HDD attached to VM!'
@@ -68,7 +68,7 @@ const bootCampRule: Rule = (report) => {
     return [
       createNodeMarker('boot-camp', NODE_ID, 'info', 'Boot Camp', {
         tooltip: 'This VM uses a Boot Camp partition',
-        iconKey: 'hard-drive'
+        iconKey: 'Boot Camp'
       })
     ];
   }
@@ -84,7 +84,7 @@ const trimEnabledRule: Rule = (report) => {
     return [
       createNodeMarker('trim-enabled', NODE_ID, 'info', 'TRIM', {
         tooltip: 'TRIM is enabled on virtual disk',
-        iconKey: 'hard-drive'
+        iconKey: 'trim'
       })
     ];
   }
@@ -100,7 +100,7 @@ const splittedDiskRule: Rule = (report) => {
     return [
       createNodeMarker('splitted-disk', NODE_ID, 'info', 'Splitted', {
         tooltip: 'Virtual disk is split into multiple files',
-        iconKey: 'hard-drive'
+        iconKey: 'splitted'
       })
     ];
   }
@@ -116,7 +116,7 @@ const plainDiskRule: Rule = (report) => {
     return [
       createNodeMarker('plain-disk', NODE_ID, 'info', 'Plain Disk', {
         tooltip: 'Non-expanding (pre-allocated) virtual disk',
-        iconKey: 'hard-drive'
+        iconKey: 'plain vHDD'
       })
     ];
   }
@@ -142,7 +142,7 @@ const externalVhddRule: Rule = (report) => {
         tooltip: externalCount > 0
           ? `Virtual HDD is located outside the PVM bundle (${externalCount} disk${externalCount === 1 ? '' : 's'}).${externalSample ? ` Example: ${externalSample}` : ''}`
           : 'Virtual HDD is located outside the PVM bundle',
-        iconKey: 'hard-drive'
+        iconKey: 'external vHDD'
       }),
       createSubSectionMarker('external-vhdd-subsection', NODE_ID, 'Hardware', 'hdds', 'warn', 'External', {
         tooltip: 'Virtual HDD is located outside the PVM bundle'
@@ -161,7 +161,7 @@ const rollbackModeRule: Rule = (report) => {
     return [
       createNodeMarker('rollback-mode', NODE_ID, 'warn', 'Rollback Mode', {
         tooltip: 'Rollback Mode is enabled - changes are discarded on shutdown',
-        iconKey: 'rotate-ccw'
+        iconKey: 'rollbackMode'
       })
     ];
   }
@@ -181,7 +181,7 @@ const sharedNetworkRule: Rule = (report) => {
     return [
       createNodeMarker('shared-network', NODE_ID, 'info', 'Shared', {
         tooltip: 'Using Shared Networking mode',
-        iconKey: 'network'
+        iconKey: 'shared'
       })
     ];
   }
@@ -197,7 +197,7 @@ const bridgedNetworkRule: Rule = (report) => {
     return [
       createNodeMarker('bridged-network', NODE_ID, 'info', 'Bridged', {
         tooltip: 'Using Bridged Networking mode',
-        iconKey: 'network'
+        iconKey: 'bridged'
       })
     ];
   }
@@ -213,7 +213,7 @@ const disconnectedAdapterRule: Rule = (report) => {
     return [
       createNodeMarker('disconnected-adapter', NODE_ID, 'warn', 'NIC Offline', {
         tooltip: 'One or more network adapters are disconnected',
-        iconKey: 'wifi-off'
+        iconKey: 'adapterNotConnected'
       }),
       createSubSectionMarker('disconnected-adapter-subsection', NODE_ID, 'Hardware', 'networks', 'warn', 'Disconnected', {
         tooltip: 'Network adapter is disconnected'
@@ -240,7 +240,7 @@ const networkConditionerRule: Rule = (report) => {
           tooltip: isLimited
             ? 'Network Conditioner is limiting bandwidth'
             : 'Network Conditioner is enabled (full speed)',
-          iconKey: 'activity'
+          iconKey: isLimited ? 'network conditioner limited' : 'network conditioner fullspeed'
         }
       )
     ];
@@ -261,7 +261,7 @@ const copiedVmRule: Rule = (report) => {
     return [
       createNodeMarker('copied-vm', NODE_ID, 'warn', 'Copied VM', {
         tooltip: 'This VM was copied from another VM (Source UUID differs from VM UUID)',
-        iconKey: 'copy'
+        iconKey: 'copied vm'
       }),
       createRowMarker('copied-vm-detail', NODE_ID, 'General.Source UUID', 'warn', 'Copied', {
         tooltip: 'Source UUID differs from VM UUID'
@@ -299,7 +299,7 @@ const externalDriveRule: Rule = (report) => {
     return [
       createNodeMarker('external-drive', NODE_ID, 'warn', 'External Drive', {
         tooltip: 'VM is located on an external volume (/Volumes/...)',
-        iconKey: 'hard-drive'
+        iconKey: 'external drive'
       })
     ];
   }
@@ -315,7 +315,7 @@ const linkedCloneRule: Rule = (report) => {
     return [
       createNodeMarker('linked-clone', NODE_ID, 'info', 'Linked Clone', {
         tooltip: 'This is a linked clone VM',
-        iconKey: 'link'
+        iconKey: 'linked clone'
       })
     ];
   }
@@ -337,7 +337,7 @@ const appleHvRule: Rule = (report) => {
     return [
       createNodeMarker('apple-hv', NODE_ID, 'info', 'Apple HV', {
         tooltip: 'Using Apple Hypervisor Framework',
-        iconKey: 'cpu'
+        iconKey: 'AppleHV'
       })
     ];
   }
@@ -353,7 +353,7 @@ const nestedVirtRule: Rule = (report) => {
     return [
       createNodeMarker('nested-virt', NODE_ID, 'info', 'Nested', {
         tooltip: 'Nested Virtualization is enabled',
-        iconKey: 'layers'
+        iconKey: 'Nested'
       })
     ];
   }
@@ -379,7 +379,7 @@ const headlessModeRule: Rule = (report) => {
     return [
       createNodeMarker('headless', NODE_ID, 'info', 'Headless', {
         tooltip: 'VM runs in headless mode (no window)',
-        iconKey: 'monitor-off'
+        iconKey: 'headless'
       })
     ];
   }
@@ -395,7 +395,7 @@ const travelModeRule: Rule = (report) => {
     return [
       createNodeMarker('travel-mode', NODE_ID, 'warn', 'Travel Mode', {
         tooltip: 'Travel Mode is enabled',
-        iconKey: 'plane'
+        iconKey: 'travelMode'
       })
     ];
   }
@@ -411,7 +411,7 @@ const isolatedVmRule: Rule = (report) => {
     return [
       createNodeMarker('isolated', NODE_ID, 'info', 'Isolated', {
         tooltip: 'VM is running in isolated mode',
-        iconKey: 'shield'
+        iconKey: 'isolated'
       })
     ];
   }
@@ -431,7 +431,7 @@ const noTimeSyncRule: Rule = (report) => {
     return [
       createNodeMarker('no-time-sync', NODE_ID, 'warn', 'No Time Sync', {
         tooltip: 'Time synchronization with host is disabled',
-        iconKey: 'clock'
+        iconKey: 'noTimeSync'
       })
     ];
   }
@@ -447,7 +447,7 @@ const bootFlagsRule: Rule = (report) => {
     return [
       createNodeMarker('boot-flags', NODE_ID, 'warn', 'Boot Flags', {
         tooltip: `Boot flags set: ${report.currentVm.bootFlags}`,
-        iconKey: 'flag'
+        iconKey: 'flags'
       })
     ];
   }
@@ -464,7 +464,7 @@ const resourceQuotaRule: Rule = (report) => {
     return [
       createNodeMarker('resource-quota', NODE_ID, 'warn', `Quota ${quota}%`, {
         tooltip: `Resource quota is limited to ${quota}%`,
-        iconKey: 'gauge'
+        iconKey: 'resource quota'
       })
     ];
   }
@@ -480,7 +480,7 @@ const smartGuardRule: Rule = (report) => {
     return [
       createNodeMarker('smart-guard', NODE_ID, 'info', 'Smart Guard', {
         tooltip: 'Smart Guard (automatic snapshots) is enabled',
-        iconKey: 'shield'
+        iconKey: 'smart guard'
       })
     ];
   }
@@ -497,7 +497,7 @@ const tpmRule: Rule = (report) => {
     return [
       createNodeMarker('tpm', NODE_ID, 'info', 'TPM', {
         tooltip: `TPM ${tpm} is enabled`,
-        iconKey: 'key'
+        iconKey: 'TPM'
       })
     ];
   }
@@ -523,7 +523,7 @@ const missingGuestCommandsOnRunningVmReportRule: Rule = (report) => {
           type === 'UserDefinedOnRunningVmReport'
             ? 'GuestCommands is empty for a running VM report; this often indicates Parallels Tools is not working.'
             : `GuestCommands is empty for report type "${type}"; this often indicates Parallels Tools is not working.`,
-        iconKey: 'alert-triangle'
+        iconKey: 'warning'
       })
     ];
   }
@@ -547,7 +547,7 @@ const tooMuchRamRule: Rule = (report) => {
     return [
       createNodeMarker('too-much-ram', NODE_ID, 'danger', 'Too Much RAM', {
         tooltip: `VM has ${vmRam}MB but host only has ${hostRam}MB (less than 6GB left for host)`,
-        iconKey: 'memory-stick'
+        iconKey: 'bad'
       }),
       createRowMarker('too-much-ram-detail', NODE_ID, 'Hardware.RAM (MB)', 'danger', '!!', {
         tooltip: 'VM RAM exceeds safe limits'
@@ -567,7 +567,7 @@ const unevenRamRule: Rule = (report) => {
     return [
       createNodeMarker('uneven-ram', NODE_ID, 'warn', 'Uneven RAM', {
         tooltip: `RAM (${vmRam}MB) is not a multiple of 256MB`,
-        iconKey: 'memory-stick'
+        iconKey: 'warning'
       })
     ];
   }
@@ -591,7 +591,7 @@ const notPvmDefaultRule: Rule = (report) => {
     return [
       createNodeMarker('not-pvmdefault', NODE_ID, 'warn', 'Not PvmDefault', {
         tooltip: 'VM name is not PvmDefault (unexpected for Chrome OS)',
-        iconKey: 'alert-triangle'
+        iconKey: 'not PvmDefault'
       })
     ];
   }

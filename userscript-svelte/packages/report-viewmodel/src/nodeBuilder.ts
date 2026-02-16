@@ -29,26 +29,7 @@ import { formatHddInterface, formatMbytes } from './units';
 export interface NodeBadge {
   label: string;
   tone?: 'info' | 'warn' | 'danger';
-  iconKey?:
-    | 'hdd'
-    | 'net'
-    | 'travel'
-    | 'vm'
-    | 'warn'
-    | 'keyboard'
-    | 'mouse'
-    | 'cd'
-    | 'disc'
-    | 'camera'
-    | 'bluetooth'
-    | 'usb'
-    | 'printer'
-    | 'cloud'
-    | 'folder'
-    | 'clipboard'
-    | 'clock'
-    | 'shield'
-    | 'cpu';
+  iconKey?: string;
 }
 
 export interface NodeRow {
@@ -88,45 +69,8 @@ export interface NodeModel {
   data?: unknown;
 }
 
-function markerIconKeyToNodeIconKey(iconKey: string | undefined): NodeBadge['iconKey'] | undefined {
-  if (!iconKey) return undefined;
-  switch (iconKey) {
-    case 'hard-drive':
-      return 'hdd';
-    case 'network':
-    case 'wifi-off':
-      return 'net';
-    case 'alert-triangle':
-      return 'warn';
-    case 'keyboard':
-      return 'keyboard';
-    case 'mouse':
-      return 'mouse';
-    case 'disc':
-      return 'disc';
-    case 'webcam':
-      return 'camera';
-    case 'bluetooth':
-      return 'bluetooth';
-    case 'usb':
-      return 'usb';
-    case 'printer':
-      return 'printer';
-    case 'cloud':
-      return 'cloud';
-    case 'folder-open':
-      return 'folder';
-    case 'clipboard':
-      return 'clipboard';
-    case 'clock':
-      return 'clock';
-    case 'shield':
-      return 'shield';
-    case 'cpu':
-      return 'cpu';
-    default:
-      return undefined;
-  }
+function markerIconKeyToNodeIconKey(iconKey: string | undefined): string | undefined {
+  return iconKey || undefined;
 }
 
 function markerSeverityToTone(severity: Marker['severity']): NodeBadge['tone'] {
@@ -204,10 +148,16 @@ const maps: Record<string, Record<string, string>> = {
   keyboard: { '0': 'Auto', '1': 'Don\'t optimize', '2': 'Optimize for games' },
   mouse: { '0': 'Auto', '1': 'Don\'t optimize', '2': 'Optimize for games' },
   networkMode: {
-    '0': 'Shared',
-    '1': 'Host-Only',
-    '2': 'Bridged',
-    '3': 'Disconnected'
+    '0': 'Host-Only',
+    '1': 'Shared',
+    '2': 'Bridged'
+  },
+  adapterType: {
+    '0': 'Legacy',
+    '1': 'RealTek RTL8029AS',
+    '2': 'Intel(R) PRO/1000MT',
+    '3': 'Virtio',
+    '4': 'Intel(R) Gigabit CT'
   },
   yesNo: { '0': 'No', '1': 'Yes' },
   enabled: { '0': 'Disabled', '1': 'Enabled' },
@@ -347,23 +297,27 @@ export function buildCurrentVmNode(summary?: CurrentVmModel | null): NodeModel {
   const hardwareSubSections: NodeSubSection[] = [];
 
   if (summary.netAdapters?.length) {
-    const netRows: NodeRow[] = summary.netAdapters.flatMap((adapter, index) => [
-      { label: 'Type', value: adapter.adapterType, iconKey: 'net' } as NodeRow,
-      { label: 'Connected', ...toBadge(adapter.connected, 'yesNo') } as NodeRow,
-      {
-        label: 'Mode',
-        value: adapter.mode,
-        iconKey:
-          typeof adapter.mode === 'string' && adapter.mode.toLowerCase().includes('bridged')
+    const netRows: NodeRow[] = summary.netAdapters.flatMap((adapter, index) => {
+      const resolvedType = maps.adapterType[adapter.adapterType || ''] || adapter.adapterType;
+      const resolvedMode = maps.networkMode[adapter.mode || ''] || adapter.mode;
+      const modeLower = (resolvedMode || '').toLowerCase();
+      return [
+        { label: 'Type', value: resolvedType, iconKey: 'networkAdapter' } as NodeRow,
+        { label: 'Connected', ...toBadge(adapter.connected, 'yesNo') } as NodeRow,
+        {
+          label: 'Mode',
+          value: resolvedMode,
+          iconKey: modeLower.includes('bridged')
             ? 'bridged'
-            : typeof adapter.mode === 'string' && adapter.mode.toLowerCase().includes('shared')
+            : modeLower.includes('shared')
               ? 'shared'
-              : 'net'
-      } as NodeRow,
-      { label: 'Adapter name', value: adapter.adapterName } as NodeRow,
-      { label: 'Mac', value: adapter.mac } as NodeRow,
-      { label: 'Conditioner', ...toBadge(adapter.conditionerEnabled, 'enabled') } as NodeRow
-    ].filter(r => r.value !== undefined || r.badge !== undefined));
+              : 'networkAdapter'
+        } as NodeRow,
+        { label: 'Adapter name', value: adapter.adapterName } as NodeRow,
+        { label: 'Mac', value: adapter.mac } as NodeRow,
+        { label: 'Conditioner', ...toBadge(adapter.conditionerEnabled, 'enabled') } as NodeRow
+      ];
+    }).filter(r => r.value !== undefined || r.badge !== undefined);
     hardwareSubSections.push({
       id: 'networks',
       title: 'Networks',
@@ -511,11 +465,11 @@ export function buildCurrentVmNode(summary?: CurrentVmModel | null): NodeModel {
   ]);
 
   // Legacy inline badges (kept for backwards compatibility)
-  if (summary.travelMode?.state === '1') badges.push({ label: 'Travel Mode', tone: 'warn', iconKey: 'travel' });
-  if (summary.macVm) badges.push({ label: 'Mac VM', tone: 'info', iconKey: 'vm' });
-  if (!summary.hdds?.length && !summary.macVm) badges.push({ label: 'No HDD', tone: 'danger', iconKey: 'warn' });
-  if (summary.isImported) badges.push({ label: 'Imported', tone: 'warn', iconKey: 'clock' });
-  if (summary.netAdapters?.some((n) => n.connected === '0')) badges.push({ label: 'NIC Offline', tone: 'warn', iconKey: 'net' });
+  if (summary.travelMode?.state === '1') badges.push({ label: 'Travel Mode', tone: 'warn', iconKey: 'travelMode' });
+  if (summary.macVm) badges.push({ label: 'Mac VM', tone: 'info', iconKey: 'macvm' });
+  if (!summary.hdds?.length && !summary.macVm) badges.push({ label: 'No HDD', tone: 'danger', iconKey: 'bad' });
+  if (summary.isImported) badges.push({ label: 'Imported', tone: 'warn' });
+  if (summary.netAdapters?.some((n) => n.connected === '0')) badges.push({ label: 'NIC Offline', tone: 'warn', iconKey: 'adapterNotConnected' });
 
   return {
     id: 'current-vm',
@@ -555,7 +509,7 @@ export function buildGuestOsNode(summary?: GuestOsSummary | null): NodeModel {
   }
 
   const label = summary.name ?? summary.version ?? summary.type ?? '';
-  if (label) badges.push({ label, tone: 'info', iconKey: 'vm' });
+  if (label) badges.push({ label, tone: 'info', iconKey: 'vms' });
 
   const hasFriendlyName =
     !!summary.name && !!summary.version && summary.name !== summary.version;
@@ -795,12 +749,12 @@ export function buildHostInfoNode(summary?: HostInfoSummary | null): NodeModel {
   else if (summary.system.os.displayString) badges.push({ label: summary.system.os.displayString, tone: 'info' });
   if (hostRamGb !== null) badges.push({ label: `${hostRamGb}GB RAM`, tone: 'info' });
 
-  if (summary.flags.lowMemory) badges.push({ label: 'High memory usage', tone: 'warn', iconKey: 'warn' });
-  if (summary.flags.privacyRestricted) badges.push({ label: 'Privacy restricted', tone: 'warn', iconKey: 'shield' });
-  if (summary.hasDisplayLink) badges.push({ label: 'DisplayLink', tone: 'warn', iconKey: 'vm' });
-  if (summary.flags.hasExternalDisks) badges.push({ label: 'External disk', tone: 'info', iconKey: 'hdd' });
-  if (summary.flags.hasUsbCamera) badges.push({ label: 'USB camera', tone: 'info', iconKey: 'camera' });
-  if (summary.flags.hasBluetoothAudio) badges.push({ label: 'BT audio', tone: 'info', iconKey: 'bluetooth' });
+  if (summary.flags.lowMemory) badges.push({ label: 'High memory usage', tone: 'warn', iconKey: 'warning' });
+  if (summary.flags.privacyRestricted) badges.push({ label: 'Privacy restricted', tone: 'warn', iconKey: 'isolated' });
+  if (summary.hasDisplayLink) badges.push({ label: 'DisplayLink', tone: 'warn', iconKey: 'DisplayLink device!' });
+  if (summary.flags.hasExternalDisks) badges.push({ label: 'External disk', tone: 'info', iconKey: 'external drive' });
+  if (summary.flags.hasUsbCamera) badges.push({ label: 'USB camera', tone: 'info', iconKey: 'webcam' });
+  if (summary.flags.hasBluetoothAudio) badges.push({ label: 'BT audio', tone: 'info' });
 
   return {
     id: 'host-info',

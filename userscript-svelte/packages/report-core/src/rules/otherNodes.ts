@@ -36,7 +36,7 @@ const licenseRules: Rule[] = [
       return [
         createNodeMarker('license.pirated', LICENSE_NODE, 'danger', 'Pirated', {
           tooltip: 'License expiration is far in the future (suspicious / likely pirated)',
-          iconKey: 'alert-triangle'
+          iconKey: 'pirated'
         })
       ];
     }
@@ -54,14 +54,14 @@ const netConfigRules: Rule[] = [
       out.push(
         createNodeMarker('netconfig.kextless', NETCONFIG_NODE, 'info', 'Kextless', {
           tooltip: 'Virtual networking is running in kextless mode',
-          iconKey: 'network'
+          iconKey: 'kextless'
         })
       );
     } else if (s.kextlessMode === 'kext') {
       out.push(
         createNodeMarker('netconfig.kext', NETCONFIG_NODE, 'info', 'Kext', {
           tooltip: 'Virtual networking uses kernel extensions',
-          iconKey: 'network'
+          iconKey: 'kext'
         })
       );
     }
@@ -70,7 +70,7 @@ const netConfigRules: Rule[] = [
       out.push(
         createNodeMarker('netconfig.network-missing', NETCONFIG_NODE, 'warn', 'Network missing', {
           tooltip: 'Shared or Host-Only virtual network is missing',
-          iconKey: 'alert-triangle'
+          iconKey: 'warning'
         })
       );
     }
@@ -87,14 +87,14 @@ const clientProxyRules: Rule[] = [
       return [
         createNodeMarker('proxy.http-enabled', PROXY_NODE, 'warn', 'HTTP proxy enabled', {
           tooltip: 'HTTP proxy is enabled in client settings',
-          iconKey: 'alert-triangle'
+          iconKey: 'vpn'
         })
       ];
     }
     return [
       createNodeMarker('proxy.none', PROXY_NODE, 'info', 'No proxy', {
         tooltip: 'No HTTP proxy detected in client settings',
-        iconKey: 'network'
+        iconKey: 'networkAdapter'
       })
     ];
   }
@@ -106,12 +106,12 @@ const advancedVmInfoRules: Rule[] = [
     if (!s) return [];
     const out = [];
 
-    if (s.snapshotCount === 0) out.push(createNodeMarker('adv.no-snapshots', ADV_NODE, 'info', 'No snapshots'));
-    if ((s.snapshotCount ?? 0) > 0) out.push(createNodeMarker('adv.snapshots', ADV_NODE, 'info', `${s.snapshotCount} snapshots`));
-    if (s.hasAclIssues) out.push(createNodeMarker('adv.acl', ADV_NODE, 'warn', 'ACL issues', { iconKey: 'alert-triangle' }));
-    if (s.hasRootOwner) out.push(createNodeMarker('adv.root-owner', ADV_NODE, 'warn', 'Root owner', { iconKey: 'alert-triangle' }));
-    if (s.hasDeleteSnapshotOp) out.push(createNodeMarker('adv.delete-snapshot', ADV_NODE, 'danger', 'Delete snapshot op', { iconKey: 'alert-triangle' }));
-    if (s.mainSnapshotMissing) out.push(createNodeMarker('adv.main-snapshot-missing', ADV_NODE, 'danger', 'Main snapshot missing', { iconKey: 'alert-triangle' }));
+    if (s.snapshotCount === 0) out.push(createNodeMarker('adv.no-snapshots', ADV_NODE, 'info', 'No snapshots', { iconKey: 'nosnapshots' }));
+    if ((s.snapshotCount ?? 0) > 0) out.push(createNodeMarker('adv.snapshots', ADV_NODE, 'info', `${s.snapshotCount} snapshots`, { iconKey: 'snapshots' }));
+    if (s.hasAclIssues) out.push(createNodeMarker('adv.acl', ADV_NODE, 'warn', 'ACL issues', { iconKey: 'ACL' }));
+    if (s.hasRootOwner) out.push(createNodeMarker('adv.root-owner', ADV_NODE, 'warn', 'Root owner', { iconKey: 'root or unknown owner' }));
+    if (s.hasDeleteSnapshotOp) out.push(createNodeMarker('adv.delete-snapshot', ADV_NODE, 'danger', 'Delete snapshot op', { iconKey: 'bad' }));
+    if (s.mainSnapshotMissing) out.push(createNodeMarker('adv.main-snapshot-missing', ADV_NODE, 'danger', 'Main snapshot missing', { iconKey: 'bad' }));
 
     return out;
   }
@@ -123,12 +123,12 @@ const hostInfoRules: Rule[] = [
     if (!s) return [];
     const out = [];
 
-    if (s.flags.lowMemory) out.push(createNodeMarker('host.low-memory', HOST_NODE, 'warn', 'High memory usage', { iconKey: 'alert-triangle' }));
-    if (s.flags.privacyRestricted) out.push(createNodeMarker('host.privacy', HOST_NODE, 'warn', 'Privacy restricted', { iconKey: 'shield' }));
-    if (s.hasDisplayLink) out.push(createNodeMarker('host.displaylink', HOST_NODE, 'warn', 'DisplayLink', { iconKey: 'monitor' }));
-    if (s.flags.hasExternalDisks) out.push(createNodeMarker('host.external-disk', HOST_NODE, 'info', 'External disk', { iconKey: 'hard-drive' }));
+    if (s.flags.lowMemory) out.push(createNodeMarker('host.low-memory', HOST_NODE, 'warn', 'High memory usage', { iconKey: 'warning' }));
+    if (s.flags.privacyRestricted) out.push(createNodeMarker('host.privacy', HOST_NODE, 'warn', 'Privacy restricted', { iconKey: 'isolated' }));
+    if (s.hasDisplayLink) out.push(createNodeMarker('host.displaylink', HOST_NODE, 'warn', 'DisplayLink', { iconKey: 'DisplayLink device!' }));
+    if (s.flags.hasExternalDisks) out.push(createNodeMarker('host.external-disk', HOST_NODE, 'info', 'External disk', { iconKey: 'external drive' }));
     if (s.flags.hasUsbCamera) out.push(createNodeMarker('host.usb-camera', HOST_NODE, 'info', 'USB camera', { iconKey: 'webcam' }));
-    if (s.flags.hasBluetoothAudio) out.push(createNodeMarker('host.bt-audio', HOST_NODE, 'info', 'BT audio', { iconKey: 'bluetooth' }));
+    if (s.flags.hasBluetoothAudio) out.push(createNodeMarker('host.bt-audio', HOST_NODE, 'info', 'BT audio'));
 
     return out;
   }
@@ -139,9 +139,9 @@ const moreHostInfoRules: Rule[] = [
     const s = report.moreHostInfo;
     if (!s) return [];
     if (s.hasNoDisplays) {
-      return [createNodeMarker('morehost.no-displays', MORE_HOST_NODE, 'warn', 'No displays', { iconKey: 'alert-triangle' })];
+      return [createNodeMarker('morehost.no-displays', MORE_HOST_NODE, 'warn', 'No displays', { iconKey: 'screens' })];
     }
-    return [createNodeMarker('morehost.displays', MORE_HOST_NODE, 'info', `${s.displayCount} displays`, { iconKey: 'monitor' })];
+    return [createNodeMarker('morehost.displays', MORE_HOST_NODE, 'info', `${s.displayCount} displays`, { iconKey: 'screens' })];
   }
 ];
 
@@ -151,10 +151,10 @@ const loadedDriversRules: Rule[] = [
     if (!s) return [];
     const out = [];
 
-    if (s.isHackintosh) out.push(createNodeMarker('drivers.hackintosh', DRIVERS_NODE, 'danger', 'Hackintosh', { iconKey: 'alert-triangle' }));
-    if (s.hasNonAppleKexts && !s.hasPrlKexts && !s.isHackintosh) out.push(createNodeMarker('drivers.no-prl', DRIVERS_NODE, 'warn', 'No PRL kexts', { iconKey: 'alert-triangle' }));
-    if (s.onlyApple) out.push(createNodeMarker('drivers.only-apple', DRIVERS_NODE, 'info', 'Only Apple', { iconKey: 'shield' }));
-    if (s.hasNonAppleKexts && !s.onlyApple && !s.isHackintosh) out.push(createNodeMarker('drivers.non-apple', DRIVERS_NODE, 'warn', 'Non-Apple kexts', { iconKey: 'alert-triangle' }));
+    if (s.isHackintosh) out.push(createNodeMarker('drivers.hackintosh', DRIVERS_NODE, 'danger', 'Hackintosh', { iconKey: 'bad' }));
+    if (s.hasNonAppleKexts && !s.hasPrlKexts && !s.isHackintosh) out.push(createNodeMarker('drivers.no-prl', DRIVERS_NODE, 'warn', 'No PRL kexts', { iconKey: 'kext' }));
+    if (s.onlyApple) out.push(createNodeMarker('drivers.only-apple', DRIVERS_NODE, 'info', 'Only Apple', { iconKey: 'all good' }));
+    if (s.hasNonAppleKexts && !s.onlyApple && !s.isHackintosh) out.push(createNodeMarker('drivers.non-apple', DRIVERS_NODE, 'warn', 'Non-Apple kexts', { iconKey: 'kext' }));
 
     return out;
   }
@@ -165,9 +165,9 @@ const mountInfoRules: Rule[] = [
     const s = report.storage;
     if (!s) return [];
     const out = [];
-    if (s.hddFull) out.push(createNodeMarker('storage.full', STORAGE_NODE, 'danger', 'HDD FULL!', { iconKey: 'alert-triangle' }));
-    if (!s.hddFull && s.lowStorage) out.push(createNodeMarker('storage.low', STORAGE_NODE, 'warn', 'Low storage', { iconKey: 'alert-triangle' }));
-    if (s.hasNtfsVolumes) out.push(createNodeMarker('storage.ntfs', STORAGE_NODE, 'info', 'NTFS detected', { iconKey: 'hard-drive' }));
+    if (s.hddFull) out.push(createNodeMarker('storage.full', STORAGE_NODE, 'danger', 'HDD FULL!', { iconKey: 'bad' }));
+    if (!s.hddFull && s.lowStorage) out.push(createNodeMarker('storage.low', STORAGE_NODE, 'warn', 'Low storage', { iconKey: 'Low storage' }));
+    if (s.hasNtfsVolumes) out.push(createNodeMarker('storage.ntfs', STORAGE_NODE, 'info', 'NTFS detected', { iconKey: 'hdds' }));
     return out;
   }
 ];
@@ -180,7 +180,7 @@ const allProcessesRules: Rule[] = [
       return [
         createNodeMarker('processes.bsdtar', PROCESSES_NODE, 'danger', 'bsdtar', {
           tooltip: 'Known bsdtar issue detected in process list',
-          iconKey: 'alert-triangle'
+          iconKey: 'bad'
         })
       ];
     }
@@ -196,14 +196,14 @@ const toolsLogRules: Rule[] = [
 
     if (!s.isWindows) out.push(createNodeMarker('tools.not-windows', TOOLS_NODE, 'info', 'Not Windows'));
     if (s.isWindows) {
-      if (s.status === 'success') out.push(createNodeMarker('tools.success', TOOLS_NODE, 'info', 'Successful'));
-      if (s.status === 'warning') out.push(createNodeMarker('tools.warning', TOOLS_NODE, 'warn', 'Warning', { iconKey: 'alert-triangle' }));
-      if (s.status === 'error') out.push(createNodeMarker('tools.failed', TOOLS_NODE, 'danger', 'Failed', { iconKey: 'alert-triangle' }));
-      if (s.status === 'empty') out.push(createNodeMarker('tools.empty', TOOLS_NODE, 'warn', 'Empty', { iconKey: 'alert-triangle' }));
+      if (s.status === 'success') out.push(createNodeMarker('tools.success', TOOLS_NODE, 'info', 'Successful', { iconKey: 'all good' }));
+      if (s.status === 'warning') out.push(createNodeMarker('tools.warning', TOOLS_NODE, 'warn', 'Warning', { iconKey: 'warning' }));
+      if (s.status === 'error') out.push(createNodeMarker('tools.failed', TOOLS_NODE, 'danger', 'Failed', { iconKey: 'bad' }));
+      if (s.status === 'empty') out.push(createNodeMarker('tools.empty', TOOLS_NODE, 'warn', 'Empty', { iconKey: 'warning' }));
     }
 
-    if (s.hasCorruptRegistry) out.push(createNodeMarker('tools.corrupt-reg', TOOLS_NODE, 'danger', 'Corrupt Registry', { iconKey: 'alert-triangle' }));
-    if (s.hasPrlDdIssue && s.kbArticle) out.push(createNodeMarker('tools.kb', TOOLS_NODE, 'danger', s.kbArticle, { iconKey: 'alert-triangle' }));
+    if (s.hasCorruptRegistry) out.push(createNodeMarker('tools.corrupt-reg', TOOLS_NODE, 'danger', 'Corrupt Registry', { iconKey: 'bad' }));
+    if (s.hasPrlDdIssue && s.kbArticle) out.push(createNodeMarker('tools.kb', TOOLS_NODE, 'danger', s.kbArticle, { iconKey: 'bad' }));
 
     return out;
   }
@@ -217,7 +217,7 @@ const systemLogRules: Rule[] = [
       return [
         createNodeMarker('syslog.coherence', SYSLOG_NODE, 'warn', 'Coherence dumps', {
           tooltip: `Coherence state dumps found (${s.coherenceDumpCount})`,
-          iconKey: 'alert-triangle'
+          iconKey: 'coherence'
         })
       ];
     }
@@ -230,9 +230,9 @@ const vmDirectoryRules: Rule[] = [
     const s = report.vmDirectory;
     if (!s) return [];
     if (s.vmCount > 0) {
-      return [createNodeMarker('vmdir.count', VMDIR_NODE, 'info', `${s.vmCount} VMs`)];
+      return [createNodeMarker('vmdir.count', VMDIR_NODE, 'info', `${s.vmCount} VMs`, { iconKey: 'vms' })];
     }
-    return [createNodeMarker('vmdir.none', VMDIR_NODE, 'warn', 'No VMs', { iconKey: 'alert-triangle' })];
+    return [createNodeMarker('vmdir.none', VMDIR_NODE, 'warn', 'No VMs', { iconKey: 'warning' })];
   }
 ];
 
@@ -244,7 +244,7 @@ const guestCommandsRules: Rule[] = [
       return [createNodeMarker('guestcmd.linux', GUEST_COMMANDS_NODE, 'info', 'Linux')];
     }
     if (s.isEmpty) {
-      return [createNodeMarker('guestcmd.empty', GUEST_COMMANDS_NODE, 'warn', 'Empty', { iconKey: 'alert-triangle' })];
+      return [createNodeMarker('guestcmd.empty', GUEST_COMMANDS_NODE, 'warn', 'Empty', { iconKey: 'warning' })];
     }
     return [];
   }
@@ -256,12 +256,12 @@ const appConfigRules: Rule[] = [
     if (!s) return [];
     const out = [];
     if (s.isUserDefinedOnDisconnectedServer) {
-      out.push(createNodeMarker('appcfg.disconnected', APP_CONFIG_NODE, 'warn', 'Disconnected', { iconKey: 'alert-triangle' }));
+      out.push(createNodeMarker('appcfg.disconnected', APP_CONFIG_NODE, 'warn', 'Disconnected', { iconKey: 'warning' }));
       return out;
     }
     if (s.verboseLoggingEnabled) out.push(createNodeMarker('appcfg.verbose', APP_CONFIG_NODE, 'info', 'Verbose logging'));
-    if (s.hasExternalVmFolder) out.push(createNodeMarker('appcfg.external-vm-folder', APP_CONFIG_NODE, 'info', 'External VM folder'));
-    if ((s.usbPermanentAssignments?.length ?? 0) > 0) out.push(createNodeMarker('appcfg.usb-assign', APP_CONFIG_NODE, 'info', 'USB assignments'));
+    if (s.hasExternalVmFolder) out.push(createNodeMarker('appcfg.external-vm-folder', APP_CONFIG_NODE, 'info', 'External VM folder', { iconKey: 'External Default VM folder' }));
+    if ((s.usbPermanentAssignments?.length ?? 0) > 0) out.push(createNodeMarker('appcfg.usb-assign', APP_CONFIG_NODE, 'info', 'USB assignments', { iconKey: 'usb' }));
     return out;
   }
 ];
@@ -270,7 +270,7 @@ const installedSoftwareRules: Rule[] = [
   (report) => {
     const s = report.installedSoftware;
     if (!s) return [];
-    return [createNodeMarker('software.count', INSTALLED_SOFTWARE_NODE, 'info', `${s.appCount} apps`)];
+    return [createNodeMarker('software.count', INSTALLED_SOFTWARE_NODE, 'info', `${s.appCount} apps`, { iconKey: 'installedApps' })];
   }
 ];
 
@@ -278,8 +278,8 @@ const launchdRules: Rule[] = [
   (report) => {
     const s = report.launchdInfo;
     if (!s?.stats) return [];
-    const out = [createNodeMarker('launchd.files', LAUNCHD_NODE, 'info', `${s.stats.files} files`)];
-    if (s.stats.rootOwnedFiles > 0) out.push(createNodeMarker('launchd.root-owned', LAUNCHD_NODE, 'warn', `${s.stats.rootOwnedFiles} root-owned`, { iconKey: 'alert-triangle' }));
+    const out = [createNodeMarker('launchd.files', LAUNCHD_NODE, 'info', `${s.stats.files} files`, { iconKey: 'service' })];
+    if (s.stats.rootOwnedFiles > 0) out.push(createNodeMarker('launchd.root-owned', LAUNCHD_NODE, 'warn', `${s.stats.rootOwnedFiles} root-owned`, { iconKey: 'root or unknown owner' }));
     return out;
   }
 ];
@@ -289,7 +289,7 @@ const autoStatisticRules: Rule[] = [
     const s = report.autoStatisticInfo;
     if (!s) return [];
     if (s.installationCount > 0) {
-      return [createNodeMarker('autostat.count', AUTOSTAT_NODE, 'info', `${s.installationCount} installations`)];
+      return [createNodeMarker('autostat.count', AUTOSTAT_NODE, 'info', `${s.installationCount} installations`, { iconKey: 'install' })];
     }
     return [];
   }
