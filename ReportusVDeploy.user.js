@@ -3,7 +3,8 @@
 // @version            1.7.0.1
 // @author 	Nikolai Smetannikov
 
-// @updateURL    https://github.com/NickSmet/PRV/raw/master/ReportusVDeploy.user.js
+// @updateURL    https://raw.githubusercontent.com/NickSmet/PRV/master/ReportusVDeploy.user.js
+// @downloadURL  https://raw.githubusercontent.com/NickSmet/PRV/master/ReportusVDeploy.user.js
 
 // @include     https://reportus.prls.net/webapp/reports/*
 // @include     https://reportus.prls.net/webapp/reports/*
@@ -54,6 +55,8 @@
 
 // For update checks + beta bundle fetch
 // @connect      github.com
+// @connect      raw.githubusercontent.com
+// @connect      objects.githubusercontent.com
 // @connect      chatbotkbimages.blob.core.windows.net
 
 // ==/UserScript==
@@ -77,51 +80,67 @@ if (window.location.href.match(/security-monitors.prls.net/)){
 
 
 function checkVersion(currentVersion, updateUrl){
-    let updateButton
-    GM_xmlhttpRequest({
-    method: "GET",
-    url: updateUrl,
-    onload: function(response) {
-        console.log(response.responseText)
-    const newerVersion = response.responseText.match(/@version +([\d\.]+)/)[1]
-    console.log({newerVersion})
-    console.log({currentVersion})
-    
-    
-    
-    
-    
     const isBeta = typeof GM_getValue === 'function' ? !!GM_getValue('prv_use_beta', false) : false
     const toggleLabel = isBeta ? 'Switch to stable' : 'Switch to beta'
 
-    if(versionCompare(newerVersion, currentVersion)==1){
-
-    updateButton = $(`<div
-    style='margin:1em'>   Reports Viewer ver. ${currentVersion} <button
-    onclick="window.location.href='${updateUrl}'" style = "font-family:Arial; margin-left: 1em;
-    background-color: #f44336;">!!!Upgrade to ${newerVersion}!!!</button>
-    <button id="prv-beta-toggle" style="font-family:Arial; margin-left: 1em; background-color: #1976d2; color: white;">
-      ${toggleLabel}
-    </button>
-    </div>`)
-    
-    }else{
-        updateButton = $(`<div
-    style='margin:1em'>   ver. ${currentVersion}
-    <button id="prv-beta-toggle" style="font-family:Arial; margin-left: 1em; background-color: #1976d2; color: white;">
-      ${toggleLabel}
-    </button>
-    </div>`)
+    function normalizeGitHubRawUrl(url) {
+      try {
+        const m = String(url || '').match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/raw\/([^\/]+)\/(.+)$/)
+        if (m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}/${m[4]}`
+      } catch (e) {}
+      return url
     }
-    
-    updateButton.insertBefore($("#app"))
-    $("#prv-beta-toggle").on("click", function () {
-      try { GM_setValue('prv_use_beta', !isBeta) } catch (e) {}
-      window.location.reload()
-    })
 
+    function renderHeader(newerVersion, usedUpdateUrl) {
+      const $existing = $("#prv-loader-header")
+      if ($existing.length) $existing.remove()
 
-  }})
+      const upgradePart = newerVersion && versionCompare(newerVersion, currentVersion)==1
+        ? `<button onclick="window.location.href='${usedUpdateUrl}'" style="font-family:Arial; margin-left: 1em; background-color: #f44336;">
+            !!!Upgrade to ${newerVersion}!!!
+           </button>`
+        : ''
+
+      const html = `<div id="prv-loader-header" style="margin:1em">
+        ${newerVersion ? `Reports Viewer ver. ${currentVersion}` : `ver. ${currentVersion}`}
+        ${upgradePart}
+        <button id="prv-beta-toggle" style="font-family:Arial; margin-left: 1em; background-color: #1976d2; color: white;">
+          ${toggleLabel}
+        </button>
+      </div>`
+
+      const $el = $(html)
+      $el.insertBefore($("#app"))
+      $("#prv-beta-toggle").on("click", function () {
+        try { GM_setValue('prv_use_beta', !isBeta) } catch (e) {}
+        window.location.reload()
+      })
+    }
+
+    // Always render immediately (so button exists even if update check fails)
+    const normalizedUrl = normalizeGitHubRawUrl(updateUrl)
+    renderHeader(null, normalizedUrl)
+
+    try {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: normalizedUrl,
+        onload: function(response) {
+          try {
+            const newerVersion = response.responseText.match(/@version +([\d\.]+)/)?.[1]
+            if (newerVersion) renderHeader(newerVersion, normalizedUrl)
+          } catch (e) {
+            // keep the already-rendered header
+            console.warn('[PRV] version parse failed', e)
+          }
+        },
+        onerror: function (e) {
+          console.warn('[PRV] update check failed', e)
+        }
+      })
+    } catch (e) {
+      console.warn('[PRV] update check exception', e)
+    }
 
 
 }
