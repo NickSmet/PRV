@@ -30,9 +30,13 @@ export function discoverPerVmFiles(index: ReportusReportIndex): PerVmDiscoveredF
   let currentToolsLog: ReportusFileEntry | undefined;
   let fallbackVm1Gz: ReportusFileEntry | undefined;
 
-  const configRe = /^vm-([0-9a-fA-F-]{36})-config\.pvs\.log$/;
-  const vmLogRe = /^vm-([0-9a-fA-F-]{36})\.log$/;
-  const toolsLogRe = /^tools-([0-9a-fA-F-]{36})\.log$/;
+  // Reportus filenames may include UUIDs with or without braces.
+  // Examples:
+  // - vm-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.log
+  // - vm-{aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee}.log
+  const configRe = /^vm-\{?([0-9a-fA-F-]{36})\}?-config\.pvs\.log$/;
+  const vmLogRe = /^vm-\{?([0-9a-fA-F-]{36})\}?\.log$/;
+  const toolsLogRe = /^tools-\{?([0-9a-fA-F-]{36})\}?\.log$/;
 
   for (const entry of index.files) {
     const filename = entry.filename ?? '';
@@ -88,4 +92,3 @@ export function discoverPerVmFiles(index: ReportusReportIndex): PerVmDiscoveredF
     screenshots
   };
 }
-

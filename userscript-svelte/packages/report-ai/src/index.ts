@@ -1,5 +1,7 @@
 import type { NodeKey, ReportModel } from '@prv/report-core';
 
+export * from './reportView';
+
 export function truncateText(
   text: string,
   opts?: { maxChars?: number }

@@ -10,11 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@prv/report-api": "0.0.1",
+    "@azure/identity": "^4.13.0",
+    "@azure/openai": "^2.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@prv/ai-chat": "0.0.1",
     "@prv/report-ai": "0.0.1",
+    "@prv/report-api": "0.0.1",
     "@prv/report-core": "0.0.1",
     "@prv/report-ui-svelte": "0.0.1",
-    "@prv/report-viewmodel": "0.0.1"
+    "@prv/report-viewmodel": "0.0.1",
+    "isomorphic-dompurify": "^2.20.0",
+    "openai": "^6.22.0"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.0",

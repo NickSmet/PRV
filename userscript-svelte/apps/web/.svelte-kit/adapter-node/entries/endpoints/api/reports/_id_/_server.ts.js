@@ -1,5 +1,6 @@
 import { json, error } from "@sveltejs/kit";
-import { g as getReportusClient, R as ReportusHttpError } from "../../../../../chunks/reportus.js";
+import { g as getReportusClient } from "../../../../../chunks/reportus.js";
+import { R as ReportusHttpError } from "../../../../../chunks/index.js";
 const GET = async ({ params }) => {
   const client = getReportusClient();
   try {

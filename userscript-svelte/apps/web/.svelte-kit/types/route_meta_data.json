@@ -1,5 +1,14 @@
 {
 	"/": [],
+	"/api/chat/activity": [
+		"src/routes/api/chat/activity/+server.ts"
+	],
+	"/api/chat/chat": [
+		"src/routes/api/chat/chat/+server.ts"
+	],
+	"/api/chat/conversations": [
+		"src/routes/api/chat/conversations/+server.ts"
+	],
 	"/api/reports/[id]": [
 		"src/routes/api/reports/[id]/+server.ts"
 	],
@@ -24,6 +33,9 @@
 	"/lab/icons": [],
 	"/lab/[reportId=reportId]": [
 		"src/routes/lab/[reportId=reportId]/+page.ts"
+	],
+	"/mcp": [
+		"src/routes/mcp/+server.ts"
 	],
 	"/nodes/[reportId=reportId]": [
 		"src/routes/nodes/[reportId=reportId]/+page.ts"

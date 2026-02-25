@@ -12,7 +12,8 @@ export default defineConfig({
       '@prv/report-core',
       '@prv/report-viewmodel',
       '@prv/report-ui-svelte',
-      '@prv/report-ai'
+      '@prv/report-ai',
+      '@prv/ai-chat'
     ]
   }
 });
