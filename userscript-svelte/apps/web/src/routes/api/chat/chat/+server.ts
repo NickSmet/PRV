@@ -15,10 +15,11 @@ import { getChatDeps } from '$lib/server/chat-deps';
 
 export const POST: RequestHandler = async ({ request, url }) => {
   const body = await request.json();
-  const { conversationId, message, reportId } = body as {
+  const { conversationId, message, reportId, history } = body as {
     conversationId?: string;
     message?: string;
     reportId?: string;
+    history?: Array<{ role: string; content: string }>;
   };
 
   if (!message?.trim()) {
@@ -32,11 +33,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
   // If reportId is provided, prepend it as context in the system prompt
   if (reportId) {
     deps.systemPrompt = (deps.systemPrompt ?? '') +
-      `\n\nThe user is looking at report ID: ${reportId}. When using the execute_report_code tool, always pass this reportId.`;
+      `\n\nThe user is looking at report ID: ${reportId}. When using the execute_report_code tool, always pass this reportId.\n\nTool args must be JSON like: {"reportId":"${reportId}","code":"async function main(data, report, ctx) { /* ... */ }"} (never wrap code under "raw").`;
   }
 
   try {
-    const result = await runChat(deps, { conversationId, message });
+    const result = await runChat(deps, { conversationId, message, history });
     return json(result);
   } catch (err) {
     console.error('[chat] Error:', err);

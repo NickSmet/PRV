@@ -37,6 +37,9 @@
     <button class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" onclick={goNodes}>
       Node view
     </button>
+    <a class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" href="/lab/timeline">
+      Timeline (fixtures)
+    </a>
     <a class="px-3 py-2 rounded-lg border border-border bg-background text-[13px]" href="/lab/icons">
       Icon gallery
     </a>

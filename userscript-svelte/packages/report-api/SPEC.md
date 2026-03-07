@@ -73,6 +73,22 @@ filePath.split('/').map(encodeURIComponent).join('/')
 
 Downloads support `maxBytes` (default 2 MiB) and return `{ truncated: true }` if content was cut early.
 
+## Range-read limitation
+
+As of `2026-03-07`, the Reportus download endpoint should be treated as **start-only** for our purposes.
+
+Observed behavior:
+
+- a request to `GET /api/reports/{reportId}/files/{filePath}/download`
+- with `Range: bytes=0-127`
+- returned `HTTP 200` and the **full file body**
+
+Implications:
+
+- callers must not assume HTTP `206 Partial Content`
+- callers must not assume efficient tail/window reads from Reportus
+- if efficient range access becomes necessary, use a separate durable raw store (planned: Azure Blob)
+
 ## Status
 
 **Complete** — used by `apps/web` and `servers/mcp`.

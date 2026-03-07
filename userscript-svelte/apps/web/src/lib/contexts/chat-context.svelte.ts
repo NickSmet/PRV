@@ -8,6 +8,7 @@
  */
 
 import { getContext, setContext } from 'svelte';
+import { browser } from '$app/environment';
 
 export type ChatMessage = {
   id: string;
@@ -47,6 +48,10 @@ export type ChatContext = {
 };
 
 const CHAT_CONTEXT_KEY = Symbol('chat-context');
+const STORAGE_VERSION = 1;
+const MAX_STORED_MESSAGES = 200;
+const HISTORY_LIMIT = 8;
+const TOOL_CALL_TIMEOUT_MS = 2 * 60 * 1000;
 
 export function setChatContext(ctx: ChatContext) {
   setContext(CHAT_CONTEXT_KEY, ctx);
@@ -65,18 +70,136 @@ function messageId(role: string, timestamp: number, content: string): string {
   return `${role}-${rounded}-${hash}`;
 }
 
+type StoredChat = {
+  version: number;
+  conversationId: string;
+  messages: Array<{ id?: string; role: ChatMessage['role']; content: string; timestamp: number }>;
+};
+
+function storageKey(reportId: string): string {
+  return `prv:web:chat:${reportId}`;
+}
+
+function safeParseStoredChat(raw: string | null): StoredChat | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as StoredChat;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (parsed.version !== STORAGE_VERSION) return null;
+    if (typeof parsed.conversationId !== 'string' || !parsed.conversationId) return null;
+    if (!Array.isArray(parsed.messages)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function createWelcomeMessage(): ChatMessage {
+  const timestamp = Date.now();
+  const content = 'Ask a question about this report. The AI will analyze report data to answer.';
+  return {
+    id: messageId('system', timestamp, content),
+    role: 'system',
+    content,
+    timestamp: new Date(timestamp),
+  };
+}
+
+function normalizeForStorage(messages: ChatMessage[]): StoredChat['messages'] {
+  // Keep the earliest system message if present, then cap to MAX_STORED_MESSAGES.
+  const system = messages.find((m) => m.role === 'system');
+  const rest = messages.filter((m) => m.role !== 'system');
+  const cappedRest = rest.slice(-MAX_STORED_MESSAGES);
+  const final = system ? [system, ...cappedRest] : cappedRest;
+
+  return final.map((m) => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    timestamp: m.timestamp.getTime(),
+  }));
+}
+
+function synthesizeTimedOutToolCalls(entries: ToolCallEntry[]): ToolCallEntry[] {
+  const now = Date.now();
+  return entries.map((tc) => {
+    if (tc.tool_result) return tc;
+    if (now - tc.tool_call.timestamp <= TOOL_CALL_TIMEOUT_MS) return tc;
+    return {
+      ...tc,
+      tool_result: {
+        error_message: 'Tool call timed out',
+        timestamp: now,
+        tool_result: null,
+        content: null,
+      },
+    };
+  });
+}
+
 /**
  * Create a chat context for a given report.
  */
 export function createChatContext(reportId: string): ChatContext {
-  let conversationId = $state(crypto.randomUUID());
+  const key = storageKey(reportId);
+
+  let persisted: StoredChat | null = null;
+  if (browser) {
+    persisted = safeParseStoredChat(localStorage.getItem(key));
+  }
+
+  let conversationId = $state<string>(persisted?.conversationId ?? crypto.randomUUID());
+  const initialMessages = (() => {
+    if (!browser) return [createWelcomeMessage()];
+
+    if (persisted?.messages?.length) {
+      const restored: ChatMessage[] = [];
+      for (const m of persisted.messages) {
+        if (!m || typeof m !== 'object') continue;
+        if (!['user', 'assistant', 'system'].includes(m.role)) continue;
+        if (typeof m.content !== 'string') continue;
+        if (typeof m.timestamp !== 'number') continue;
+        const id =
+          typeof m.id === 'string' && m.id ? m.id : messageId(m.role, m.timestamp, m.content);
+        restored.push({
+          id,
+          role: m.role,
+          content: m.content,
+          timestamp: new Date(m.timestamp),
+        });
+      }
+      if (restored.length > 0) return restored;
+    }
+
+    return [createWelcomeMessage()];
+  })();
+
   let state = $state<ChatState>({
     status: 'idle',
-    messages: [],
+    messages: initialMessages,
     toolCalls: [],
+    error: undefined,
   });
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
   let lastActivityTimestamp = 0;
+  let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function schedulePersist() {
+    if (!browser) return;
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      try {
+        const stored: StoredChat = {
+          version: STORAGE_VERSION,
+          conversationId,
+          messages: normalizeForStorage(state.messages),
+        };
+        localStorage.setItem(key, JSON.stringify(stored));
+      } catch {
+        // Ignore storage errors (quota/blocked)
+      }
+    }, 250);
+  }
 
   function startPolling() {
     if (pollingInterval) return;
@@ -107,7 +230,18 @@ export function createChatContext(reportId: string): ChatContext {
         for (const newTc of data.toolCalls) {
           existing.set(newTc.tool_call.tool_call_id, newTc);
         }
-        state = { ...state, toolCalls: Array.from(existing.values()) };
+        const merged = Array.from(existing.values());
+        state = { ...state, toolCalls: synthesizeTimedOutToolCalls(merged) };
+        const maxTs = Math.max(...merged.map((t) => t.tool_call.timestamp));
+        if (Number.isFinite(maxTs)) lastActivityTimestamp = Math.max(lastActivityTimestamp, maxTs);
+        return;
+      }
+
+      // Even if no new tool calls arrived, mark any stuck ones as timed out.
+      const withTimeouts = synthesizeTimedOutToolCalls(state.toolCalls);
+      const didChange = withTimeouts.some((tc, i) => tc.tool_result !== state.toolCalls[i]?.tool_result);
+      if (didChange) {
+        state = { ...state, toolCalls: withTimeouts };
       }
     } catch {
       // Ignore polling errors
@@ -117,6 +251,11 @@ export function createChatContext(reportId: string): ChatContext {
   async function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
+
+    const history = state.messages
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .slice(-HISTORY_LIMIT)
+      .map((m) => ({ role: m.role, content: m.content }));
 
     // Optimistically add user message
     const userTimestamp = Date.now();
@@ -132,6 +271,7 @@ export function createChatContext(reportId: string): ChatContext {
       messages: [...state.messages, userMsg],
       error: undefined,
     };
+    schedulePersist();
 
     lastActivityTimestamp = userTimestamp;
     startPolling();
@@ -144,6 +284,7 @@ export function createChatContext(reportId: string): ChatContext {
           conversationId,
           message: trimmed,
           reportId,
+          history,
         }),
       });
 
@@ -153,6 +294,7 @@ export function createChatContext(reportId: string): ChatContext {
         const errData = await res.json().catch(() => ({ error: 'Request failed' }));
         const errMsg = (errData as { error?: string }).error || 'Request failed';
         state = { ...state, status: 'error', error: errMsg };
+        schedulePersist();
         return;
       }
 
@@ -183,18 +325,21 @@ export function createChatContext(reportId: string): ChatContext {
         status: 'idle',
         messages: [...state.messages, assistantMsg],
       };
+      schedulePersist();
     } catch (err) {
       stopPolling();
       const errMsg = err instanceof Error ? err.message : String(err);
       state = { ...state, status: 'error', error: errMsg };
+      schedulePersist();
     }
   }
 
   function clearConversation() {
     stopPolling();
     conversationId = crypto.randomUUID();
-    state = { status: 'idle', messages: [], toolCalls: [] };
+    state = { status: 'idle', messages: [createWelcomeMessage()], toolCalls: [] };
     lastActivityTimestamp = 0;
+    schedulePersist();
   }
 
   return {

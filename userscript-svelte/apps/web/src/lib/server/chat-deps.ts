@@ -55,6 +55,7 @@ function buildCatalog(mcpUrl: string): McpCatalog {
             usageHint:
               [
                 'Strategy: prefer ONE tool call. Write a single `main(data, report, ctx)` that collects all fields you need and returns one compact JSON object. Only do a second tool call if the first result proves some required data is missing.',
+                'Tool arguments must be an object with `reportId` and `code` (do not use a `raw` field).',
                 '- If you want all values as strings, wrap them with `String(...)` (and preserve nulls) before returning.',
                 '',
                 'Common network mapping (single call):',

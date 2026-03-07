@@ -74,6 +74,7 @@ export async function runChat(
     conversationId?: string | null;
     message: string;
     selection?: ConversationToolSelection | null;
+    history?: Array<{ role: string; content: string }> | null;
   },
 ): Promise<{ conversationId: string; response: string }> {
   const conversationId = params.conversationId || randomUUID();
@@ -128,14 +129,32 @@ export async function runChat(
     const responseTools = allResponseTools.filter((t) => isChatToolEnabled({ toolName: t.name, enabledToolNames: plan.enabledToolNames }));
 
     const systemPrompt = buildChatSystemPrompt({ catalog, plan, basePrompt: deps.systemPrompt });
-    const history = await persistence.getConversationMessages(conversationId, 50);
 
-    // Load only non-empty message rows. Intermediate assistant messages from tool-calling
-    // loops (which have empty content) must be excluded — they break the alternating
-    // user/assistant pattern required by Chat Completions API.
-    const historyMessages = history
-      .filter((m) => m.type === 'message' && typeof m.content === 'string' && m.content.trim() !== '')
-      .map((m) => ({ role: m.role, content: m.content! }));
+    let historyMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+    // Prefer client-provided history (stateless mode).
+    if (Array.isArray(params.history) && params.history.length > 0) {
+      historyMessages = params.history
+        .filter((m): m is { role: string; content: string } => !!m && typeof m === 'object' && typeof (m as any).role === 'string' && typeof (m as any).content === 'string')
+        .map((m) => ({ role: m.role.trim(), content: m.content }))
+        .filter((m): m is { role: 'user' | 'assistant'; content: string } => (m.role === 'user' || m.role === 'assistant') && m.content.trim() !== '')
+        .slice(-8);
+
+      // Always append the current user message (client history is "prior messages only").
+      const last = historyMessages[historyMessages.length - 1];
+      if (!last || last.role !== 'user' || last.content !== message) {
+        historyMessages = [...historyMessages, { role: 'user', content: message }];
+      }
+    } else {
+      const history = await persistence.getConversationMessages(conversationId, 50);
+
+      // Load only non-empty message rows. Intermediate assistant messages from tool-calling
+      // loops (which have empty content) must be excluded — they break the alternating
+      // user/assistant pattern required by Chat Completions API.
+      historyMessages = history
+        .filter((m): m is typeof m & { role: 'user' | 'assistant'; content: string } => m.type === 'message' && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim() !== '')
+        .map((m) => ({ role: m.role, content: m.content }));
+    }
 
     const openai = getOpenAIClient(openaiConfig);
     const model = openaiConfig.chatModel;

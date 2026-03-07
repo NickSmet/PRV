@@ -1,17 +1,22 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { DataSet, Timeline, type TimelineOptions } from 'vis-timeline/standalone';
   import timelineStyles from 'vis-timeline/styles/vis-timeline-graph2d.min.css?inline';
 
-  export interface TimelinePayload {
-    groups: any[];
-    items: any[];
+  type VisGroup = Record<string, unknown> & { id: string | number; content?: string };
+  type VisItem = Record<string, unknown> & { id: string | number; content?: string; start: Date | string | number; end?: Date | string | number };
+
+  export type TimelinePayload = {
+    groups: VisGroup[];
+    items: VisItem[];
     options?: TimelineOptions;
     initialWindow?: { start: string | number | Date; end: string | number | Date };
-  }
+  };
 
-  export let payload: TimelinePayload;
-  export let onItemClick: (item: any) => void = () => {};
+  let { payload, onItemClick = () => {} }: {
+    payload: TimelinePayload;
+    onItemClick?: (item: unknown) => void;
+  } = $props();
 
   let container: HTMLDivElement | null = null;
   let timeline: Timeline | null = null;
@@ -39,8 +44,10 @@
   }
 
   function updateData(nextPayload: TimelinePayload) {
-    groups?.update(nextPayload.groups);
-    items?.update(nextPayload.items);
+    groups?.clear();
+    items?.clear();
+    groups?.add(nextPayload.groups);
+    items?.add(nextPayload.items);
     timeline?.setOptions(nextPayload.options ?? {});
   }
 
@@ -74,22 +81,22 @@
     };
   });
 
-  $: if (timeline) {
+  $effect(() => {
+    if (!timeline) return;
     updateData(payload);
-  }
-
-  onDestroy(() => timeline?.destroy());
+  });
 </script>
 
-<div class="timeline-container" bind:this={container}></div>
+<div class="prv-timeline-container" bind:this={container}></div>
 
 <style>
-  .timeline-container {
-    min-height: 380px;
+  .prv-timeline-container {
+    min-height: 420px;
     width: 100%;
-    background: #fff;
-    border: 1px solid #e3e3e3;
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
     border-radius: 12px;
     overflow: hidden;
   }
 </style>
+

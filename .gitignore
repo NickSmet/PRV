@@ -9,3 +9,4 @@ userscript-svelte/dist/
 userscript-svelte/docs/
 userscript-svelte/*.md
 userscript-svelte/dist/*.md
+userscript-svelte/apps/web/.svelte-kit/

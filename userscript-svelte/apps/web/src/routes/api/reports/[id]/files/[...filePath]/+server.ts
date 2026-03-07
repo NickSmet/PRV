@@ -3,21 +3,42 @@ import type { RequestHandler } from './$types';
 import { getReportusClient } from '$lib/server/reportus';
 import { ReportusHttpError } from '@prv/report-api';
 
+type ReadMode = 'head' | 'tail';
+
+function parseMode(v: string | null): ReadMode {
+  return v === 'tail' ? 'tail' : 'head';
+}
+
+function trimTailText(text: string, truncated: boolean): { text: string; trimmedFirstLine: boolean } {
+  if (!truncated || !text) return { text, trimmedFirstLine: false };
+  const nl = text.indexOf('\n');
+  if (nl < 0 || nl + 1 >= text.length) return { text, trimmedFirstLine: false };
+  return {
+    text: text.slice(nl + 1),
+    trimmedFirstLine: true
+  };
+}
+
 export const GET: RequestHandler = async ({ params, url }) => {
   const maxBytes = Number(url.searchParams.get('maxBytes') ?? '2097152');
+  const mode = parseMode(url.searchParams.get('mode'));
   const client = getReportusClient();
   const decodedPath = params.filePath;
   if (!decodedPath) throw kitError(400, 'Missing filePath');
 
   try {
     const { text, truncated } = await client.downloadFileText(params.id, decodedPath, {
-      maxBytes: Number.isFinite(maxBytes) ? maxBytes : 2 * 1024 * 1024
+      maxBytes: Number.isFinite(maxBytes) ? maxBytes : 2 * 1024 * 1024,
+      mode
     });
+    const adjusted = mode === 'tail' ? trimTailText(text, truncated) : { text, trimmedFirstLine: false };
 
-    return new Response(text, {
+    return new Response(adjusted.text, {
       headers: {
         'content-type': 'text/plain; charset=utf-8',
-        'x-prv-truncated': truncated ? 'true' : 'false'
+        'x-prv-truncated': truncated ? 'true' : 'false',
+        'x-prv-mode': mode,
+        'x-prv-trimmed-first-line': mode === 'tail' && adjusted.trimmedFirstLine ? 'true' : 'false'
       }
     });
   } catch (e) {

@@ -25,3 +25,5 @@ fixtures/
 # Storybook
 storybook-static/
 .cache-storybook/
+
+apps/web/.svelte-kit/

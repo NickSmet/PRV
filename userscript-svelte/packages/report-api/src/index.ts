@@ -32,12 +32,12 @@ export interface ReportusClient {
   downloadFileText(
     reportId: ReportId,
     filePath: string,
-    opts?: { maxBytes?: number }
+    opts?: { maxBytes?: number; mode?: 'head' | 'tail' }
   ): Promise<{ text: string; truncated: boolean }>;
   downloadFileBytes(
     reportId: ReportId,
     filePath: string,
-    opts?: { maxBytes?: number }
+    opts?: { maxBytes?: number; mode?: 'head' | 'tail' }
   ): Promise<{ bytes: Uint8Array; truncated: boolean }>;
 }
 
@@ -75,9 +75,10 @@ export function createReportusClient(opts: { baseUrl: string; basicAuth: string 
   async function downloadFileBytes(
     reportId: ReportId,
     filePath: string,
-    opts?: { maxBytes?: number }
+    opts?: { maxBytes?: number; mode?: 'head' | 'tail' }
   ): Promise<{ bytes: Uint8Array; truncated: boolean }> {
     const maxBytes = opts?.maxBytes ?? 2 * 1024 * 1024;
+    const mode = opts?.mode === 'tail' ? 'tail' : 'head';
     const url = `${baseUrl}/api/reports/${encodeURIComponent(reportId)}/files/${encodeFilePathSegments(filePath)}/download`;
     const res = await fetch(url, { headers: { Authorization: authHeader } });
     if (!res.ok) {
@@ -92,51 +93,97 @@ export function createReportusClient(opts: { baseUrl: string; basicAuth: string 
     if (!reader) {
       const ab = await res.arrayBuffer();
       const bytes = new Uint8Array(ab);
+      if (mode === 'tail') {
+        return { bytes: bytes.slice(Math.max(0, bytes.length - maxBytes)), truncated: bytes.length > maxBytes };
+      }
       return { bytes: bytes.slice(0, maxBytes), truncated: bytes.length > maxBytes };
     }
 
-    const chunks: Uint8Array[] = [];
+    if (mode === 'head') {
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      let truncated = false;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+
+        if (total + value.length > maxBytes) {
+          const remaining = Math.max(0, maxBytes - total);
+          if (remaining > 0) chunks.push(value.slice(0, remaining));
+          truncated = true;
+          break;
+        }
+
+        chunks.push(value);
+        total += value.length;
+      }
+
+      if (truncated) {
+        try {
+          await reader.cancel();
+        } catch {
+          // ignore
+        }
+      }
+
+      const out = new Uint8Array(chunks.reduce((sum, c) => sum + c.length, 0));
+      let offset = 0;
+      for (const c of chunks) {
+        out.set(c, offset);
+        offset += c.length;
+      }
+
+      return { bytes: out, truncated };
+    }
+
+    const ring = new Uint8Array(maxBytes);
+    let ringWrite = 0;
     let total = 0;
-    let truncated = false;
 
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-      if (!value) continue;
+      if (!value || value.length === 0) continue;
 
-      if (total + value.length > maxBytes) {
-        const remaining = Math.max(0, maxBytes - total);
-        if (remaining > 0) chunks.push(value.slice(0, remaining));
-        truncated = true;
-        break;
-      }
-
-      chunks.push(value);
       total += value.length;
-    }
 
-    if (truncated) {
-      try {
-        await reader.cancel();
-      } catch {
-        // ignore
+      if (maxBytes === 0) continue;
+
+      if (value.length >= maxBytes) {
+        ring.set(value.subarray(value.length - maxBytes));
+        ringWrite = 0;
+        continue;
       }
+
+      const firstLen = Math.min(value.length, maxBytes - ringWrite);
+      ring.set(value.subarray(0, firstLen), ringWrite);
+      const remaining = value.length - firstLen;
+      if (remaining > 0) {
+        ring.set(value.subarray(firstLen), 0);
+      }
+      ringWrite = (ringWrite + value.length) % maxBytes;
     }
 
-    const out = new Uint8Array(chunks.reduce((sum, c) => sum + c.length, 0));
-    let offset = 0;
-    for (const c of chunks) {
-      out.set(c, offset);
-      offset += c.length;
+    if (maxBytes === 0) {
+      return { bytes: new Uint8Array(0), truncated: total > 0 };
     }
 
-    return { bytes: out, truncated };
+    if (total <= maxBytes) {
+      return { bytes: ring.slice(0, total), truncated: false };
+    }
+
+    const out = new Uint8Array(maxBytes);
+    out.set(ring.subarray(ringWrite), 0);
+    out.set(ring.subarray(0, ringWrite), maxBytes - ringWrite);
+    return { bytes: out, truncated: true };
   }
 
   async function downloadFileText(
     reportId: ReportId,
     filePath: string,
-    opts?: { maxBytes?: number }
+    opts?: { maxBytes?: number; mode?: 'head' | 'tail' }
   ): Promise<{ text: string; truncated: boolean }> {
     const { bytes, truncated } = await downloadFileBytes(reportId, filePath, opts);
     const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);

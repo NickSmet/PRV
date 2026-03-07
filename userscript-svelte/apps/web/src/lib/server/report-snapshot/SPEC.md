@@ -6,6 +6,9 @@ Reduce (ideally eliminate) repeated calls from `apps/web` backend routes to the 
 
 This is designed for deployment on **Azure Static Web Apps + Azure Functions**, where **in-memory caching is not reliable** (cold starts, scale-out, per-instance memory).
 
+This spec is about **derived snapshot blobs**, not raw log mirroring.
+Raw log Blob storage is a separate planned subsystem described in `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`.
+
 ## Non-Goals
 
 - Do **not** expose `REPORTUS_BASIC_AUTH` to the browser.
@@ -166,4 +169,3 @@ Emit structured logs with:
 2. Enable for `/mental-model` first (largest savings).
 3. Expand to `/model`, `/nodes/:nodeKey` (if beneficial).
 4. Wire MCP to snapshot `reportView` if needed.
-

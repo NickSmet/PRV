@@ -198,6 +198,9 @@ ctx.raw(value, opts?) => any            // clone including non-enumerable props 
 - If you're unsure about field names, call ctx.schema() once and search within it.
 - Use ctx.raw(...) only when the user asks for "under the hood" details (raw codes, original values, derivations) or when debugging mismatches.
 - Many objects carry a hidden \`__raw\` payload (non-enumerable). Use \`ctx.raw(obj)\` to inspect it.
+- Do not guess property names. If you haven't confirmed a field exists in the schema, avoid mapping/renaming it.
+- When you just need to “see what’s there”, return the subtree directly (e.g. \`return data.host.gpu;\`) instead of projecting it into a new shape that can drop fields.
+- Prefer a two-step approach for narrow questions: (1) return the relevant subtree as-is, then (2) write a second version that picks specific fields after confirming their names.
 
 === EXAMPLES ===
 \`\`\`js

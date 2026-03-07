@@ -9,12 +9,17 @@
 - renders shared UI from `packages/report-ui-svelte`
 - embeds an HTTP MCP server at `/mcp` (exposes `execute_report_code`)
 - provides an **AI Chat** side panel that connects to the embedded MCP server via `@prv/ai-chat`
+- includes several **lab routes** for prototyping parsing, timeline, and visualization ideas
 
 **Key principle:** the browser never talks to `https://reportus.prls.net` directly — all calls go through SvelteKit routes.
 
-This surface ships two UI modes:
+This surface currently ships:
 - **Reality-centered (mental-model) view**: `/{reportId}` (digits-only)
 - **Node-centered view**: `/nodes/{reportId}` (digits-only)
+- **Lab report playground**: `/lab/{reportId}`
+- **Lab icon gallery**: `/lab/icons`
+- **Lab timeline fixtures**: `/lab/timeline`
+- **Lab log parser fixtures**: `/lab/logs`
 
 The report page includes an optional **AI Chat panel** for asking questions about the report data.
 
@@ -28,6 +33,14 @@ Browser UI (Svelte 5)
   │           └─ packages/report-core (node payload resolution + parsing + rules)
   │               └─ packages/report-viewmodel (NodeModel builders)
   │                   └─ packages/report-ui-svelte (render)
+  │
+  ├─ lab log flow (current prototype direction)
+  │   └─ browser worker
+  │       └─ parses current-VM logs to local browser state / IndexedDB substrate
+  │
+  ├─ future raw log durability
+  │   └─ backend ingest
+  │       └─ Azure Blob (raw log mirror for AI/MCP and efficient range reads)
   │
   ├─ calls /api/chat/*              (AI Chat)
   │   └─ @prv/ai-chat               (agentic loop + MCP client)
@@ -82,6 +95,35 @@ All routes are under `apps/web/src/routes/api/reports/`.
 | `GET /api/reports/:id/mental-model` | Build the mental-model page payload (RealityModel + nodes + markers + raw list + per-VM discovery) |
 | `GET /api/reports/:id/raw/node/:nodeKey` | Raw node payload for modal (text/plain; includes truncation headers) |
 
+These routes are part of the **main application contract** and should remain stable unless a shared parser/model contract changes.
+
+### Lab routes
+
+These routes are intentionally experimental and may use fixtures or temporary UI contracts.
+
+| Route | Purpose |
+|---|---|
+| `GET /lab/:reportId` | Lab report view / experiments on a report payload |
+| `GET /lab/icons` | Icon experiments |
+| `GET /lab/timeline` | Fixture picker for timeline experiments |
+| `GET /lab/timeline/:reportId` | Grouped timeline prototype over selected fixture logs |
+| `GET /lab/logs` | Fixture picker for log parsing experiments |
+| `GET /lab/logs/:reportId` | Single-file log parsing debug UI |
+| `GET /lab/logs/:reportId/viewer` | Tight, end-user oriented log viewer over IndexedDB |
+| `GET /lab/fixtures/:reportId/files/[...filePath]` | Fixture file endpoint for lab UIs |
+
+Lab routes are allowed to evolve quickly and are not part of the stable product API.
+
+### Planned log-ingest routes (not implemented yet)
+
+These are the likely next backend-facing additions once log parsing moves beyond the lab:
+
+- ingest/report metadata endpoints for browser-side log indexing
+- query endpoints over derived events or cached manifests
+- Blob-backed raw log retrieval endpoints for MCP / AI access
+
+They should be designed around the storage contract in `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`, not around fixture-only lab behavior.
+
 ### MCP Server
 
 | Route | Purpose |
@@ -115,12 +157,46 @@ All routes are under `apps/web/src/routes/api/chat/`. The chat backend is powere
 ### Data source note (fixtures vs real API)
 
 This web app always retrieves report content from the **Reportus API** via `packages/report-api`.
-Local `fixtures/` are used only by the CLI parser harness (`npm run parse:node`) and are not consulted by the web surface.
+Local `fixtures/` are used only by:
+
+- the CLI parser harness (`npm run parse:node`)
+- lab routes under `/lab/*`
+
+They are not part of the main report surface.
+
+For log-heavy workflows, the intended path is:
+
+- current implementation phase: `Reportus API -> web proxy -> browser worker -> IndexedDB`
+- future durable raw storage phase: `Reportus API -> backend ingest -> Azure Blob`
+
+Blob is the planned source for later AI/MCP log access because Reportus does not provide efficient range reads in practice.
+
+See `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`.
+
+The important boundary is:
+
+- **main report routes** continue to read from Reportus-derived parsers/viewmodels
+- **log indexing routes** will build a browser-local query substrate
+- **AI/MCP raw log access** should target Blob once that mirror exists
 
 ### Caching and size limits
 
 - Server-side TTL caches are used for node payloads and file downloads to reduce repeated Reportus calls.
 - Default `maxBytes` is **2 MiB** for logs/payloads; callers may request larger sizes (the UI offers “Show more”) up to a hard cap.
+- Reportus file downloads should be treated as **non-rangeable**; callers cannot assume `206 Partial Content` or efficient tail/window reads from the upstream server.
+
+### Log timestamp contract
+
+For log-derived views, the web app should preserve the **customer-visible wall clock** from the raw log.
+
+That means:
+
+- infer missing year when necessary
+- do **not** shift timestamps using report timezone offset
+- encode sortable values using UTC-shaped dates/numbers
+- format them in UTC mode in the UI so the shown clock matches the raw log text
+
+The report timezone can still be recorded as metadata, but it must not change the displayed log time.
 
 ### Azure Functions note (WIP)
 
@@ -129,6 +205,11 @@ When deployed on Azure Static Web Apps (Azure Functions backend), **in-memory ca
 Planned feature: **Report Snapshot Cache** backed by **Azure Blob Storage** to materialize report-derived UI/AI payloads once per report version and serve future requests without repeatedly calling Reportus.
 
 Spec: `apps/web/src/lib/server/report-snapshot/SPEC.md`
+
+Important distinction:
+
+- **snapshot blobs** cache derived UI/AI payloads
+- **raw log blobs** are a separate planned subsystem for durable raw log access and later AI/MCP range reads
 
 ### Error handling contract
 
@@ -150,6 +231,36 @@ The report page renders a `RealityViewer` (mental-model view) with an optional *
 ### Persistence
 
 Chat persistence is **in-memory only** (conversations lost on server restart). The `@prv/ai-chat` package defines a `ChatPersistence` interface — swap in a database-backed implementation when needed.
+
+### Lab UIs
+
+Lab routes are allowed to:
+
+- use fixture-only sources
+- use temporary view models
+- iterate quickly on parsing and visualization
+
+But they should still prefer:
+
+- shared parsing contracts when possible
+- browser workers for heavy log parsing
+- evolution paths that can be promoted into the main app later
+
+#### Tight log viewer (`/lab/logs/:reportId/viewer`)
+
+This route is a “performance-first” prototype of the eventual end-user log viewer:
+
+- IndexedDB-backed ingestion (browser worker), windowed querying, and virtualized rendering
+- fixed ingest parameters: `tail`, `2 MiB`, `20,000` lines
+- scoped log selector: `vm.log`, `parallels-system.log`, `tools.log` (when present)
+- tight viewer display policy: hides non-timestamped rows and rows with empty messages
+- chunked window policy: advance in `150`-row steps while retaining up to `500` rows around the viewport
+- editor-style search UX: case-insensitive find over cached rows with `N of M` count and previous/next navigation, without filtering the dataset; enters find mode after a short idle debounce and immediately reveals the active match centered in the viewport when possible
+
+Behavior requirements and parsing substrate are specified in:
+
+- `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`
+- `docs/features/LOG-LINE-INDEXING-SPEC.md`
 
 ## Testing Pipeline
 
