@@ -64,6 +64,7 @@ To avoid duplicating node-specific UI:
 
 - Mental-model UX contract: `docs/features/MENTAL-MODEL-VIEW.md`
 - View models: `packages/report-viewmodel/SPEC.md`
+- Timeline primitive (vis-timeline wrapper): `packages/report-ui-svelte/src/ui/timeline/SPEC.md`
 
 ## Status
 
