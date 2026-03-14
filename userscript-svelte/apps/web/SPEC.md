@@ -107,6 +107,7 @@ These routes are intentionally experimental and may use fixtures or temporary UI
 | `GET /lab/icons` | Icon experiments |
 | `GET /lab/timeline` | Fixture picker for timeline experiments |
 | `GET /lab/timeline/:reportId` | Grouped timeline prototype over selected fixture logs |
+| `GET /lab/timeline/:reportId/compact` | Shared timeline + log viewer workspace for current-VM logs. Uses one browser-local log session, shared selection state, and click-to-jump from timeline events into the log viewer. |
 | `GET /lab/logs` | Fixture picker for log parsing experiments |
 | `GET /lab/logs/:reportId` | Single-file log parsing debug UI |
 | `GET /lab/logs/:reportId/viewer` | Tight, end-user oriented log viewer over IndexedDB |
@@ -122,7 +123,7 @@ These are the likely next backend-facing additions once log parsing moves beyond
 - query endpoints over derived events or cached manifests
 - Blob-backed raw log retrieval endpoints for MCP / AI access
 
-They should be designed around the storage contract in `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`, not around fixture-only lab behavior.
+They should be designed around the storage contract in `docs/work-in-progress/log-workspace/LOG-INGEST-AND-STORAGE-SPEC.md`, not around fixture-only lab behavior.
 
 ### MCP Server
 
@@ -171,7 +172,7 @@ For log-heavy workflows, the intended path is:
 
 Blob is the planned source for later AI/MCP log access because Reportus does not provide efficient range reads in practice.
 
-See `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`.
+See `docs/work-in-progress/log-workspace/LOG-INGEST-AND-STORAGE-SPEC.md`.
 
 The important boundary is:
 
@@ -256,11 +257,40 @@ This route is a “performance-first” prototype of the eventual end-user log v
 - tight viewer display policy: hides non-timestamped rows and rows with empty messages
 - chunked window policy: advance in `150`-row steps while retaining up to `500` rows around the viewport
 - editor-style search UX: case-insensitive find over cached rows with `N of M` count and previous/next navigation, without filtering the dataset; enters find mode after a short idle debounce and immediately reveals the active match centered in the viewport when possible
+- the viewer is designed to be embeddable inside the shared timeline workspace
+- row navigation can be driven externally by a row locator / timeline event click
 
-Behavior requirements and parsing substrate are specified in:
+#### Shared log workspace
 
-- `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`
-- `docs/features/LOG-LINE-INDEXING-SPEC.md`
+The intended final arrangement for timeline + viewer work is a shared browser-local workspace:
+
+- app-local orchestration, not shared package UI
+- shared current-VM log selection
+- viewer + compact timeline consume the same indexed row substrate
+- timeline selection navigates the viewer by event start row
+
+Conceptual app-local modules:
+
+- `lab/log-viewer`
+- `lab/log-timeline`
+- `lab/log-workspace`
+
+#### Compact timeline workspace (`/lab/timeline/:reportId/compact`)
+
+This route is the main orchestration surface for the shared timeline+viewer lab:
+
+- shared log selection for current-VM logs
+- compact grouped timeline over extracted events
+- event details pane
+- click timeline event → viewer jump to event start row
+- auto-select event source log if needed
+- partial events allowed during ingest
+- no separate raw-log fetch/parse path inside the timeline presentation component
+
+Behavior requirements and parsing substrate are specified in (WIP):
+
+- `docs/work-in-progress/log-workspace/LOG-INGEST-AND-STORAGE-SPEC.md`
+- `docs/work-in-progress/log-workspace/LOG-LINE-INDEXING-SPEC.md`
 
 ## Testing Pipeline
 
@@ -385,9 +415,18 @@ The following `console.log` prefixes are available in server logs during dev:
 
 To see full message payloads sent to OpenAI, check the `[Chat] Chat Completions continue request` logs — they list every message index with role, content length, and tool call IDs.
 
+## Dependencies
+
+- **SvelteKit surface**: `apps/web` (Svelte 5)
+- **Reportus proxy + parsing/model**: `packages/report-api`, `packages/report-core`
+- **Viewmodels + UI**: `packages/report-viewmodel`, `packages/report-ui-svelte`
+- **Embedded MCP server**: `apps/web/src/routes/mcp/+server.ts` + `servers/mcp`
+- **AI Chat**: `@prv/ai-chat` (server routes under `apps/web/src/routes/api/chat/*`)
+
 ## Related docs
 
 - Mental-model UX contract: `docs/features/MENTAL-MODEL-VIEW.md`
+- Log workspace (WIP): `docs/work-in-progress/log-workspace/`
 - Embedded MCP server: `apps/web/src/routes/mcp/SPEC.md`
 - MCP stdio server: `servers/mcp/SPEC.md`
 - AI shaping layer: `packages/report-ai/SPEC.md`

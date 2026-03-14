@@ -194,6 +194,27 @@ SvelteKit route (+server.ts)
 - **Streaming**: MCP may stream results via SSE; callers must support `text/event-stream`
 - **Return format**: The handler must return a `CallToolResult` object: `{ content: [{ type: 'text', text: '...' }] }`. Returning a plain string will cause MCP error -32602 (`Invalid tools/call result: expected object, received string`).
 
+## Error Handling
+
+| Error | Handling |
+|---|---|
+| Missing `REPORTUS_BASIC_AUTH` / `REPORTUS_BASE_URL` | Read from `$env/dynamic/private` in SvelteKit and pass credentials into the shared handler (do not rely on `process.env`). |
+| MCP error `-32602` (“expected object, received string”) | Ensure the tool handler returns a `CallToolResult` object, not an unwrapped string. |
+| “Already connected to a transport” | Create **fresh** `McpServer` and transport instances per request (stateless mode). |
+| Client doesn’t receive streaming responses | Ensure `Accept` includes both `application/json` and `text/event-stream` (the route normalizes common `*/*` cases for `POST`). |
+
+## Dependencies
+
+- `apps/web/src/routes/mcp/+server.ts` (SvelteKit route)
+- `servers/mcp/src/executeReportCode.ts` (shared tool handler)
+- `@modelcontextprotocol/sdk` (MCP server + transports)
+- `@prv/report-ai` (ReportView shaping for the sandbox)
+
+## Related Specifications
+
+- Stdio MCP server: `servers/mcp/SPEC.md`
+- Web app surface: `apps/web/SPEC.md`
+
 ## Troubleshooting
 
 ### "Missing REPORTUS_BASIC_AUTH"

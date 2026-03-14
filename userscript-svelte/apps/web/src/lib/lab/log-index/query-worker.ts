@@ -1,5 +1,6 @@
 import { queryRowsForSources, readRowsAfterLineNo } from './db';
 import type { LogKind, LogRow } from './types';
+import type { LogRowLocator } from '$lib/lab/timeline/types';
 
 type QueryRequest =
   | {
@@ -35,6 +36,13 @@ type QueryRequest =
       query: string;
       activeRowId?: string | null;
       anchorRowId?: string | null;
+      /** Optional global match ordinal to focus (0-based). */
+      targetOrdinal?: number | null;
+    }
+  | {
+      type: 'locate';
+      jobId: number;
+      locator: LogRowLocator;
     }
   | {
       type: 'window';
@@ -62,7 +70,19 @@ type QueryResponse =
         query: string;
         matchIndexes: number[];
         matchRowIds: string[];
+        /** Active match ordinal in the full (uncapped) match list. */
         activeOrdinal: number;
+        /** Global ordinal of matchIndexes[0] within the full match list. */
+        windowStartOrdinal: number;
+        totalMatchCount: number;
+      };
+    }
+  | {
+      type: 'locate';
+      jobId: number;
+      result: {
+        rowIndex: number;
+        row: LogRow | null;
       };
     }
   | {
@@ -227,75 +247,166 @@ function sendWindow(jobId: number, windowStart: number, windowSize: number) {
   });
 }
 
-function buildFindResult(query: string, activeRowId?: string | null, anchorRowId?: string | null) {
+/**
+ * Maximum number of match positions returned to the main thread per find.
+ * Capping prevents large postMessage payloads (structured-clone cost) and
+ * avoids main-thread stalls when queries like "driver" match tens of thousands
+ * of rows. Navigation still works within the capped window;
+ * totalMatchCount carries the real total for display.
+ */
+const MAX_FIND_HIGHLIGHTS = 10_000;
+
+function buildFindResult(
+  query: string,
+  activeRowId?: string | null,
+  anchorRowId?: string | null,
+  targetOrdinal?: number | null
+) {
   const trimmed = query.trim();
   if (!cache || !trimmed) {
     return {
       query: trimmed,
-      matchIndexes: [],
-      matchRowIds: [],
-      activeOrdinal: -1
+      matchIndexes: [] as number[],
+      matchRowIds: [] as string[],
+      activeOrdinal: -1,
+      windowStartOrdinal: 0,
+      totalMatchCount: 0
     };
   }
 
   const queryLower = trimmed.toLowerCase();
-  const matchIndexes: number[] = [];
-  const matchRowIds: string[] = [];
+  const allMatchIndexes: number[] = [];
+  const allMatchRowIds: string[] = [];
 
   for (let i = 0; i < cache.rows.length; i += 1) {
     const row = cache.rows[i]!;
     if (!row.raw.toLowerCase().includes(queryLower)) continue;
-    matchIndexes.push(i);
-    matchRowIds.push(row.id);
+    allMatchIndexes.push(i);
+    allMatchRowIds.push(row.id);
   }
 
-  if (matchIndexes.length === 0) {
+  const totalMatchCount = allMatchIndexes.length;
+
+  if (totalMatchCount === 0) {
     return {
       query: trimmed,
-      matchIndexes,
-      matchRowIds,
-      activeOrdinal: -1
+      matchIndexes: allMatchIndexes,
+      matchRowIds: allMatchRowIds,
+      activeOrdinal: -1,
+      windowStartOrdinal: 0,
+      totalMatchCount: 0
     };
   }
 
-  if (activeRowId) {
-    const ordinal = matchRowIds.indexOf(activeRowId);
-    if (ordinal >= 0) {
-      return {
-        query: trimmed,
-        matchIndexes,
-        matchRowIds,
-        activeOrdinal: ordinal
-      };
-    }
-  }
-
-  if (anchorRowId) {
+  // Determine active ordinal before we potentially cap the arrays.
+  let activeOrdinal = 0;
+  if (targetOrdinal != null && Number.isFinite(targetOrdinal)) {
+    const desired = Math.trunc(targetOrdinal);
+    activeOrdinal = Math.max(0, Math.min(desired, totalMatchCount - 1));
+  } else if (activeRowId) {
+    const ordinal = allMatchRowIds.indexOf(activeRowId);
+    if (ordinal >= 0) activeOrdinal = ordinal;
+  } else if (anchorRowId) {
     const anchorIndex = cache.rows.findIndex((row) => row.id === anchorRowId);
     if (anchorIndex >= 0) {
-      const ordinal = matchIndexes.findIndex((matchIndex) => matchIndex >= anchorIndex);
-      return {
-        query: trimmed,
-        matchIndexes,
-        matchRowIds,
-        activeOrdinal: ordinal >= 0 ? ordinal : 0
-      };
+      const ordinal = allMatchIndexes.findIndex((matchIndex) => matchIndex >= anchorIndex);
+      activeOrdinal = ordinal >= 0 ? ordinal : 0;
     }
   }
 
-  return {
-    query: trimmed,
-    matchIndexes,
-    matchRowIds,
-    activeOrdinal: 0
-  };
+  // Cap transferred arrays to keep postMessage payload small and avoid main-thread stalls.
+  // We centre the window around the active ordinal so the user can navigate in both directions.
+  let matchIndexes: number[];
+  let matchRowIds: string[];
+  let windowStartOrdinal = 0;
+
+  if (totalMatchCount <= MAX_FIND_HIGHLIGHTS) {
+    matchIndexes = allMatchIndexes;
+    matchRowIds = allMatchRowIds;
+  } else {
+    const halfWindow = Math.floor(MAX_FIND_HIGHLIGHTS / 2);
+    const sliceStart = Math.max(0, Math.min(activeOrdinal - halfWindow, totalMatchCount - MAX_FIND_HIGHLIGHTS));
+    matchIndexes = allMatchIndexes.slice(sliceStart, sliceStart + MAX_FIND_HIGHLIGHTS);
+    matchRowIds = allMatchRowIds.slice(sliceStart, sliceStart + MAX_FIND_HIGHLIGHTS);
+    windowStartOrdinal = sliceStart;
+  }
+
+  return { query: trimmed, matchIndexes, matchRowIds, activeOrdinal, windowStartOrdinal, totalMatchCount };
 }
 
-function sendFind(jobId: number, query: string, activeRowId?: string | null, anchorRowId?: string | null) {
+function sendFind(
+  jobId: number,
+  query: string,
+  activeRowId?: string | null,
+  anchorRowId?: string | null,
+  targetOrdinal?: number | null
+) {
   postMessageSafe({
     type: 'find',
     jobId,
-    result: buildFindResult(query, activeRowId, anchorRowId)
+    result: buildFindResult(query, activeRowId, anchorRowId, targetOrdinal)
+  });
+}
+
+function locateRowIndex(locator: LogRowLocator): number {
+  if (!cache || cache.rows.length === 0) return -1;
+
+  if (locator.rowId) {
+    const directIndex = cache.rows.findIndex((row) => row.id === locator.rowId);
+    if (directIndex >= 0) return directIndex;
+  }
+
+  const sourceRows = cache.rows
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => row.sourceFile === locator.sourceFile);
+
+  if (sourceRows.length === 0) return -1;
+
+  if (locator.lineNo != null) {
+    const exact = sourceRows.find(({ row }) => row.lineNo === locator.lineNo);
+    if (exact) return exact.index;
+
+    let nearest = sourceRows[0]!;
+    let bestDistance = Math.abs(nearest.row.lineNo - locator.lineNo);
+    for (let index = 1; index < sourceRows.length; index += 1) {
+      const candidate = sourceRows[index]!;
+      const distance = Math.abs(candidate.row.lineNo - locator.lineNo);
+      if (distance < bestDistance) {
+        nearest = candidate;
+        bestDistance = distance;
+      }
+    }
+    return nearest.index;
+  }
+
+  if (locator.tsWallMs != null) {
+    let nearest = sourceRows[0]!;
+    let bestDistance = Math.abs((nearest.row.tsWallMs ?? locator.tsWallMs) - locator.tsWallMs);
+    for (let index = 1; index < sourceRows.length; index += 1) {
+      const candidate = sourceRows[index]!;
+      const distance = Math.abs((candidate.row.tsWallMs ?? locator.tsWallMs) - locator.tsWallMs);
+      if (distance < bestDistance) {
+        nearest = candidate;
+        bestDistance = distance;
+      }
+    }
+    return nearest.index;
+  }
+
+  return sourceRows[0]!.index;
+}
+
+function sendLocate(jobId: number, locator: LogRowLocator) {
+  const rowIndex = locateRowIndex(locator);
+  const row = rowIndex >= 0 && cache ? cache.rows[rowIndex] ?? null : null;
+  postMessageSafe({
+    type: 'locate',
+    jobId,
+    result: {
+      rowIndex,
+      row,
+      locator
+    }
   });
 }
 
@@ -308,7 +419,12 @@ self.onmessage = (event: MessageEvent<QueryRequest>) => {
   }
 
   if (event.data.type === 'find') {
-    sendFind(event.data.jobId, event.data.query, event.data.activeRowId, event.data.anchorRowId);
+    sendFind(event.data.jobId, event.data.query, event.data.activeRowId, event.data.anchorRowId, event.data.targetOrdinal ?? null);
+    return;
+  }
+
+  if (event.data.type === 'locate') {
+    sendLocate(event.data.jobId, event.data.locator);
     return;
   }
 

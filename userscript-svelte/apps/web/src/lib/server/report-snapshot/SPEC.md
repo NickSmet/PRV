@@ -1,13 +1,13 @@
 # Report Snapshot Cache (Azure Blob) — Specification (WIP)
 
-## Goal
+## Overview
 
 Reduce (ideally eliminate) repeated calls from `apps/web` backend routes to the Reportus API by **materializing** a report into a compact “snapshot” object once, storing it in **Azure Blob Storage**, and serving subsequent requests from the snapshot.
 
 This is designed for deployment on **Azure Static Web Apps + Azure Functions**, where **in-memory caching is not reliable** (cold starts, scale-out, per-instance memory).
 
 This spec is about **derived snapshot blobs**, not raw log mirroring.
-Raw log Blob storage is a separate planned subsystem described in `docs/features/LOG-INGEST-AND-STORAGE-SPEC.md`.
+Raw log Blob storage is a separate planned subsystem described in `docs/work-in-progress/log-workspace/LOG-INGEST-AND-STORAGE-SPEC.md`.
 
 ## Non-Goals
 
@@ -169,3 +169,20 @@ Emit structured logs with:
 2. Enable for `/mental-model` first (largest savings).
 3. Expand to `/model`, `/nodes/:nodeKey` (if beneficial).
 4. Wire MCP to snapshot `reportView` if needed.
+
+## Dependencies
+
+- Web surface: `apps/web` (server routes under `apps/web/src/routes/api/reports/*`)
+- Storage: Azure Blob Storage (planned)
+- Reportus client + parsing/model: `packages/report-api`, `packages/report-core`
+- Viewmodel/UI payload builders: `packages/report-viewmodel`, `packages/report-ui-svelte`
+
+## Related Specifications
+
+- Web app surface: `apps/web/SPEC.md`
+- Raw log storage architecture (separate subsystem): `docs/work-in-progress/log-workspace/LOG-INGEST-AND-STORAGE-SPEC.md`
+- Embedded MCP server (optional consumer of `reportView`): `apps/web/src/routes/mcp/SPEC.md`
+
+## Status
+
+**🔶 Outline** — Design is documented; implementation is planned behind feature flags (Blob integration not yet shipped).

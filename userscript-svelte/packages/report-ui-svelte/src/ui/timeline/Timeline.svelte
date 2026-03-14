@@ -22,6 +22,19 @@
   let timeline: Timeline | null = null;
   let groups: DataSet | null = null;
   let items: DataSet | null = null;
+  let initialized = false;
+  let resizeObserver: ResizeObserver | null = null;
+  let pendingRedraw = false;
+
+  function scheduleRedraw() {
+    if (!timeline) return;
+    if (pendingRedraw) return;
+    pendingRedraw = true;
+    window.requestAnimationFrame(() => {
+      pendingRedraw = false;
+      timeline?.redraw();
+    });
+  }
 
   function injectStylesIntoRoot() {
     if (!container) return;
@@ -73,7 +86,20 @@
       onItemClick(record);
     });
 
+    // Pane resize (via drag handles) doesn't trigger a window resize event, and
+    // vis-timeline doesn't automatically re-measure height. Observe the container
+    // so the timeline always fills the available vertical space.
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        scheduleRedraw();
+      });
+      resizeObserver.observe(container);
+    }
+    scheduleRedraw();
+
     return () => {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
       timeline?.destroy();
       timeline = null;
       groups = null;
@@ -83,6 +109,13 @@
 
   $effect(() => {
     if (!timeline) return;
+    // Skip the first run — onMount already initialized the data.
+    // This prevents resetting vis-timeline's internal state (e.g. group collapse)
+    // on every parent re-render.
+    if (!initialized) {
+      initialized = true;
+      return;
+    }
     updateData(payload);
   });
 </script>
@@ -91,7 +124,8 @@
 
 <style>
   .prv-timeline-container {
-    min-height: 420px;
+    height: 100%;
+    min-height: 200px;
     width: 100%;
     background: hsl(var(--background));
     border: 1px solid hsl(var(--border));

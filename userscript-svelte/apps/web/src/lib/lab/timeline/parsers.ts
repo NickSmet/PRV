@@ -122,7 +122,17 @@ export function parseParallelsSystemLog(
         start: diffBurst.start,
         end: diffBurst.end,
         label,
-        detail
+        detail,
+        startRef: {
+          sourceFile: opts.sourceFile,
+          lineNo: diffBurst.lines[0]?.line,
+          tsWallMs: diffBurst.start.getTime()
+        },
+        endRef: {
+          sourceFile: opts.sourceFile,
+          lineNo: diffBurst.lines[count - 1]?.line,
+          tsWallMs: diffBurst.end.getTime()
+        }
       });
     }
     diffBurst = null;
@@ -184,6 +194,8 @@ export function parseParallelsSystemLog(
           end: at,
           label: `PD Message: ${typeCode}`,
           detail: open.detail,
+          startRef: { sourceFile: opts.sourceFile, lineNo: open.line, tsWallMs: open.startedAt.getTime() },
+          endRef: { sourceFile: opts.sourceFile, lineNo, tsWallMs: at.getTime() },
           rawRef: { line: open.line }
         });
       }
@@ -229,6 +241,7 @@ export function parseParallelsSystemLog(
       start: open.startedAt,
       label: `PD Message: ${open.typeCode}`,
       detail: open.detail,
+      startRef: { sourceFile: opts.sourceFile, lineNo: open.line, tsWallMs: open.startedAt.getTime() },
       rawRef: { line: open.line }
     });
   }
@@ -242,7 +255,14 @@ export function parseVmLog(
 ): TimelineEvent[] {
   if (!text.trim()) return [];
 
-  type AppAgg = { start: Date; end: Date; label: string; detail?: string };
+  type AppAgg = {
+    start: Date;
+    end: Date;
+    label: string;
+    detail?: string;
+    startLine: number;
+    endLine: number;
+  };
   const byKey = new Map<string, AppAgg>();
 
   const lines = text.split(/\r?\n/);
@@ -266,11 +286,17 @@ export function parseVmLog(
 
     const existing = byKey.get(key);
     if (!existing) {
-      byKey.set(key, { start: at, end: at, label, detail: p.trim() });
+      byKey.set(key, { start: at, end: at, label, detail: p.trim(), startLine: i + 1, endLine: i + 1 });
       continue;
     }
-    if (at.getTime() < existing.start.getTime()) existing.start = at;
-    if (at.getTime() > existing.end.getTime()) existing.end = at;
+    if (at.getTime() < existing.start.getTime()) {
+      existing.start = at;
+      existing.startLine = i + 1;
+    }
+    if (at.getTime() > existing.end.getTime()) {
+      existing.end = at;
+      existing.endLine = i + 1;
+    }
   }
 
   const out: TimelineEvent[] = [];
@@ -283,7 +309,12 @@ export function parseVmLog(
       start: agg.start,
       end: agg.end.getTime() === agg.start.getTime() ? undefined : agg.end,
       label: agg.label,
-      detail: agg.detail
+      detail: agg.detail,
+      startRef: { sourceFile: opts.sourceFile, lineNo: agg.startLine, tsWallMs: agg.start.getTime() },
+      endRef:
+        agg.end.getTime() === agg.start.getTime()
+          ? undefined
+          : { sourceFile: opts.sourceFile, lineNo: agg.endLine, tsWallMs: agg.end.getTime() }
     });
   }
 
