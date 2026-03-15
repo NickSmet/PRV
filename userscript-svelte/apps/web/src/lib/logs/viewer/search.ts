@@ -1,4 +1,4 @@
-import type { LogRow } from '$lib/lab/log-index/types';
+import type { LogRow } from '$lib/logs/index/types';
 
 export function messageSegments(text: string, query: string): Array<{ text: string; match: boolean }> {
   if (!query) return [{ text, match: false }];

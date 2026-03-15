@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { X } from '@lucide/svelte';
 	import type { TimelineEvent } from '$lib/lab/timeline/types';
-	import { colorForSource, sourceLabel, VIEWER_COLORS, VIEWER_FONTS } from '$lib/lab/log-viewer/theme';
+	import { colorForSource, sourceLabel, VIEWER_COLORS, VIEWER_FONTS } from '$lib/logs/viewer/theme';
 
 	let {
 		event,

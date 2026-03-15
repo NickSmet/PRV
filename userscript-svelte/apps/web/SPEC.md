@@ -9,14 +9,15 @@
 - renders shared UI from `packages/report-ui-svelte`
 - embeds an HTTP MCP server at `/mcp` (exposes `execute_report_code`)
 - provides an **AI Chat** side panel that connects to the embedded MCP server via `@prv/ai-chat`
-- includes several **lab routes** for prototyping parsing, timeline, and visualization ideas
+- includes several **lab routes** for prototyping parsing, timeline, and visualization ideas, alongside a promoted report logs workspace
 
 **Key principle:** the browser never talks to `https://reportus.prls.net` directly — all calls go through SvelteKit routes.
 
 This surface currently ships:
 - **Reality-centered (mental-model) view**: `/{reportId}` (digits-only)
+- **Report logs workspace**: `/{reportId}/logs` (digits-only)
 - **Node-centered view**: `/nodes/{reportId}` (digits-only)
-- **Lab report playground**: `/lab/{reportId}`
+- **Legacy lab report alias**: `/lab/{reportId}`
 - **Lab icon gallery**: `/lab/icons`
 - **Lab timeline fixtures**: `/lab/timeline`
 - **Lab log parser fixtures**: `/lab/logs`
@@ -34,7 +35,7 @@ Browser UI (Svelte 5)
   │               └─ packages/report-viewmodel (NodeModel builders)
   │                   └─ packages/report-ui-svelte (render)
   │
-  ├─ lab log flow (current prototype direction)
+  ├─ report log workspace
   │   └─ browser worker
   │       └─ parses current-VM logs to local browser state / IndexedDB substrate
   │
@@ -62,6 +63,7 @@ These are **server-only** (do not prefix with `VITE_`).
 |---|---|---|
 | `REPORTUS_BASE_URL` | Reportus origin | `https://reportus.prls.net` |
 | `REPORTUS_BASIC_AUTH` | Basic auth for Reportus API (full header value or base64 payload) | `Basic <base64>` |
+| `REPORT_SOURCE_MODE` | Source selection for report-backed routes: `api`, `prefer_fixture`, or `fixture` (default `api`) | `prefer_fixture` |
 | `AI_CHAT_PROVIDER` | LLM provider: `auto`, `openai`, or `azure` (default `auto`) | `auto` |
 | `AI_CHAT_API_MODE` | OpenAI API mode: `responses` or `chat_completions` (default `responses`) | `responses` |
 | `AI_CHAT_MODEL` | Model / Azure deployment name (default `gpt-4o-mini`) | `gpt-4o-mini` |
@@ -103,11 +105,12 @@ These routes are intentionally experimental and may use fixtures or temporary UI
 
 | Route | Purpose |
 |---|---|
+| `GET /:reportId/logs` | Main report logs workspace: shared timeline + log viewer for current-VM logs. Uses one browser-local log session, shared selection state, and click-to-jump from timeline events into the log viewer. |
 | `GET /lab/:reportId` | Lab report view / experiments on a report payload |
 | `GET /lab/icons` | Icon experiments |
 | `GET /lab/timeline` | Fixture picker for timeline experiments |
 | `GET /lab/timeline/:reportId` | Grouped timeline prototype over selected fixture logs |
-| `GET /lab/timeline/:reportId/compact` | Shared timeline + log viewer workspace for current-VM logs. Uses one browser-local log session, shared selection state, and click-to-jump from timeline events into the log viewer. |
+| `GET /lab/timeline/:reportId/compact` | Legacy redirect to `/:reportId/logs` |
 | `GET /lab/logs` | Fixture picker for log parsing experiments |
 | `GET /lab/logs/:reportId` | Single-file log parsing debug UI |
 | `GET /lab/logs/:reportId/viewer` | Tight, end-user oriented log viewer over IndexedDB |
@@ -271,13 +274,13 @@ The intended final arrangement for timeline + viewer work is a shared browser-lo
 
 Conceptual app-local modules:
 
-- `lab/log-viewer`
-- `lab/log-timeline`
-- `lab/log-workspace`
+- `logs/viewer`
+- `logs/timeline`
+- `logs/workspace`
 
-#### Compact timeline workspace (`/lab/timeline/:reportId/compact`)
+#### Logs workspace (`/{reportId}/logs`)
 
-This route is the main orchestration surface for the shared timeline+viewer lab:
+This route is the main orchestration surface for the shared timeline+viewer experience:
 
 - shared log selection for current-VM logs
 - compact grouped timeline over extracted events

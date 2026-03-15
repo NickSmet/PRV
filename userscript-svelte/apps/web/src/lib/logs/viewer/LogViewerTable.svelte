@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { LogRow } from '$lib/lab/log-index/types';
+  import type { LogRow } from '$lib/logs/index/types';
 
   import type { LogViewerFile, ViewerPlaceholderState, ViewerVirtualState } from './types';
   import { messageSegments, rowHasVisibleMatch } from './search';

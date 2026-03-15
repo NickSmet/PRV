@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Clipboard, X } from '@lucide/svelte';
 
-  import type { LogRow } from '$lib/lab/log-index/types';
+  import type { LogRow } from '$lib/logs/index/types';
 
   import { colorForSource, sourceLabel, VIEWER_COLORS, VIEWER_FONTS } from './theme';
 

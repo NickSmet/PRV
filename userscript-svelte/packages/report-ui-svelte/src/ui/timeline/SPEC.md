@@ -157,17 +157,16 @@ Common options used by consumers:
 ## Dependencies
 
 - `vis-timeline/standalone`
-- Consumer payload builders (e.g. `apps/web/src/lib/lab/log-timeline/buildCompactPayload.ts`)
+- Consumer payload builders (e.g. `apps/web/src/lib/logs/timeline/buildCompactPayload.ts`)
 - Vendored API snapshot (version-pinned): `docs/vendor/vis-timeline/`
 
 ---
 
 ## Status
 
-**🔶 Outline** — stable primitive used by lab timelines; expect additive improvements as timeline UX is customized.
+**🔶 Outline** — stable primitive used by report and lab timelines; expect additive improvements as timeline UX is customized.
 
 ## Related Specifications
 
 - Timeline prototype / UX target (WIP): `docs/work-in-progress/log-workspace/LOG-TIMELINE-PROTOTYPE.md`
-- Web lab workspace orchestration: `apps/web/src/lib/lab/log-workspace/` (see WIP folder in docs)
-
+- Web logs workspace orchestration: `apps/web/src/lib/logs/workspace/` (see WIP folder in docs)

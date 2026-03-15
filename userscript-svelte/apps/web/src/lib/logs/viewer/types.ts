@@ -1,6 +1,6 @@
-import type { LogRow, LogSourceRecord } from '$lib/lab/log-index/types';
+import type { LogRow, LogSourceRecord } from '$lib/logs/index/types';
 import type { LogRowLocator } from '$lib/lab/timeline/types';
-import type { LogWorkspaceFile, LogWorkspacePageData } from '$lib/lab/log-workspace/types';
+import type { LogWorkspaceFile, LogWorkspacePageData } from '$lib/logs/workspace/types';
 
 export type LogViewerFile = LogWorkspaceFile;
 

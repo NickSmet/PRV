@@ -1,7 +1,7 @@
 import { error as kitError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getReportusClient } from '$lib/server/reportus';
 import { ReportusHttpError } from '@prv/report-api';
+import { ReportSourceError, resolveReportSource } from '$lib/server/report-source';
 
 type ReadMode = 'head' | 'tail';
 
@@ -22,12 +22,12 @@ function trimTailText(text: string, truncated: boolean): { text: string; trimmed
 export const GET: RequestHandler = async ({ params, url }) => {
   const maxBytes = Number(url.searchParams.get('maxBytes') ?? '2097152');
   const mode = parseMode(url.searchParams.get('mode'));
-  const client = getReportusClient();
   const decodedPath = params.filePath;
   if (!decodedPath) throw kitError(400, 'Missing filePath');
 
   try {
-    const { text, truncated } = await client.downloadFileText(params.id, decodedPath, {
+    const source = await resolveReportSource(params.id);
+    const { text, truncated } = await source.client.downloadFileText(params.id, decodedPath, {
       maxBytes: Number.isFinite(maxBytes) ? maxBytes : 2 * 1024 * 1024,
       mode
     });
@@ -42,7 +42,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
       }
     });
   } catch (e) {
-    if (e instanceof ReportusHttpError) throw kitError(e.status, e.message);
+    if (e instanceof ReportusHttpError || e instanceof ReportSourceError) throw kitError(e.status, e.message);
     throw e;
   }
 };

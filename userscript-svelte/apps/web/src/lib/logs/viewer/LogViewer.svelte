@@ -2,8 +2,8 @@
   import { browser } from '$app/environment';
   import { onDestroy, onMount } from 'svelte';
 
-  import { getSourceRecord } from '$lib/lab/log-index/db';
-  import type { LogRow, LogSourceRecord } from '$lib/lab/log-index/types';
+  import { getSourceRecord } from '$lib/logs/index/db';
+  import type { LogRow, LogSourceRecord } from '$lib/logs/index/types';
 
   import LogViewerDetailPane from './LogViewerDetailPane.svelte';
   import LogViewerHeader from './LogViewerHeader.svelte';
@@ -168,7 +168,7 @@
   });
 
   onMount(() => {
-    queryWorker = new Worker(new URL('$lib/lab/log-index/query-worker.ts', import.meta.url), {
+    queryWorker = new Worker(new URL('$lib/logs/index/query-worker.ts', import.meta.url), {
       type: 'module'
     });
 
@@ -536,7 +536,7 @@
   async function startSourceIngest(file: LogViewerFile) {
     stopWorker(file.filename);
 
-    const worker = new Worker(new URL('$lib/lab/log-index/worker.ts', import.meta.url), {
+    const worker = new Worker(new URL('$lib/logs/index/worker.ts', import.meta.url), {
       type: 'module'
     });
     const jobId = ++nextJobId;

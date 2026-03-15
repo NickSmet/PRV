@@ -1,9 +1,9 @@
 import { error as kitError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getReportusClient } from '$lib/server/reportus';
 import { TtlCache } from '$lib/server/cache';
 import { ensureDomParser, fetchNodePayload, nodeRegistry, type NodeKey } from '@prv/report-core';
 import { ReportusHttpError } from '@prv/report-api';
+import { ReportSourceError, resolveReportSource } from '$lib/server/report-source';
 
 const payloadCache = new TtlCache<string, { text: string; truncated: boolean; sourceFile?: { filename: string; path: string } }>(
   10 * 60 * 1000
@@ -21,8 +21,15 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
   const maxBytes = Number(url.searchParams.get('maxBytes') ?? '2097152');
   const max = Number.isFinite(maxBytes) ? maxBytes : 2 * 1024 * 1024;
+  let source: Awaited<ReturnType<typeof resolveReportSource>>;
+  try {
+    source = await resolveReportSource(params.id);
+  } catch (e) {
+    if (e instanceof ReportusHttpError || e instanceof ReportSourceError) throw kitError(e.status, e.message);
+    throw e;
+  }
 
-  const cacheKey = `${params.id}::${nodeKey}::${max}`;
+  const cacheKey = `${source.sourceKind}::${params.id}::${nodeKey}::${max}`;
   const cached = payloadCache.get(cacheKey);
   if (cached) {
     return new Response(cached.text, {
@@ -35,15 +42,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
     });
   }
 
-  const client = getReportusClient();
-  let index: Awaited<ReturnType<typeof client.getReportIndex>>;
-  try {
-    index = await client.getReportIndex(params.id);
-  } catch (e) {
-    if (e instanceof ReportusHttpError) throw kitError(e.status, e.message);
-    throw e;
-  }
-  const payload = await fetchNodePayload(client, params.id, index, nodeKey, { maxBytes: max });
+  const payload = await fetchNodePayload(source.client, params.id, source.index, nodeKey, { maxBytes: max });
   if (!payload) throw kitError(404, `Missing payload for nodeKey: ${nodeKey}`);
 
   payloadCache.set(cacheKey, {

@@ -1,11 +1,11 @@
-# Log Timeline (Lab) Specification (`apps/web/src/lib/lab/log-timeline`)
+# Log Timeline Workspace Specification (`apps/web/src/lib/logs/timeline`)
 
 ## Overview
 
-This module provides the **lab log timeline** used by:
+This module provides the **report logs timeline** used by:
 
+- `/:reportId/logs` (main shared timeline + log viewer workspace)
 - `/lab/timeline/:reportId` (timeline prototype over selected fixture logs)
-- `/lab/timeline/:reportId/compact` (shared timeline + log viewer workspace)
 
 It is responsible for:
 
@@ -15,7 +15,7 @@ It is responsible for:
 - rendering the timeline and a details pane
 - coordinating selection so a timeline click can jump the log viewer to a specific row
 
-**Key principle:** lab timeline logic is **workspace-driven** and consumes a local row substrate; it should not fetch/parse raw logs inside the timeline renderer.
+**Key principle:** timeline logic is **workspace-driven** and consumes a local row substrate; it should not fetch/parse raw logs inside the timeline renderer.
 
 ---
 
@@ -111,7 +111,7 @@ Severity is rendered via CSS class hooks and an HTML severity dot prefix in the 
 - `Apps: Microsoft`
 - `Apps: Third-party`
 
-The compact workspace keeps per-category visibility state for these three lanes only:
+The logs workspace keeps per-category visibility state for these three lanes only:
 
 - `Apps: System` hidden by default
 - `Apps: Microsoft` hidden by default
@@ -184,9 +184,9 @@ The payload also adds a custom vertical time marker at `dataMax` labeled `Report
 
 ### Reparse test hook
 
-The compact route supports a one-shot `?reparse=1` query parameter:
+The logs workspace supports a one-shot `?reparse=1` query parameter:
 
-- route: `/lab/timeline/:reportId/compact?reparse=1`
+- route: `/:reportId/logs?reparse=1`
 - effect: workspace init forces `ensureIndexed(true)` before the first normal refresh cycle
 - purpose: end-to-end parser testing against the selected report without trusting the existing IndexedDB snapshot
 
@@ -259,9 +259,9 @@ Defined in `buildCompactPayload.ts`:
 ## Dependencies
 
 - vis-timeline wrapper: `packages/report-ui-svelte/src/ui/timeline/Timeline.svelte`
-- clustering spec: `apps/web/src/lib/lab/log-timeline/clustering/SPEC.md`
+- clustering spec: `apps/web/src/lib/logs/timeline/clustering/SPEC.md`
 - clustering debug background: `docs/work-in-progress/timeline-clustering-debug.md`
-- shared workspace/controller: `apps/web/src/lib/lab/log-workspace/`
+- shared workspace/controller: `apps/web/src/lib/logs/workspace/`
 
 ---
 

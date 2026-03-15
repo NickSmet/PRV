@@ -1,6 +1,5 @@
 import { error as kitError, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getReportusClient } from '$lib/server/reportus';
 import { TtlCache } from '$lib/server/cache';
 import {
   buildReportModelFromRawPayloads,
@@ -18,6 +17,7 @@ import { buildNodesFromReport, buildRealityModel, type RealityRawItem } from '@p
 import type { CurrentVmModel } from '@prv/report-core';
 import type { GuestCommandsSummary, HostInfoSummary, MountInfoSummary } from '@prv/report-core';
 import { ReportusHttpError } from '@prv/report-api';
+import { ReportSourceError, resolveReportSource } from '$lib/server/report-source';
 
 const ttlMs = 10 * 60 * 1000;
 const nodePayloadCache = new TtlCache<
@@ -70,13 +70,12 @@ function buildRawItems(opts: {
 export const GET: RequestHandler = async ({ params }) => {
   ensureDomParser();
 
-  const client = getReportusClient();
   const reportId = params.id;
-  let index: Awaited<ReturnType<typeof client.getReportIndex>>;
+  let source: Awaited<ReturnType<typeof resolveReportSource>>;
   try {
-    index = await client.getReportIndex(reportId);
+    source = await resolveReportSource(reportId);
   } catch (e) {
-    if (e instanceof ReportusHttpError) {
+    if (e instanceof ReportusHttpError || e instanceof ReportSourceError) {
       throw kitError(e.status, e.message);
     }
     throw e;
@@ -109,14 +108,16 @@ export const GET: RequestHandler = async ({ params }) => {
 
   const raw: Partial<Record<NodeKey, string>> = {};
   for (const nodeKey of defaultNodes) {
-    const cacheKey = `${reportId}::${nodeKey}::${2 * 1024 * 1024}`;
+    const cacheKey = `${source.sourceKind}::${reportId}::${nodeKey}::${2 * 1024 * 1024}`;
     const cached = nodePayloadCache.get(cacheKey);
     if (cached) {
       raw[nodeKey] = cached.text;
       continue;
     }
 
-    const payload = await fetchNodePayload(client, reportId, index, nodeKey, { maxBytes: 2 * 1024 * 1024 });
+    const payload = await fetchNodePayload(source.client, reportId, source.index, nodeKey, {
+      maxBytes: 2 * 1024 * 1024
+    });
     if (!payload) continue;
     nodePayloadCache.set(cacheKey, {
       text: payload.text,
@@ -128,15 +129,15 @@ export const GET: RequestHandler = async ({ params }) => {
 
   const { report } = buildReportModelFromRawPayloads(raw);
   // Enrich canonical model with API metadata for more accurate rules.
-  report.meta.productName = index.product ?? report.meta.productName;
-  report.meta.productVersion = index.product_version ?? report.meta.productVersion;
-  report.meta.reportId = String(index.report_id ?? reportId);
-  report.meta.reportType = index.report_type ?? report.meta.reportType;
-  report.meta.reportReason = index.report_reason ?? report.meta.reportReason;
+  report.meta.productName = source.index.product ?? report.meta.productName;
+  report.meta.productVersion = source.index.product_version ?? report.meta.productVersion;
+  report.meta.reportId = String(source.index.report_id ?? reportId);
+  report.meta.reportType = source.index.report_type ?? report.meta.reportType;
+  report.meta.reportReason = source.index.report_reason ?? report.meta.reportReason;
   const markers = evaluateRules(report);
   const nodes = buildNodesFromReport(report, markers);
 
-  const perVm = discoverPerVmFiles(index);
+  const perVm = discoverPerVmFiles(source.index);
 
   const vmConfigByUuid: Record<string, CurrentVmModel | null> = {};
   const currentVmUuid = normalizeUuid(report.currentVm?.vmUuid);
@@ -146,11 +147,11 @@ export const GET: RequestHandler = async ({ params }) => {
 
   for (const [uuidRaw, file] of Object.entries(perVm.vmConfigByUuid)) {
     const uuid = normalizeUuid(uuidRaw);
-    const cacheKey = `${reportId}::file::${file.path}::${2 * 1024 * 1024}`;
+    const cacheKey = `${source.sourceKind}::${reportId}::file::${file.path}::${2 * 1024 * 1024}`;
     const cached = fileTextCache.get(cacheKey);
     const payload = cached
       ? cached
-      : await client.downloadFileText(reportId, file.path, { maxBytes: 2 * 1024 * 1024 });
+      : await source.client.downloadFileText(reportId, file.path, { maxBytes: 2 * 1024 * 1024 });
 
     if (!cached) fileTextCache.set(cacheKey, payload);
 
@@ -164,11 +165,11 @@ export const GET: RequestHandler = async ({ params }) => {
   > = {};
   for (const [uuidRaw, file] of Object.entries(perVm.toolsLogByUuid)) {
     const uuid = normalizeUuid(uuidRaw);
-    const cacheKey = `${reportId}::file::${file.path}::${2 * 1024 * 1024}`;
+    const cacheKey = `${source.sourceKind}::${reportId}::file::${file.path}::${2 * 1024 * 1024}`;
     const cached = fileTextCache.get(cacheKey);
     const payload = cached
       ? cached
-      : await client.downloadFileText(reportId, file.path, { maxBytes: 2 * 1024 * 1024 });
+      : await source.client.downloadFileText(reportId, file.path, { maxBytes: 2 * 1024 * 1024 });
     if (!cached) fileTextCache.set(cacheKey, payload);
 
     const summary = parseToolsLog(payload.text);
@@ -182,26 +183,26 @@ export const GET: RequestHandler = async ({ params }) => {
       : null;
   }
 
-  const reality = buildRealityModel({ reportId, report, index, perVm });
+  const reality = buildRealityModel({ reportId, report, index: source.index, perVm });
 
   const rawItems = buildRawItems({
     nodes: allNodeKeys,
-    indexFiles: index.files,
+    indexFiles: source.index.files,
     perVm
   });
 
   const reportMeta = {
-    report_id: index.report_id ?? Number(reportId),
-    report_type: index.report_type ?? null,
-    report_reason: index.report_reason ?? null,
-    product: index.product ?? null,
-    product_version: index.product_version ?? null,
-    received: index.received ?? null,
-    parsed: index.parsed ?? null,
-    problem_description: index.problem_description ?? null,
-    server_uuid: index.server_uuid ?? null,
-    computer_model: index.computer_model ?? null,
-    md5: index.md5 ?? null
+    report_id: source.index.report_id ?? Number(reportId),
+    report_type: source.index.report_type ?? null,
+    report_reason: source.index.report_reason ?? null,
+    product: source.index.product ?? null,
+    product_version: source.index.product_version ?? null,
+    received: source.index.received ?? null,
+    parsed: source.index.parsed ?? null,
+    problem_description: source.index.problem_description ?? null,
+    server_uuid: source.index.server_uuid ?? null,
+    computer_model: source.index.computer_model ?? null,
+    md5: source.index.md5 ?? null
   };
 
   const host = report.hostDevices as HostInfoSummary | null | undefined;

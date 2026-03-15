@@ -6,12 +6,12 @@
 	import { onDestroy } from 'svelte';
 
 	import * as Resizable from '$lib/components/ui/resizable';
-	import { LogWorkspaceController } from '$lib/lab/log-workspace/createLogWorkspace.svelte';
-	import type { LogWorkspacePageData } from '$lib/lab/log-workspace/types';
-	import LogViewerDetailPane from '$lib/lab/log-viewer/LogViewerDetailPane.svelte';
-	import LogViewerTable from '$lib/lab/log-viewer/LogViewerTable.svelte';
-	import LogViewerToolbar from '$lib/lab/log-viewer/LogViewerToolbar.svelte';
-	import { VIEWER_COLORS, VIEWER_FONTS } from '$lib/lab/log-viewer/theme';
+	import { LogWorkspaceController } from '$lib/logs/workspace/createLogWorkspace.svelte';
+	import type { LogWorkspacePageData } from '$lib/logs/workspace/types';
+	import LogViewerDetailPane from '$lib/logs/viewer/LogViewerDetailPane.svelte';
+	import LogViewerTable from '$lib/logs/viewer/LogViewerTable.svelte';
+	import LogViewerToolbar from '$lib/logs/viewer/LogViewerToolbar.svelte';
+	import { VIEWER_COLORS, VIEWER_FONTS } from '$lib/logs/viewer/theme';
 
 	import LogTimeline from './LogTimeline.svelte';
 	import LogTimelineDetailPane from './LogTimelineDetailPane.svelte';
@@ -88,9 +88,9 @@
 			<div class="flex items-center gap-2 flex-wrap">
 				<a
 					style={`font-size:12px; color:${VIEWER_COLORS.t2}; text-decoration:underline; text-underline-offset:2px;`}
-					href="/lab/timeline"
+					href={`/${encodeURIComponent(data.reportId)}`}
 				>
-					Timeline
+					Report
 				</a>
 				<span style={`color:${VIEWER_COLORS.t3}; font-size:12px;`}>/</span>
 				<a
@@ -100,7 +100,7 @@
 					Debug
 				</a>
 				<span style={`color:${VIEWER_COLORS.t3}; font-size:12px;`}>/</span>
-				<span style={`font-size:14px; font-weight:700; color:${VIEWER_COLORS.t1};`}>Compact</span>
+				<span style={`font-size:14px; font-weight:700; color:${VIEWER_COLORS.t1};`}>Logs</span>
 				<span style={`font-size:12px; color:${VIEWER_COLORS.t2};`}>Report {data.reportId}</span>
 			</div>
 		</div>

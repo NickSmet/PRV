@@ -7,8 +7,8 @@
     getSourceRecord,
     queryRowsForSources,
     type LogRowsQueryResult
-  } from '$lib/lab/log-index/db';
-  import type { LogKind, LogRow, LogSourceRecord } from '$lib/lab/log-index/types';
+  } from '$lib/logs/index/db';
+  import type { LogKind, LogRow, LogSourceRecord } from '$lib/logs/index/types';
 
   type PageData = {
     reportId: string;
@@ -406,7 +406,7 @@
   async function startSourceIngest(file: PageData['files'][number]) {
     stopWorker(file.filename);
 
-    const worker = new Worker(new URL('$lib/lab/log-index/worker.ts', import.meta.url), {
+    const worker = new Worker(new URL('$lib/logs/index/worker.ts', import.meta.url), {
       type: 'module'
     });
     const jobId = ++nextJobId;

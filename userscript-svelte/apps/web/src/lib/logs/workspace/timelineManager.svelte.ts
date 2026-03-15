@@ -1,21 +1,21 @@
 import { browser } from '$app/environment';
-import { queryRowsForSources } from '$lib/lab/log-index/db';
+import { queryRowsForSources } from '$lib/logs/index/db';
 import {
 	buildCompactTimeline,
 	deriveInitialWindowFromExtent,
 	type BuiltCompactTimeline
-} from '$lib/lab/log-timeline/buildCompactPayload';
+} from '$lib/logs/timeline/buildCompactPayload';
 import {
 	APP_TIMELINE_CATEGORIES,
 	DEFAULT_APP_CATEGORY_VISIBILITY,
 	isAppTimelineCategory
-} from '$lib/lab/log-timeline/appCategories';
-import { extractTimelineEventsFromRows } from '$lib/lab/log-timeline/extractEvents';
+} from '$lib/logs/timeline/appCategories';
+import { extractTimelineEventsFromRows } from '$lib/logs/timeline/extractEvents';
 import {
 	clusterTimelineEvents,
 	DEFAULT_TIMELINE_CLUSTERING,
 	type VisibleWindow
-} from '$lib/lab/log-timeline/clustering/clusterTimelineEvents';
+} from '$lib/logs/timeline/clustering/clusterTimelineEvents';
 import type { LogRowLocator, TimelineEvent } from '$lib/lab/timeline/types';
 
 const DEBUG_TIMELINE_CLUSTER = true;

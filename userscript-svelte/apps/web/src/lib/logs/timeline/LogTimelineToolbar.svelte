@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { RefreshCw } from '@lucide/svelte';
 
-	import type { LogWorkspaceFile } from '$lib/lab/log-workspace/types';
-	import { APP_TIMELINE_CATEGORIES } from '$lib/lab/log-timeline/appCategories';
-	import { colorForSource, fmtSize, sourceLabel, VIEWER_COLORS, VIEWER_FONTS } from '$lib/lab/log-viewer/theme';
+	import type { LogWorkspaceFile } from '$lib/logs/workspace/types';
+	import { APP_TIMELINE_CATEGORIES } from '$lib/logs/timeline/appCategories';
+	import { colorForSource, fmtSize, sourceLabel, VIEWER_COLORS, VIEWER_FONTS } from '$lib/logs/viewer/theme';
 
 	let {
 		files,

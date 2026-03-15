@@ -1,6 +1,6 @@
-import type { LogSourceRecord } from '$lib/lab/log-index/types';
-import type { WorkerProgressMessage } from '$lib/lab/log-viewer/types';
-import type { LogWorkspaceFile } from '$lib/lab/log-workspace/types';
+import type { LogSourceRecord } from '$lib/logs/index/types';
+import type { WorkerProgressMessage } from '$lib/logs/viewer/types';
+import type { LogWorkspaceFile } from '$lib/logs/workspace/types';
 
 export type IngestManagerConfig = {
 	reportId: () => string;
@@ -92,7 +92,7 @@ export class IngestManager {
 	startIngest(file: LogWorkspaceFile) {
 		this.stopWorker(file.filename);
 
-		const worker = new Worker(new URL('$lib/lab/log-index/worker.ts', import.meta.url), {
+		const worker = new Worker(new URL('$lib/logs/index/worker.ts', import.meta.url), {
 			type: 'module'
 		});
 		const jobId = ++this.#nextJobId;
@@ -168,10 +168,7 @@ export class IngestManager {
 
 	#buildSourceUrl(file: LogWorkspaceFile) {
 		const reportId = this.#config.reportId();
-		if (this.#config.sourceKind() === 'api') {
-			return `/api/reports/${encodeURIComponent(reportId)}/files/${this.#encodeFilePath(file.filePath)}?mode=${this.#config.downloadMode}&maxBytes=${this.#config.maxBytes}`;
-		}
-		return `/lab/fixtures/${encodeURIComponent(reportId)}/files/${encodeURIComponent(file.filePath)}?mode=${this.#config.downloadMode}&maxBytes=${this.#config.maxBytes}`;
+		return `/api/reports/${encodeURIComponent(reportId)}/files/${this.#encodeFilePath(file.filePath)}?mode=${this.#config.downloadMode}&maxBytes=${this.#config.maxBytes}`;
 	}
 
 	// ---------------------------------------------------------------------------

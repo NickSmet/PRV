@@ -1,8 +1,8 @@
 import { error as kitError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getReportusClient } from '$lib/server/reportus';
 import { TtlCache } from '$lib/server/cache';
 import { ReportusHttpError } from '@prv/report-api';
+import { ReportSourceError, resolveReportSource } from '$lib/server/report-source';
 
 const bytesCache = new TtlCache<string, { bytes: Uint8Array; truncated: boolean }>(10 * 60 * 1000);
 
@@ -26,20 +26,20 @@ export const GET: RequestHandler = async ({ params, url }) => {
   const decodedPath = params.filePath;
   if (!decodedPath) throw kitError(400, 'Missing filePath');
 
-  const cacheKey = `${params.id}::${decodedPath}::${max}::bytes`;
-  const cached = bytesCache.get(cacheKey);
-  if (cached) {
-    return new Response(cached.bytes, {
-      headers: {
-        'content-type': contentTypeFromPath(decodedPath),
-        'x-prv-truncated': cached.truncated ? 'true' : 'false'
-      }
-    });
-  }
-
-  const client = getReportusClient();
   try {
-    const { bytes, truncated } = await client.downloadFileBytes(params.id, decodedPath, { maxBytes: max });
+    const source = await resolveReportSource(params.id);
+    const cacheKey = `${source.sourceKind}::${params.id}::${decodedPath}::${max}::bytes`;
+    const cached = bytesCache.get(cacheKey);
+    if (cached) {
+      return new Response(cached.bytes, {
+        headers: {
+          'content-type': contentTypeFromPath(decodedPath),
+          'x-prv-truncated': cached.truncated ? 'true' : 'false'
+        }
+      });
+    }
+
+    const { bytes, truncated } = await source.client.downloadFileBytes(params.id, decodedPath, { maxBytes: max });
     bytesCache.set(cacheKey, { bytes, truncated });
 
     return new Response(bytes, {
@@ -49,7 +49,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
       }
     });
   } catch (e) {
-    if (e instanceof ReportusHttpError) throw kitError(e.status, e.message);
+    if (e instanceof ReportusHttpError || e instanceof ReportSourceError) throw kitError(e.status, e.message);
     throw e;
   }
 };

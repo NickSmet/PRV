@@ -1,17 +1,17 @@
 import { browser } from '$app/environment';
 
-import { getSourceRecord } from '$lib/lab/log-index/db';
-import type { LogRow } from '$lib/lab/log-index/types';
-import type { LogWorkspaceFile, LogWorkspacePageData } from '$lib/lab/log-workspace/types';
+import { getSourceRecord } from '$lib/logs/index/db';
+import type { LogRow } from '$lib/logs/index/types';
+import type { LogWorkspaceFile, LogWorkspacePageData } from '$lib/logs/workspace/types';
 import type {
 	QueryMessage,
 	ViewerPlaceholderState,
 	ViewerStats,
 	ViewerVirtualState,
 	WorkerProgressMessage
-} from '$lib/lab/log-viewer/types';
+} from '$lib/logs/viewer/types';
 import type { LogRowLocator, TimelineEvent } from '$lib/lab/timeline/types';
-import type { VisibleWindow } from '$lib/lab/log-timeline/clustering/clusterTimelineEvents';
+import type { VisibleWindow } from '$lib/logs/timeline/clustering/clusterTimelineEvents';
 import { TimelineManager } from './timelineManager.svelte';
 import { IngestManager } from './ingestManager.svelte';
 
@@ -416,7 +416,7 @@ export class LogWorkspaceController {
 	init() {
 		if (!browser || this.queryWorker) return;
 
-		this.queryWorker = new Worker(new URL('$lib/lab/log-index/query-worker.ts', import.meta.url), {
+		this.queryWorker = new Worker(new URL('$lib/logs/index/query-worker.ts', import.meta.url), {
 			type: 'module'
 		});
 
@@ -557,7 +557,7 @@ export class LogWorkspaceController {
 		);
 		if (runId !== this.#ensureRunId) return;
 
-		const nextRecords: Record<string, import('$lib/lab/log-index/types').LogSourceRecord> = {};
+		const nextRecords: Record<string, import('$lib/logs/index/types').LogSourceRecord> = {};
 		for (const [sourceFile, record] of records) {
 			if (record) nextRecords[sourceFile] = record;
 		}

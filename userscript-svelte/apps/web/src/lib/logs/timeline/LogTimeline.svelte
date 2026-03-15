@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Timeline, type TimelinePayload, type TimelineWindowEvent } from '@prv/report-ui-svelte';
-	import { VIEWER_COLORS, VIEWER_FONTS } from '$lib/lab/log-viewer/theme';
+	import { VIEWER_COLORS, VIEWER_FONTS } from '$lib/logs/viewer/theme';
 
 	let {
 		payload,

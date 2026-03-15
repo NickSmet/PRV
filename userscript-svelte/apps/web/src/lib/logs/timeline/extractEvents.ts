@@ -1,4 +1,4 @@
-import type { LogRow } from '$lib/lab/log-index/types';
+import type { LogRow } from '$lib/logs/index/types';
 import type { LogRowLocator, TimelineEvent } from '$lib/lab/timeline/types';
 
 import { classifyWindowsTimelineApp } from './classifyWindowsTimelineApp';
