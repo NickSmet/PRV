@@ -11,6 +11,7 @@ It is responsible for:
 
 - extracting `TimelineEvent[]` from indexed log rows (browser-local IndexedDB substrate)
 - building a `vis-timeline` payload (`groups/items/options/initialWindow`)
+- clustering events by density and zoom level for readability at any zoom
 - rendering the timeline and a details pane
 - coordinating selection so a timeline click can jump the log viewer to a specific row
 
@@ -23,13 +24,25 @@ It is responsible for:
 ```
 IndexedDB row substrate (query-worker)
   └─ LogWorkspaceController
-     ├─ extractTimelineEventsFromRows(rows) → TimelineEvent[]
-     ├─ buildCompactTimeline(events) → { groups, items, options, initialWindow }
+     ├─ TimelineManager                         ← owns all timeline state
+     │   ├─ clusterTimelineEvents(events, window) → ClusteredTimelineModel
+     │   └─ buildCompactTimeline(events, options) → BuiltCompactTimeline
+     ├─ IngestManager                           ← owns worker lifecycle
      └─ LogTimelineWorkspace.svelte
-        ├─ <LogTimeline payload=timelinePayload onItemClick />
+        ├─ <LogTimeline payload onItemClick />
         │   └─ <Timeline /> from @prv/report-ui-svelte (vis-timeline wrapper)
         └─ <LogTimelineDetailPane event />
 ```
+
+### Code organisation
+
+The workspace controller is split across three files:
+
+| File | Responsibility |
+|---|---|
+| `createLogWorkspace.svelte.ts` | Orchestrator + viewer/search/scroll/query-worker |
+| `timelineManager.svelte.ts` | All timeline state, clustering, payload, selection |
+| `ingestManager.svelte.ts` | Worker lifecycle, source records, progress tracking |
 
 ---
 
@@ -49,41 +62,135 @@ export type TimelineEvent = {
   end?: Date;
   label: string;
   detail?: string;
-  startRef?: import('$lib/lab/timeline/types').LogRowLocator;
+  startRef: LogRowLocator | null;
+  endRef?: LogRowLocator | null;
+  rawRef?: { line: number };
 };
 ```
 
 ### Payload builder
 
-`buildCompactTimeline(events)` produces:
+`buildCompactTimeline(events, options?)` produces:
 
 ```ts
 export type BuiltCompactTimeline = {
-  groups: Array<{ id: string; content: string; nestedGroups?: string[]; showNested?: boolean; className?: string; order?: number }>;
-  items: Array<{ id: string; group: string; start: Date; end?: Date; content: string; className?: string; title?: string }>;
+  groups: VisGroup[];
+  items: VisItem[];
   options: Record<string, unknown>; // forwarded to vis-timeline
   initialWindow?: { start: Date; end: Date };
+  customTimes?: Array<{ id: string; time: Date; title?: string; marker?: string }>;
 };
 ```
+
+`options.visibleSpanMs` is optional; when supplied it drives readability expansion and point/range display decisions at the current zoom level.
+`options.categoryTotals` and `options.ensureCategories` let the builder keep empty category rows visible when their items are filtered out.
+Display semantics are defined in `DISPLAY-MODES.md`.
 
 ---
 
 ## Behavior
 
-### Grouping + labeling (current)
+### Grouping + labeling
 
-Current payload builder groups as:
+Payload builder groups as:
 
 - **Subsystem parent lane** (level 1): `VM` vs `System` (derived from `sourceFile`)
-  - **Category lanes** (level 2): e.g. `Apps`, `GUI`, `Config`
+  - **Category lanes** (level 2): e.g. `Apps: System`, `Apps: Microsoft`, `Apps: Third-party`, `Tools Install`, `Tools Issues`, `GUI Messages`, `Config Diffs`
 
 Items:
-- range item when `end` exists
-- point item when `end` is absent
+- `point` items for semantic point events (`<= 5s`, or no `end`)
+- `range` items for real duration events and cluster summaries
 
-Severity is rendered via className hooks (color language) and optional HTML dot prefix.
+Severity is rendered via CSS class hooks and an HTML severity dot prefix in the item content.
 
-### Selection + drilldown (current)
+### App categories + visibility
+
+`vm.log` app activity is classified at extraction time into three concrete timeline categories:
+
+- `Apps: System`
+- `Apps: Microsoft`
+- `Apps: Third-party`
+
+The compact workspace keeps per-category visibility state for these three lanes only:
+
+- `Apps: System` hidden by default
+- `Apps: Microsoft` hidden by default
+- `Apps: Third-party` visible by default
+
+Hidden means:
+
+- the lane row remains in the timeline
+- no items are rendered into that lane
+- clustering runs only on currently visible events
+
+The toolbar exposes checkboxes for these three app lanes along with raw counts from the unfiltered event set.
+
+App extraction semantics:
+
+- each matching `D3D*.**: <path>.exe` row is treated as an **app sighting**, not a process lifetime
+- app sightings are emitted as point events
+- no synthetic start/end pairing is performed for repeated sightings of the same app
+- consecutive sightings of the same executable path within `2s` are deduped
+- dedupe ignores D3D version so `D3D11.32` and `D3D12.20` rows for the same path still collapse when they are effectively the same launch observation
+
+### Tools log extraction
+
+`tools.log` contributes timeline events under the `VM` subsystem:
+
+- `Tools Install` for setup milestones such as install mode, update source version, success, and fatal install exit codes
+- `Tools Issues` for known tail-signatures such as registry corruption and the `prl_dd.inf` / `KB125243` driver-install pattern
+
+The extraction is heuristic and intentionally mirrors the older tools-log summary logic, but now emits clickable timeline events instead of a plain text summary.
+
+### Display modes + readability
+
+Timeline items use three zoom-sensitive display modes:
+
+- **Point mode**: no `end`, or real duration `<= 5s`
+- **Readability range mode**: real duration `> 5s` but too narrow to read at current zoom
+- **True-duration range mode**: real duration `> 5s` and already readable at current zoom
+
+Point items use vis-timeline `type: 'point'` with a bounded chip label.
+Readability-range items widen rightward from the true start, but remain visually distinct from true-duration bars.
+True-duration items render at their exact elapsed span.
+
+Cluster items remain synthetic summaries with bounded width.
+Cluster summaries are not flattened back to leaf rows in tooltips/details; their child list may contain already summarized extracted events.
+
+`Config Diffs` no longer pre-aggregate adjacent rows during extraction. Each diff row becomes its own timeline event, and any visual grouping is handled later by clustering.
+
+### Dynamic clustering
+
+Events are clustered by `clusterTimelineEvents()` before the payload is built. See `clustering/SPEC.md` for the full specification. Key behaviors:
+
+- **Category-agnostic**: every category participates
+- **Dual trigger**: density (too many visible events) OR span (window > 6 hours) with enough total events
+- **Hard floor**: no clustering below 5-minute span
+- **Display-footprint aware**: burst formation uses a small synthetic footprint for point-like / narrow events so visually colliding items can cluster even when their raw timestamps do not overlap
+- **Severity-aware**: composite labels + highest-severity CSS class
+- **Stable under panning**: span trigger uses total event count so clusters don't disappear when panning pushes events to the edge of view
+
+### Initial view window
+
+On load, the timeline opens at the **last 5 hours** of the data:
+
+```
+initialWindow.start = (dataMax + 1h) − 5h
+initialWindow.end   = dataMax + 1h
+```
+
+This is baked into vis-timeline's constructor options (not a post-construction `setWindow` call) to prevent vis-timeline's internal async `fit()` from overriding it.
+The payload also adds a custom vertical time marker at `dataMax` labeled `Report end`.
+
+### Reparse test hook
+
+The compact route supports a one-shot `?reparse=1` query parameter:
+
+- route: `/lab/timeline/:reportId/compact?reparse=1`
+- effect: workspace init forces `ensureIndexed(true)` before the first normal refresh cycle
+- purpose: end-to-end parser testing against the selected report without trusting the existing IndexedDB snapshot
+
+### Selection + drilldown
 
 1. User clicks an item on the timeline.
 2. `@prv/report-ui-svelte` emits `onItemClick(record)` for the clicked item.
@@ -91,23 +198,27 @@ Severity is rendered via className hooks (color language) and optional HTML dot 
 4. If the event has `startRef`, the log viewer is asked to jump to that locator.
 5. The details pane shows `TimelineEvent.detail` and provenance.
 
-### Sizing contract (current)
+### Tooltips
 
-Timeline height should be controlled by the parent container:
+Every timeline item carries a structured HTML tooltip built by `buildTooltipHtml()` in `buildCompactPayload.ts`. Layout:
+
+- **Individual event**: severity dot + bold label → timestamp (+ duration if > 0) → source file · category → `detail` text if present
+- **Cluster event**: severity dot + composite label (e.g. `"12 apps (3 errors, 2 warn, 7 info)"`) → time range (start – end) → source file · category → first 8 child event labels as a list
+
+For point-mode items, the tooltip still reports the real event timestamp and any true duration from the source event model; the bounded chip width is purely a display affordance.
+
+All styles are inlined so the tooltip works in both normal DOM and shadow DOM (userscript) contexts. vis-timeline's `.vis-tooltip` CSS is overridden to allow word-wrapping (by default it is `white-space: nowrap`) with a max-width of 380px.
+
+### Wheel zoom policy
+
+Mouse wheel zooms the time axis (not the lane list). Shift + wheel scrolls lanes vertically. Implemented via `wheelMode="zoom"` prop on `<Timeline>`.
+
+### Sizing contract
+
+Timeline height is controlled by the parent container:
 
 - timeline payload sets `options.height = '100%'`
-- consumers must avoid fixed caps like `options.maxHeight = 400`
-- the underlying `Timeline.svelte` wrapper redraws on container resize
-
-### Scroll / zoom (current behavior; expected to evolve)
-
-Current options enable:
-- `zoomKey: 'ctrlKey'`
-- `verticalScroll: true`
-
-Implications:
-- **Mouse wheel** scrolls the timeline vertically (lane list) when the cursor is over the timeline.
-- **Ctrl + wheel** zooms in/out (browser-like zoom gesture).
+- the underlying `Timeline.svelte` wrapper redraws on container resize via `ResizeObserver`
 
 ---
 
@@ -115,13 +226,21 @@ Implications:
 
 ### Timeline options (vis-timeline)
 
-Current baseline options are defined in:
-- `apps/web/src/lib/lab/log-timeline/buildCompactPayload.ts`
+Defined in `buildCompactPayload.ts`:
 
-Rules:
-- Prefer `height: '100%'` so resizable containers control the viewport height.
-- Avoid fixed caps (`maxHeight`) in embedded layouts.
-- Prefer additive changes to options (keep current UX stable unless explicitly changing behavior).
+| Option | Value | Notes |
+|---|---|---|
+| `stack` | `true` | Items stack vertically to avoid overlap |
+| `zoomKey` | `'ctrlKey'` | Ctrl+wheel zooms (fallback for native scroll mode) |
+| `orientation` | `'top'` | Time axis at the top |
+| `groupOrder` | `'order'` | Groups sorted by `order` field |
+| `tooltip.followMouse` | `true` | Tooltip tracks cursor |
+| `tooltip.overflowMethod` | `'flip'` | Tooltip flips when near edge |
+| `margin.item` | `{ horizontal: 2, vertical: 3 }` | Compact item spacing |
+| `verticalScroll` | `true` | Lane list scrollable |
+| `zoomMin` | `5000ms` | 5 seconds minimum |
+| `zoomMax` | `~13 months` (or data span if larger) | Can always zoom out to full data |
+| `height` | `'100%'` | Container-controlled height |
 
 ---
 
@@ -129,86 +248,34 @@ Rules:
 
 | Error | Handling |
 |---|---|
-| Timeline payload missing / no selected logs | Timeline UI shows an empty/placeholder state (handled by `LogTimeline.svelte`) |
+| Timeline payload missing / no selected logs | Timeline UI shows "Loading…" or "No events" placeholder (`LogTimeline.svelte`) |
 | Event click cannot be mapped to a `TimelineEvent` | No selection change |
 | Event has no `startRef` | Details can still show; viewer jump is skipped |
-| Viewer jump locator is outside indexed slice | Viewer shows a notice (workspace-level) |
-
----
-
-## Future Enhancements (planned)
-
-These are the next expected changes to align the timeline with our use-case:
-
-- **Minimum visual width for short events**: ultra-short ranges should still be clickable and readable.
-- **Wheel behavior**: wheel should primarily **zoom** (with a modifier for vertical scroll), not scroll lanes by default.
-- **Zoom bounds**: define a maximum zoom-out window (overview) and a minimum zoom-in (precision).
-- **Pan model**: horizontal panning should feel consistent with log viewer navigation.
-- **Density controls**: compact vs readable lane heights; label visibility policies.
-- **Selection sync**: optional highlight/scroll-to-event when the viewer jumps due to other interactions.
-
-### Next iteration (we will implement first)
-
-#### 1) Minimum visual width for events
-
-**Goal:** very short range/point events must remain clickable and discoverable even when zoomed out.
-
-**Rule (visual):**
-- All timeline items in this surface MUST render with a minimum pixel width.
-- This is a **UI affordance**, not a data transformation: the underlying timestamps remain correct.
-
-**Baseline values:**
-- Range items: min width = **10px**
-- Point items: min width = **12px**
-
-Implementation note: enforce via CSS on the item class used by this surface (`.prv-ct-item`) so we can tweak without touching data.
-
-#### 1a) Point events render as tiny ranges (no vertical bars)
-
-**Goal:** an event without an end timestamp should not render as a tall “instant” bar/marker.
-
-**Rule (rendering):**
-- If an event has no `end` (or `end === start`), we render it as a **tiny range** by using:
-  - `renderEnd = start + 1000ms`
-
-**Notes:**
-- This is a **visual affordance**. It does not claim the event lasted 1s; it avoids misleading “instant” rendering and keeps the UI consistent.
-- Implemented in the payload builders that create `vis-timeline` items.
-
-#### 2) Wheel zoom policy (primary interaction)
-
-**Goal:** scrolling over the timeline should zoom the time axis, not scroll lanes.
-
-**Rules:**
-- Mouse wheel / trackpad scroll over the timeline MUST zoom in/out.
-- Holding **Shift** while wheeling MAY scroll lanes vertically (escape hatch for dense lane lists).
-
-Implementation note: implement wheel-to-zoom in the shared timeline wrapper (`packages/report-ui-svelte/src/ui/timeline/Timeline.svelte`) behind an explicit opt-in (`wheelMode: 'zoom'`) so other surfaces are unaffected.
-
-#### 3) Zoom bounds (max zoom-out + min zoom-in)
-
-**Goal:** prevent “zoom out forever” and define a stable overview window.
-
-**Rules:**
-- Maximum zoom-out range MUST be bounded by the initial overview span (derived from event min/max with padding).
-- Minimum zoom-in range MUST be bounded to a practical precision window.
-
-**Baseline values:**
-- `zoomMax`: `initialWindow.end - initialWindow.start` (ms)
-- `zoomMin`: **5 seconds** (5000 ms)
+| Viewer jump locator is outside indexed slice | Viewer shows a transient notice (via `timeline.showNotice()`) |
+| Timeline data load fails | `timeline.error` state shown in-pane |
 
 ---
 
 ## Dependencies
 
-- vis timeline wrapper: `packages/report-ui-svelte/src/ui/timeline/Timeline.svelte`
-- timeline wrapper spec: `packages/report-ui-svelte/src/ui/timeline/SPEC.md`
-- prototype goals (WIP): `docs/work-in-progress/log-workspace/LOG-TIMELINE-PROTOTYPE.md`
-- shared workspace/controller: `apps/web/src/lib/lab/log-workspace/createLogWorkspace.svelte.ts`
+- vis-timeline wrapper: `packages/report-ui-svelte/src/ui/timeline/Timeline.svelte`
+- clustering spec: `apps/web/src/lib/lab/log-timeline/clustering/SPEC.md`
+- clustering debug background: `docs/work-in-progress/timeline-clustering-debug.md`
+- shared workspace/controller: `apps/web/src/lib/lab/log-workspace/`
 
 ---
 
 ## Status
 
-**🔶 Outline** — prototype timeline is functional; behavior is expected to change as we refine zoom/scroll and event rendering rules.
+**✅ Working** — all planned phases from timeline-v2-scope are implemented:
 
+| Phase | Feature | Status |
+|---|---|---|
+| 1 | Universal aggregation (all categories) | ✅ Done |
+| 2 | Density-based dynamic aggregation with dual triggers | ✅ Done |
+| 3 | Severity-aware aggregation (composite labels + highest-severity styling) | ✅ Done |
+| 4 | Minimum event width (time-range inflation) | ✅ Done |
+| 5 | Structured HTML tooltips | ✅ Done |
+| — | Initial 5-hour view window | ✅ Done |
+| — | Pan stability (no de-aggregation when events near edge of view) | ✅ Done |
+| — | Controller refactor (TimelineManager / IngestManager split) | ✅ Done |

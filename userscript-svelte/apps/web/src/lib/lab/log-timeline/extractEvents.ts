@@ -1,6 +1,83 @@
 import type { LogRow } from '$lib/lab/log-index/types';
 import type { LogRowLocator, TimelineEvent } from '$lib/lab/timeline/types';
 
+import { classifyWindowsTimelineApp } from './classifyWindowsTimelineApp';
+
+const TOOLS_INSTALL_CATEGORY = 'Tools Install';
+const TOOLS_ISSUES_CATEGORY = 'Tools Issues';
+
+type ToolsRule = {
+	pattern: RegExp;
+	label: string | ((match: RegExpExecArray) => string);
+	severity: 'info' | 'warn' | 'danger';
+};
+
+const TOOLS_RULES: ToolsRule[] = [
+	{
+		pattern: /Installation type ([A-Z]+) detected/i,
+		label: (match) => `Installation type: ${match[1]}`,
+		severity: 'info'
+	},
+	{
+		pattern: /Installer exited with error code 3010: The requested operation is successful.*/i,
+		label: 'Installation successful!',
+		severity: 'info'
+	},
+	{
+		pattern: /Setup finished with code 3010 \(0xbc2\)/i,
+		label: 'Installation successful!',
+		severity: 'info'
+	},
+	{
+		pattern: /The requested operation is successful/i,
+		label: 'Installation successful!',
+		severity: 'info'
+	},
+	{
+		pattern: /Setup finished with code 0 \(0x0\)/i,
+		label: 'Installation successful!',
+		severity: 'info'
+	},
+	{
+		pattern: /Setup finished with code 1641 \(0x669\)/i,
+		label: 'Installation successful!',
+		severity: 'info'
+	},
+	{
+		pattern: /\*{14} Setup mode: UPDATE from version (\d\d\.\d\.\d\.\d{5})/i,
+		label: (match) => `Updating from ${match[1]}`,
+		severity: 'info'
+	},
+	{
+		pattern: /\*{14} Setup mode: EXPRESS INSTALL\./i,
+		label: 'Original installation.',
+		severity: 'info'
+	},
+	{
+		pattern: /\*{14} Setup mode: INSTALL\./i,
+		label: 'Manual installation.',
+		severity: 'info'
+	},
+	{
+		pattern: /\*{14} Setup mode: REINSTALL/i,
+		label: 'Reinstalling.',
+		severity: 'info'
+	},
+	{
+		pattern: /Setup completed with code 1603/i,
+		label: 'Installation failed.',
+		severity: 'danger'
+	}
+];
+
+const TOOLS_SUCCESS_PATTERNS = [
+	/\bsuccessful\b/i,
+	/Setup finished with code 3010 \(0xbc2\)/i,
+	/Setup finished with code 0 \(0x0\)/i,
+	/Setup finished with code 1641 \(0x669\)/i,
+	/The requested operation is successful/i
+];
+
 function locatorForRow(row: LogRow): LogRowLocator {
 	return {
 		sourceFile: row.sourceFile,
@@ -23,46 +100,8 @@ function pushGuiAndConfigEvents(rows: LogRow[], events: TimelineEvent[]) {
 		detail?: string;
 	};
 
-	type DiffRow = {
-		row: LogRow;
-		at: Date;
-		text: string;
-	};
-
 	const openByKey = new Map<string, OpenMessage>();
 	const msgDataByCode = new Map<string, { at: Date; detail: string }>();
-	let diffBurst: { start: Date; end: Date; rows: DiffRow[] } | null = null;
-
-	function flushDiffBurst() {
-		if (!diffBurst || diffBurst.rows.length === 0) {
-			diffBurst = null;
-			return;
-		}
-
-		const count = diffBurst.rows.length;
-		const preview = diffBurst.rows
-			.slice(0, 20)
-			.map((item) => item.text)
-			.join('\n');
-		const detail = count > 20 ? `${preview}\n… +${count - 20} more` : preview;
-		const firstRow = diffBurst.rows[0]!.row;
-		const lastRow = diffBurst.rows[count - 1]!.row;
-
-		events.push({
-			id: `${firstRow.sourceFile}:config:${firstRow.id}:${lastRow.id}`,
-			sourceFile: firstRow.sourceFile,
-			category: 'Config Diffs',
-			severity: 'info',
-			start: diffBurst.start,
-			end: diffBurst.end,
-			label: count === 1 ? '1 config change' : `${count} config changes`,
-			detail,
-			startRef: locatorForRow(firstRow),
-			endRef: locatorForRow(lastRow)
-		});
-
-		diffBurst = null;
-	}
 
 	for (const row of rows) {
 		const at = dateForRow(row);
@@ -129,23 +168,18 @@ function pushGuiAndConfigEvents(rows: LogRow[], events: TimelineEvent[]) {
 		if (!diff?.groups?.key) continue;
 
 		const rendered = `${diff.groups.key}: '${diff.groups.old ?? ''}' → '${diff.groups.new ?? ''}'`;
-		if (!diffBurst) {
-			diffBurst = { start: at, end: at, rows: [{ row, at, text: rendered }] };
-			continue;
-		}
 
-		const gapMs = at.getTime() - diffBurst.end.getTime();
-		if (gapMs > 250) {
-			flushDiffBurst();
-			diffBurst = { start: at, end: at, rows: [{ row, at, text: rendered }] };
-			continue;
-		}
-
-		diffBurst.end = at;
-		diffBurst.rows.push({ row, at, text: rendered });
+		events.push({
+			id: `${row.sourceFile}:config:${row.id}`,
+			sourceFile: row.sourceFile,
+			category: 'Config Diffs',
+			severity: 'info',
+			start: at,
+			label: diff.groups.key,
+			detail: rendered,
+			startRef: locatorForRow(row)
+		});
 	}
-
-	flushDiffBurst();
 
 	for (const open of openByKey.values()) {
 		events.push({
@@ -161,17 +195,85 @@ function pushGuiAndConfigEvents(rows: LogRow[], events: TimelineEvent[]) {
 	}
 }
 
-function pushVmAppEvents(rows: LogRow[], events: TimelineEvent[]) {
-	type AggregatedApp = {
-		first: LogRow;
-		last: LogRow;
-		start: Date;
-		end: Date;
-		label: string;
-		detail?: string;
-	};
+function pushToolsEvents(rows: LogRow[], events: TimelineEvent[]) {
+	if (rows.length === 0) return;
 
-	const byKey = new Map<string, AggregatedApp>();
+	const joinedTail = rows
+		.map((row) => row.raw || row.message)
+		.join('\n')
+		.slice(-1000);
+	const toolsSuccess = TOOLS_SUCCESS_PATTERNS.some((pattern) => pattern.test(joinedTail));
+
+	for (const row of rows) {
+		const at = dateForRow(row);
+		if (!at) continue;
+		const isToolsSetupRow =
+			(row.tags ?? []).includes('WIN_TOOLS_SETUP') || /WIN_TOOLS_SETUP\]/.test(row.raw);
+		if (!isToolsSetupRow) continue;
+
+		const message = (row.message || row.raw).trim();
+		for (const rule of TOOLS_RULES) {
+			const match = rule.pattern.exec(message);
+			if (!match) continue;
+			const label = typeof rule.label === 'function' ? rule.label(match) : rule.label;
+			events.push({
+				id: `${row.sourceFile}:tools:${row.id}:${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+				sourceFile: row.sourceFile,
+				category: TOOLS_INSTALL_CATEGORY,
+				severity: rule.severity,
+				start: at,
+				label,
+				detail: message,
+				startRef: locatorForRow(row)
+			});
+			break;
+		}
+	}
+
+	const last300Rows = rows.slice(-300);
+	const corruptRegistryRow = [...last300Rows]
+		.reverse()
+		.find((row) => /configuration registry database is corrupt/i.test(row.message || row.raw));
+	if (corruptRegistryRow) {
+		const at = dateForRow(corruptRegistryRow);
+		if (at) {
+			events.push({
+				id: `${corruptRegistryRow.sourceFile}:tools-issue:${corruptRegistryRow.id}:corrupt-registry`,
+				sourceFile: corruptRegistryRow.sourceFile,
+				category: TOOLS_ISSUES_CATEGORY,
+				severity: 'danger',
+				start: at,
+				label: 'Registry database is corrupt',
+				detail: `${corruptRegistryRow.message || corruptRegistryRow.raw}\nReference: Windows registry corruption during Tools install.`,
+				startRef: locatorForRow(corruptRegistryRow)
+			});
+		}
+	}
+
+	const last30Rows = rows.slice(-30);
+	const prlDdRow = !toolsSuccess
+		? [...last30Rows].reverse().find((row) => /prl_dd\.inf/i.test(row.message || row.raw))
+		: null;
+	if (prlDdRow) {
+		const at = dateForRow(prlDdRow);
+		if (at) {
+			events.push({
+				id: `${prlDdRow.sourceFile}:tools-issue:${prlDdRow.id}:kb125243`,
+				sourceFile: prlDdRow.sourceFile,
+				category: TOOLS_ISSUES_CATEGORY,
+				severity: 'danger',
+				start: at,
+				label: 'prl_dd.inf issue (KB125243)',
+				detail: `${prlDdRow.message || prlDdRow.raw}\nReference: KB125243`,
+				startRef: locatorForRow(prlDdRow)
+			});
+		}
+	}
+}
+
+function pushVmAppEvents(rows: LogRow[], events: TimelineEvent[]) {
+	const lastSeenByPath = new Map<string, number>();
+	const APP_SIGHTING_DEDUPE_MS = 2000;
 
 	for (const row of rows) {
 		const at = dateForRow(row);
@@ -184,46 +286,28 @@ function pushVmAppEvents(rows: LogRow[], events: TimelineEvent[]) {
 		const exe = exeMatch?.[exeMatch.length - 1] ?? null;
 		if (!exe) continue;
 
+		const appPath = d3d.groups.path.trim();
+		const exePathMatch = /(?<exePath>.*?\.exe)\b/i.exec(appPath);
+		const exePath = (exePathMatch?.groups?.exePath ?? appPath).trim();
+		const category = classifyWindowsTimelineApp(appPath);
 		const d3dVersion = d3d.groups.d3d;
-		const key = `${exe.toLowerCase()}|${d3dVersion}`;
+		const dedupeKey = `${category}|${exePath.toLowerCase()}`;
 		const label = `${exe} (${d3dVersion})`;
-		const existing = byKey.get(key);
-
-		if (!existing) {
-			byKey.set(key, {
-				first: row,
-				last: row,
-				start: at,
-				end: at,
-				label,
-				detail: d3d.groups.path.trim()
-			});
+		const seenAtMs = lastSeenByPath.get(dedupeKey);
+		if (seenAtMs != null && at.getTime() - seenAtMs <= APP_SIGHTING_DEDUPE_MS) {
 			continue;
 		}
+		lastSeenByPath.set(dedupeKey, at.getTime());
 
-		if (row.lineNo < existing.first.lineNo) {
-			existing.first = row;
-			existing.start = at;
-		}
-		if (row.lineNo > existing.last.lineNo) {
-			existing.last = row;
-			existing.end = at;
-		}
-	}
-
-	for (const [key, value] of byKey.entries()) {
 		events.push({
-			id: `${value.first.sourceFile}:apps:${value.first.id}:${key}`,
-			sourceFile: value.first.sourceFile,
-			category: 'Apps',
+			id: `${row.sourceFile}:apps:${row.id}:${dedupeKey}`,
+			sourceFile: row.sourceFile,
+			category,
 			severity: 'info',
-			start: value.start,
-			end: value.end.getTime() === value.start.getTime() ? undefined : value.end,
-			label: value.label,
-			detail: value.detail,
-			startRef: locatorForRow(value.first),
-			endRef:
-				value.end.getTime() === value.start.getTime() ? undefined : locatorForRow(value.last)
+			start: at,
+			label,
+			detail: exePath,
+			startRef: locatorForRow(row)
 		});
 	}
 }
@@ -246,6 +330,10 @@ export function extractTimelineEventsFromRows(rows: LogRow[]): TimelineEvent[] {
 		}
 		if (sourceFile === 'vm.log') {
 			pushVmAppEvents(orderedRows, events);
+			continue;
+		}
+		if (sourceFile === 'tools.log') {
+			pushToolsEvents(orderedRows, events);
 		}
 	}
 

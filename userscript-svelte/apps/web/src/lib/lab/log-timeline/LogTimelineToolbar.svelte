@@ -2,6 +2,7 @@
 	import { RefreshCw } from '@lucide/svelte';
 
 	import type { LogWorkspaceFile } from '$lib/lab/log-workspace/types';
+	import { APP_TIMELINE_CATEGORIES } from '$lib/lab/log-timeline/appCategories';
 	import { colorForSource, fmtSize, sourceLabel, VIEWER_COLORS, VIEWER_FONTS } from '$lib/lab/log-viewer/theme';
 
 	let {
@@ -9,16 +10,30 @@
 		selectedFiles,
 		loading,
 		eventCount,
+		appCategoryVisibility,
+		appCategoryCounts,
 		onToggleFile,
+		onToggleAppCategory,
 		onReload
 	}: {
 		files: LogWorkspaceFile[];
 		selectedFiles: string[];
 		loading: boolean;
 		eventCount: number;
+		appCategoryVisibility: Record<string, boolean>;
+		appCategoryCounts: Record<string, number>;
 		onToggleFile: (filename: string) => void;
+		onToggleAppCategory: (category: string) => void;
 		onReload: () => void;
 	} = $props();
+
+	function categoryLabel(category: string) {
+		return category.replace(/^Apps:\s*/, '');
+	}
+
+	const hasAppCategories = $derived(
+		APP_TIMELINE_CATEGORIES.some((category) => (appCategoryCounts[category] ?? 0) > 0)
+	);
 </script>
 
 <div
@@ -61,9 +76,31 @@
 		</button>
 	{/each}
 
-	<span class="prv-ct-pill prv-ct-pill--apps">Apps</span>
-	<span class="prv-ct-pill prv-ct-pill--gui">GUI</span>
-	<span class="prv-ct-pill prv-ct-pill--config">Config</span>
+	{#if hasAppCategories}
+		<div
+			style={`display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-left:4px; border-left:1px solid ${VIEWER_COLORS.b1}; margin-left:2px;`}
+		>
+			{#each APP_TIMELINE_CATEGORIES as category (category)}
+				<label
+					style={`display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:6px; border:1px solid ${VIEWER_COLORS.b1}; background:#fff; color:${VIEWER_COLORS.t2}; cursor:pointer;`}
+				>
+					<input
+						type="checkbox"
+						checked={appCategoryVisibility[category] ?? false}
+						onchange={() => onToggleAppCategory(category)}
+					/>
+					<span style={`font-size:11px; font-weight:600; color:${VIEWER_COLORS.t1};`}>
+						{categoryLabel(category)}
+					</span>
+					<span
+						style={`display:inline-flex; align-items:center; padding:0 5px; height:18px; border-radius:999px; font-size:9px; font-family:${VIEWER_FONTS.mono}; background:${VIEWER_COLORS.headerBg}; color:${VIEWER_COLORS.t2};`}
+					>
+						{appCategoryCounts[category] ?? 0}
+					</span>
+				</label>
+			{/each}
+		</div>
+	{/if}
 
 	{#if loading}
 		<span style={`font-size:11px; color:${VIEWER_COLORS.t2};`}>Loading…</span>

@@ -118,7 +118,10 @@
 				selectedFiles={workspace.selectedFiles}
 				loading={workspace.loading || workspace.timelineLoading}
 				eventCount={workspace.events.length}
+				appCategoryVisibility={workspace.timelineAppCategoryVisibility}
+				appCategoryCounts={workspace.timelineAppCategoryCounts}
 				onToggleFile={(filename) => workspace?.toggleFile(filename)}
+				onToggleAppCategory={(category) => workspace?.toggleTimelineAppCategory(category)}
 				onReload={() => workspace?.reloadSelected()}
 			/>
 
@@ -183,7 +186,7 @@
 								<span
 									style={`font-size:10px; font-family:${VIEWER_FONTS.mono}; color:${VIEWER_COLORS.t3};`}
 								>
-									{workspace.events.length} events{workspace.timelineClusterMode === 'apps' ? ' (apps clustered)' : ''}{workspace.timelineVisibleWindow ? ` · span ${Math.round(workspace.timelineVisibleWindow.spanMs / 60000)}m` : ''} · apps raw {workspace.timelineRawAppsCount}/rendered {workspace.timelineRenderedAppsCount}
+									{workspace.events.length} events{workspace.timelineClusterMode === 'clustered' ? ' (clustered)' : ''}{workspace.timelineVisibleWindow ? ` · span ${Math.round(workspace.timelineVisibleWindow.spanMs / 60000)}m` : ''} · raw {workspace.timelineRawEventCount}/rendered {workspace.timelineRenderedEventCount}
 								</span>
 							</button>
 
@@ -344,12 +347,18 @@
 
 <style>
 	:global(.vis-item.prv-ct-item) {
+		--prv-ct-bg: rgba(148, 163, 184, 0.12);
+		--prv-ct-border: rgba(148, 163, 184, 0.35);
+		--prv-ct-fg: rgb(51, 65, 85);
 		border-radius: 4px;
 		border-width: 1px;
 		font-size: 11px;
 		font-weight: 500;
 		line-height: 1.3;
 		min-width: 10px;
+		background: var(--prv-ct-bg);
+		border-color: var(--prv-ct-border);
+		color: var(--prv-ct-fg);
 	}
 
 	/* Cluster items should remain readable even when zoomed out. */
@@ -358,7 +367,44 @@
 	}
 
 	:global(.vis-item.vis-point.prv-ct-item) {
-		min-width: 12px;
+		background: transparent;
+		border: none;
+		min-width: 0;
+		overflow: visible;
+	}
+
+	:global(.vis-item.vis-point.prv-ct-item .vis-item-content) {
+		padding: 1px 6px;
+		min-width: 7ch;
+		max-width: 24ch;
+		border: 1px solid var(--prv-ct-border);
+		border-radius: 4px;
+		background: var(--prv-ct-bg);
+		color: var(--prv-ct-fg);
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	:global(.vis-item.vis-dot.prv-ct-item--point) {
+		width: 10px;
+		height: 10px;
+		border-width: 1.5px;
+		border-radius: 2px;
+		background: var(--prv-ct-fg);
+		border-color: var(--prv-ct-border);
+		transform: rotate(45deg);
+		box-sizing: border-box;
+	}
+
+	:global(.vis-item.prv-ct-item.prv-ct-item--readability:not(.prv-ct-item--cluster)) {
+		border-style: dashed;
+		background-image:
+			linear-gradient(90deg, color-mix(in srgb, var(--prv-ct-border) 22%, transparent) 0 10px, transparent 10px 16px);
+		background-size: 16px 100%;
+	}
+
+	:global(.vis-item.prv-ct-item.prv-ct-item--range) {
+		border-style: solid;
 	}
 
 	:global(.vis-item.prv-ct-item .vis-item-content) {
@@ -369,33 +415,39 @@
 	}
 
 	:global(.vis-item.prv-ct-item--apps) {
-		background: rgba(16, 185, 129, 0.12);
-		border-color: rgba(16, 185, 129, 0.35);
-		color: rgb(6, 95, 70);
+		--prv-ct-bg: rgba(16, 185, 129, 0.12);
+		--prv-ct-border: rgba(16, 185, 129, 0.35);
+		--prv-ct-fg: rgb(6, 95, 70);
+	}
+
+	:global(.vis-item.prv-ct-item--tools) {
+		--prv-ct-bg: rgba(99, 102, 241, 0.12);
+		--prv-ct-border: rgba(99, 102, 241, 0.35);
+		--prv-ct-fg: rgb(67, 56, 202);
 	}
 
 	:global(.vis-item.prv-ct-item--gui) {
-		background: rgba(59, 130, 246, 0.12);
-		border-color: rgba(59, 130, 246, 0.35);
-		color: rgb(30, 64, 175);
+		--prv-ct-bg: rgba(59, 130, 246, 0.12);
+		--prv-ct-border: rgba(59, 130, 246, 0.35);
+		--prv-ct-fg: rgb(30, 64, 175);
 	}
 
 	:global(.vis-item.prv-ct-item--config) {
-		background: rgba(217, 119, 6, 0.12);
-		border-color: rgba(217, 119, 6, 0.35);
-		color: rgb(120, 53, 15);
+		--prv-ct-bg: rgba(217, 119, 6, 0.12);
+		--prv-ct-border: rgba(217, 119, 6, 0.35);
+		--prv-ct-fg: rgb(120, 53, 15);
 	}
 
 	:global(.vis-item.prv-ct-item--warn) {
-		border-color: rgba(234, 179, 8, 0.5);
-		background: rgba(234, 179, 8, 0.12);
-		color: rgb(113, 63, 18);
+		--prv-ct-border: rgba(234, 179, 8, 0.5);
+		--prv-ct-bg: rgba(234, 179, 8, 0.12);
+		--prv-ct-fg: rgb(113, 63, 18);
 	}
 
 	:global(.vis-item.prv-ct-item--danger) {
-		border-color: rgba(239, 68, 68, 0.5);
-		background: rgba(239, 68, 68, 0.1);
-		color: rgb(127, 29, 29);
+		--prv-ct-border: rgba(239, 68, 68, 0.5);
+		--prv-ct-bg: rgba(239, 68, 68, 0.1);
+		--prv-ct-fg: rgb(127, 29, 29);
 	}
 
 	:global(.vis-item.prv-ct-item.vis-selected) {

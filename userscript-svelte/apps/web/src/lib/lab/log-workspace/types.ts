@@ -8,6 +8,7 @@ export type LogWorkspacePageData = {
 	reportId: string;
 	sourceKind: 'api' | 'fixture';
 	reportOk: boolean;
+	forceReparse: boolean;
 	timezoneOffsetSeconds: number | null;
 	yearHint: number | null;
 	files: LogWorkspaceFile[];

@@ -4,7 +4,7 @@
   // @ts-expect-error Vite resolves ?inline imports at build time.
   import timelineStyles from 'vis-timeline/styles/vis-timeline-graph2d.min.css?inline';
 
-  import type { TimelinePayload, TimelineWindowEvent, VisGroup, VisItem } from './types';
+  import type { TimelinePayload, TimelineWindowEvent, VisCustomTime, VisGroup, VisItem } from './types';
 
   let {
     payload,
@@ -41,6 +41,7 @@
   let pendingRedraw = false;
   let wheelCleanup: (() => void) | null = null;
   let optionsRef: Record<string, unknown> = {};
+  let customTimeIds = new Set<string | number>();
   const DEBUG_TIMELINE_WINDOW = true;
   const DEBUG_TIMELINE_PAYLOAD = true;
   let lastClusterLike = 0;
@@ -84,28 +85,58 @@
     });
   }
 
+  function schedulePostToggleRedraw() {
+    window.setTimeout(() => {
+      scheduleRedraw();
+      window.setTimeout(() => {
+        scheduleRedraw();
+      }, 50);
+    }, 0);
+  }
+
   function injectStylesIntoRoot() {
     if (!container) return;
     const root = container.getRootNode();
+
+    // Tooltip overrides: vis-timeline uses white-space:nowrap which makes tooltips
+    // expand horizontally without limit. Force wrapping and cap width.
+    const tooltipOverrides = [
+      '.vis-tooltip { max-width: 380px !important; white-space: normal !important;',
+      '  word-break: break-word !important; box-sizing: border-box !important; }',
+      '.vis-custom-time { background-color: #ea580c !important; width: 2px !important; cursor: default !important; z-index: 2 !important; }',
+      '.vis-custom-time > .vis-custom-time-marker {',
+      '  background-color: #fff7ed !important;',
+      '  border: 1px solid #fdba74 !important;',
+      '  border-radius: 4px !important;',
+      '  color: #9a3412 !important;',
+      '  font-size: 11px !important;',
+      '  font-weight: 600 !important;',
+      '  padding: 2px 6px !important;',
+      '  top: 4px !important;',
+      '}'
+    ].join('\n');
 
     if (root instanceof ShadowRoot) {
       const hasStyle = root.querySelector('style[data-vis-timeline]');
       if (!hasStyle) {
         const styleEl = document.createElement('style');
         styleEl.dataset.visTimeline = 'true';
-        styleEl.textContent = timelineStyles;
+        styleEl.textContent = timelineStyles + '\n' + tooltipOverrides;
         root.appendChild(styleEl);
       }
     } else if (!document.head.querySelector('style[data-vis-timeline]')) {
       const styleEl = document.createElement('style');
       styleEl.dataset.visTimeline = 'true';
-      styleEl.textContent = timelineStyles;
+      styleEl.textContent = timelineStyles + '\n' + tooltipOverrides;
       document.head.appendChild(styleEl);
     }
   }
 
   function bindTimelineEvents(instance: Timeline) {
     instance.on('click', (props) => {
+      if (props.what === 'group-label' && props.group != null) {
+        schedulePostToggleRedraw();
+      }
       if (!props.item) return;
       const record = items?.get(props.item);
       onItemClick(record);
@@ -122,9 +153,44 @@
     });
   }
 
+  function syncCustomTimes(instance: Timeline, customTimes: VisCustomTime[] | undefined) {
+    const timelineAny = instance as Timeline & {
+      addCustomTime: (time: Date | string | number, id?: string | number) => string | number;
+      removeCustomTime: (id?: string | number) => void;
+      setCustomTime: (time: Date | string | number, id?: string | number) => void;
+      setCustomTimeTitle: (title: string, id?: string | number) => void;
+      setCustomTimeMarker: (title: string, id?: string | number, editable?: boolean) => void;
+    };
+
+    const nextCustomTimes = customTimes ?? [];
+    const nextIds = new Set(nextCustomTimes.map((customTime) => customTime.id));
+
+    for (const id of customTimeIds) {
+      if (nextIds.has(id)) continue;
+      timelineAny.removeCustomTime(id);
+    }
+
+    for (const customTime of nextCustomTimes) {
+      if (customTimeIds.has(customTime.id)) {
+        timelineAny.setCustomTime(customTime.time, customTime.id);
+      } else {
+        timelineAny.addCustomTime(customTime.time, customTime.id);
+      }
+      if (customTime.title) {
+        timelineAny.setCustomTimeTitle(customTime.title, customTime.id);
+      }
+      if (customTime.marker) {
+        timelineAny.setCustomTimeMarker(customTime.marker, customTime.id, false);
+      }
+    }
+
+    customTimeIds = nextIds;
+  }
+
   function recreateTimeline(nextPayload: TimelinePayload, preserveWindow: { start: Date; end: Date } | null) {
     if (!container) return;
     timeline?.destroy();
+    customTimeIds = new Set();
     const nextGroups = new DataSet(nextPayload.groups);
     const nextItems = new DataSet(nextPayload.items);
     groups = nextGroups;
@@ -141,6 +207,7 @@
 
     timeline = new Timeline(container, nextItems, nextGroups, opts);
     bindTimelineEvents(timeline);
+    syncCustomTimes(timeline, nextPayload.customTimes);
 
     // After construction vis-timeline's internal DOM is inserted but the
     // browser hasn't performed layout yet. rAFs fire before the layout is
@@ -160,27 +227,41 @@
     }, 0);
   }
 
+  /**
+   * Detect whether the group structure changed (different group IDs or count).
+   * When groups are identical we can skip the expensive empty-data flush.
+   */
+  function groupsChanged(nextGroups: TimelinePayload['groups']): boolean {
+    if (!groups) return true;
+    const current = groups.getIds();
+    if (current.length !== nextGroups.length) return true;
+    const nextIds = new Set(nextGroups.map((g) => g.id));
+    for (const id of current) {
+      if (!nextIds.has(String(id))) return true;
+    }
+    return false;
+  }
+
   function updateData(nextPayload: TimelinePayload) {
     if (!timeline) return;
     // Prefer the user-intended window over whatever vis-timeline currently reports
     // (which may already be polluted by a previous data-update reflow).
     const windowToPreserve = userIntendedWindow ?? timeline.getWindow();
     const nextClusterLike = nextPayload.items.filter((item) => String(item.id).startsWith('cluster:')).length;
+    const structureChanged = groupsChanged(nextPayload.groups);
     lastClusterLike = nextClusterLike;
 
-    // Never destroy/recreate the timeline — doing so inside a Svelte $effect
-    // leaves vis-timeline in a state where no redraw timing reliably restores
-    // rendering. Instead, clear items/groups first to flush stale state, then
-    // set new data. Merging start/end into setOptions keeps the window stable.
     const timelineAny = timeline as unknown as {
       setData?: (data: { items: DataSet<VisItem>; groups: DataSet<VisGroup> }) => void;
       setGroups?: (groups: DataSet<VisGroup>) => void;
       setItems?: (items: DataSet<VisItem>) => void;
     };
 
-    // Clear first to avoid vis-timeline keeping stale rendered items when
-    // the group/item structure changes significantly (e.g. cluster ↔ expand).
-    if (typeof timelineAny.setData === 'function') {
+    // Only flush via empty-data when the group/item structure changes
+    // significantly (e.g. cluster ↔ expand adds/removes groups).
+    // When structure is stable (e.g. zooming within the same mode),
+    // skip the flush to avoid the visual stacking collapse.
+    if (structureChanged && typeof timelineAny.setData === 'function') {
       timelineAny.setData({ items: new DataSet([]), groups: new DataSet([]) });
     }
 
@@ -202,6 +283,7 @@
     opts.start = windowToPreserve.start;
     opts.end = windowToPreserve.end;
     timeline.setOptions(opts);
+    syncCustomTimes(timeline, nextPayload.customTimes);
     scheduleRedraw();
 
     if (DEBUG_TIMELINE_PAYLOAD) {
@@ -211,6 +293,7 @@
         items: nextPayload.items.length,
         groups: nextPayload.groups.length,
         clusterLike,
+        structureChanged,
         firstIds: ids,
         windowPreserved: !!userIntendedWindow
       });
@@ -224,8 +307,19 @@
 
     groups = new DataSet(payload.groups);
     items = new DataSet(payload.items);
-    timeline = new Timeline(container, items, groups, payload.options ?? {});
-    optionsRef = (payload.options ?? {}) as unknown as Record<string, unknown>;
+
+    // Bake initialWindow into constructor options — same pattern as recreateTimeline.
+    // A post-construction setWindow() is unreliable: vis-timeline's async internal
+    // fit() fires after construction and can override it, leaving the view at the
+    // full data extent instead of the desired initial window.
+    const mountOpts: Record<string, unknown> = { ...(payload.options ?? {}) };
+    if (payload.initialWindow) {
+      mountOpts.start = payload.initialWindow.start;
+      mountOpts.end = payload.initialWindow.end;
+    }
+    timeline = new Timeline(container, items, groups, mountOpts);
+    optionsRef = mountOpts;
+    customTimeIds = new Set();
     lastClusterLike = payload.items.filter((item) => String(item.id).startsWith('cluster:')).length;
     if (DEBUG_TIMELINE_PAYLOAD) {
       const ids = payload.items.slice(0, 3).map((item) => String(item.id));
@@ -238,12 +332,11 @@
       });
     }
 
-    if (payload.initialWindow) {
-      const { start, end } = payload.initialWindow;
-      timeline.setWindow(start, end, { animation: false });
-    } else {
+    if (!payload.initialWindow) {
       timeline.fit({ animation: false });
     }
+
+    syncCustomTimes(timeline, payload.customTimes);
 
     {
       const w = timeline.getWindow();
@@ -334,6 +427,7 @@
       timeline = null;
       groups = null;
       items = null;
+      customTimeIds = new Set();
     };
   });
 
@@ -368,4 +462,3 @@
     overflow: hidden;
   }
 </style>
-

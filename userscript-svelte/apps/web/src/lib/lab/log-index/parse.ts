@@ -60,8 +60,12 @@ export type LogParser = {
 export function createLogParser(opts: ParserOptions): LogParser {
   const entryRe =
     /^(?<ts>\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}) (?<lvl>[A-Z]) \/(?<hdr>[^/]+)\/ ?(?<msg>.*)$/;
+  const relaxedEntryRe =
+    /^(?:(?<prefix>\S+\s+\S+)\s+)?(?:(?:(?<lvl>[A-Z])|(?<badLvl>\S+))\s+)?\/(?<hdr>[^/]+)\/ ?(?<msg>.*)$/;
   const repeatRe =
     /^(?<ts>\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}) Last message repeated (?<n>\d+) times\.$/;
+  const relaxedRepeatRe =
+    /^(?:(?<prefix>\S+\s+\S+)\s+)?Last message repeated (?<n>\d+) times\.$/;
 
   const kindCounts = initKindCounts();
   const componentCounts = new Map<string, number>();
@@ -71,6 +75,7 @@ export function createLogParser(opts: ParserOptions): LogParser {
   let lastEntryId: string | null = null;
   let lastEntryEndsWithColon = false;
   let entryWithTs = 0;
+  let lastResolvedTsWallMs: number | null = null;
 
   function buildBaseRow(
     kind: LogKind,
@@ -99,47 +104,78 @@ export function createLogParser(opts: ParserOptions): LogParser {
     };
   }
 
+  function resolveFallbackTsWallMs(): number | null {
+    if (lastResolvedTsWallMs == null) return null;
+    return lastResolvedTsWallMs + 1;
+  }
+
+  function buildEntryRow(args: {
+    raw: string;
+    tsRaw: string | null;
+    level: LogLevel;
+    hdr: string;
+    msgRaw: string;
+  }): LogRow {
+    const { component, pid, ctx } = parseHeaderPart(args.hdr);
+    const { tags, rest } = extractLeadingBracketTags(args.msgRaw);
+    const message = rest;
+
+    const fields: Record<string, string> = {};
+    const diffFields = extractDiffFields(message);
+    if (diffFields) Object.assign(fields, diffFields);
+    const guiFields = extractGuiMessageDataFields(message);
+    if (guiFields) Object.assign(fields, guiFields);
+
+    const parsedTsWallMs = args.tsRaw ? parseTsRaw(args.tsRaw, opts.baseYear) : null;
+    const tsWallMs = parsedTsWallMs ?? resolveFallbackTsWallMs();
+    if (parsedTsWallMs != null) entryWithTs += 1;
+
+    const row = buildBaseRow('entry', args.raw, {
+      tsWallMs,
+      tsRaw: args.tsRaw,
+      level: args.level,
+      component,
+      pid,
+      ctx,
+      message,
+      tags,
+      fields: Object.keys(fields).length ? fields : null
+    });
+
+    kindCounts.entry += 1;
+    bump(componentCounts, component);
+    for (const t of tags) bump(tagCounts, t);
+
+    lastEntryId = row.id;
+    lastEntryEndsWithColon =
+      message.trimEnd().endsWith(':') || args.msgRaw.trimEnd().endsWith(':');
+    if (tsWallMs != null) lastResolvedTsWallMs = tsWallMs;
+    return row;
+  }
+
   function pushLine(raw: string): LogRow {
     lineNo += 1;
 
     const entryMatch = entryRe.exec(raw);
     if (entryMatch?.groups) {
-      const tsRaw = entryMatch.groups.ts;
-      const lvl = entryMatch.groups.lvl as LogLevel;
-      const hdr = entryMatch.groups.hdr;
-      const msgRaw = entryMatch.groups.msg ?? '';
-      const { component, pid, ctx } = parseHeaderPart(hdr);
-      const { tags, rest } = extractLeadingBracketTags(msgRaw);
-      const message = rest;
-
-      const fields: Record<string, string> = {};
-      const diffFields = extractDiffFields(message);
-      if (diffFields) Object.assign(fields, diffFields);
-      const guiFields = extractGuiMessageDataFields(message);
-      if (guiFields) Object.assign(fields, guiFields);
-
-      const tsWallMs = parseTsRaw(tsRaw, opts.baseYear);
-      if (tsWallMs != null) entryWithTs += 1;
-
-      const row = buildBaseRow('entry', raw, {
-        tsWallMs,
-        tsRaw,
-        level: lvl,
-        component,
-        pid,
-        ctx,
-        message,
-        tags,
-        fields: Object.keys(fields).length ? fields : null
+      return buildEntryRow({
+        raw,
+        tsRaw: entryMatch.groups.ts,
+        level: entryMatch.groups.lvl as LogLevel,
+        hdr: entryMatch.groups.hdr,
+        msgRaw: entryMatch.groups.msg ?? ''
       });
+    }
 
-      kindCounts.entry += 1;
-      bump(componentCounts, component);
-      for (const t of tags) bump(tagCounts, t);
-
-      lastEntryId = row.id;
-      lastEntryEndsWithColon = message.trimEnd().endsWith(':') || msgRaw.trimEnd().endsWith(':');
-      return row;
+    const relaxedEntryMatch = relaxedEntryRe.exec(raw);
+    if (relaxedEntryMatch?.groups) {
+      return buildEntryRow({
+        raw,
+        tsRaw: relaxedEntryMatch.groups.prefix ?? null,
+        level: (relaxedEntryMatch.groups.lvl as LogLevel | undefined) ?? 'I',
+        hdr: relaxedEntryMatch.groups.hdr,
+        msgRaw: relaxedEntryMatch.groups.msg ?? ''
+      });
     }
 
     const repeatMatch = repeatRe.exec(raw);
@@ -147,13 +183,29 @@ export function createLogParser(opts: ParserOptions): LogParser {
       const tsRaw = repeatMatch.groups.ts;
       const repeatCount = Number(repeatMatch.groups.n);
       const row = buildBaseRow('repeat', raw, {
-        tsWallMs: parseTsRaw(tsRaw, opts.baseYear),
+        tsWallMs: parseTsRaw(tsRaw, opts.baseYear) ?? resolveFallbackTsWallMs(),
         tsRaw,
         message: raw.replace(/^\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}\s+/, ''),
         parentId: lastEntryId,
         repeatCount: Number.isFinite(repeatCount) ? repeatCount : null
       });
       kindCounts.repeat += 1;
+      if (row.tsWallMs != null) lastResolvedTsWallMs = row.tsWallMs;
+      return row;
+    }
+
+    const relaxedRepeatMatch = relaxedRepeatRe.exec(raw);
+    if (relaxedRepeatMatch?.groups) {
+      const repeatCount = Number(relaxedRepeatMatch.groups.n);
+      const row = buildBaseRow('repeat', raw, {
+        tsWallMs: resolveFallbackTsWallMs(),
+        tsRaw: relaxedRepeatMatch.groups.prefix ?? null,
+        message: raw.replace(/^(?:\S+\s+\S+\s+)?/, ''),
+        parentId: lastEntryId,
+        repeatCount: Number.isFinite(repeatCount) ? repeatCount : null
+      });
+      kindCounts.repeat += 1;
+      if (row.tsWallMs != null) lastResolvedTsWallMs = row.tsWallMs;
       return row;
     }
 

@@ -1,19 +1,23 @@
 import { browser } from '$app/environment';
 
-import { getSourceRecord, queryRowsForSources } from '$lib/lab/log-index/db';
-import type { LogRow, LogSourceRecord } from '$lib/lab/log-index/types';
-import { buildCompactTimeline, type BuiltCompactTimeline } from '$lib/lab/log-timeline/buildCompactPayload';
-import { extractTimelineEventsFromRows } from '$lib/lab/log-timeline/extractEvents';
-import {
-  clusterTimelineEvents,
-  DEFAULT_TIMELINE_CLUSTERING,
-  type VisibleWindow
-} from '$lib/lab/log-timeline/clustering/clusterTimelineEvents';
+import { getSourceRecord } from '$lib/lab/log-index/db';
+import type { LogRow } from '$lib/lab/log-index/types';
 import type { LogWorkspaceFile, LogWorkspacePageData } from '$lib/lab/log-workspace/types';
-import type { QueryMessage, ViewerPlaceholderState, ViewerStats, ViewerVirtualState, WorkerProgressMessage } from '$lib/lab/log-viewer/types';
+import type {
+	QueryMessage,
+	ViewerPlaceholderState,
+	ViewerStats,
+	ViewerVirtualState,
+	WorkerProgressMessage
+} from '$lib/lab/log-viewer/types';
 import type { LogRowLocator, TimelineEvent } from '$lib/lab/timeline/types';
+import type { VisibleWindow } from '$lib/lab/log-timeline/clustering/clusterTimelineEvents';
+import { TimelineManager } from './timelineManager.svelte';
+import { IngestManager } from './ingestManager.svelte';
 
-const DEBUG_TIMELINE_CLUSTER = true;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type QueryWorkerRequest =
 	| {
@@ -64,9 +68,14 @@ type QueryWorkerRequest =
 			locator: LogRowLocator;
 	  };
 
+// ---------------------------------------------------------------------------
+// Controller
+// ---------------------------------------------------------------------------
+
 export class LogWorkspaceController {
 	readonly data: LogWorkspacePageData;
 
+	// --- Config constants ---
 	readonly parseVersion = 'log-index-v1';
 	readonly maxBytes = 2 * 1024 * 1024;
 	readonly maxLines = 20_000;
@@ -80,17 +89,17 @@ export class LogWorkspaceController {
 	readonly prefetchThreshold = 150;
 	readonly searchDebounceMs = 1500;
 
+	// --- Sub-managers ---
+	readonly timeline: TimelineManager;
+	readonly ingest: IngestManager;
+
+	// --- File selection ---
 	selectedFiles = $state<string[]>([]);
-	sourceRecords = $state<Record<string, LogSourceRecord>>({});
-	progressByFile = $state<Record<string, string>>({});
-	activeWorkers = $state<Record<string, Worker>>({});
-	activeJobIds = $state<Record<string, number>>({});
-	rowsWrittenByFile = $state<Record<string, number>>({});
 
+	// --- Viewer error (separate from timeline error) ---
 	error = $state<string | null>(null);
-	timelineError = $state<string | null>(null);
-	timelineNotice = $state<string | null>(null);
 
+	// --- Viewer data ---
 	totalRows = $state(0);
 	totalMatches = $state(0);
 	clipped = $state(false);
@@ -98,6 +107,7 @@ export class LogWorkspaceController {
 	windowRows = $state<LogRow[]>([]);
 	lastQueryKey = $state<string | null>(null);
 
+	// --- Search / Find ---
 	searchInput = $state('');
 	debouncedSearch = $state('');
 	/** $state.raw avoids Svelte's deep-proxy traversal on large arrays. */
@@ -114,9 +124,11 @@ export class LogWorkspaceController {
 	activeMatchRowId = $state<string | null>(null);
 	pendingRevealRowIndex = $state<number | null>(null);
 
+	// --- Row detail ---
 	selectedRow = $state<LogRow | null>(null);
 	detailOpen = $state(false);
 
+	// --- Viewport / Scroll ---
 	tableEl = $state<HTMLDivElement | null>(null);
 	viewportHeight = $state(560);
 	scrollTop = $state(0);
@@ -124,33 +136,8 @@ export class LogWorkspaceController {
 	windowLoading = $state(false);
 	pendingWindowStart = $state<number | null>(null);
 
-	events = $state<TimelineEvent[]>([]);
-	eventById = $state<Record<string, TimelineEvent>>({});
-	/**
-	 * Render model can differ from `events` (e.g. clustered view when zoomed out).
-	 * `events` remains the full extracted list so we can still show totals.
-	 */
-	renderedEvents = $state<TimelineEvent[]>([]);
-	renderedEventById = $state<Record<string, TimelineEvent>>({});
-	builtTimeline = $state<BuiltCompactTimeline | null>(null);
-	/** Monotonic revision to force downstream timeline payload refreshes. */
-	timelineRevision = $state(0);
-	timelineClusters = $state<Record<string, string[]>>({});
-	timelineVisibleWindow = $state<VisibleWindow | null>(null);
-	/**
-	 * The last window explicitly set by user interaction (wheel/drag).
-	 * Clustering decisions are based on this, NOT on timelineVisibleWindow,
-	 * to avoid feedback loops from vis-timeline's internal reflows.
-	 */
-	userIntendedWindow = $state<VisibleWindow | null>(null);
-	timelineClusterMode = $state<'none' | 'apps'>('none');
-	timelineLoading = $state(false);
-	selectedEventId = $state<string | null>(null);
-	eventFilter = $state('');
-	flashEventId = $state<string | null>(null);
-
+	// --- Private bookkeeping ---
 	queryWorker: Worker | null = null;
-	#nextJobId = 0;
 	#nextQueryJobId = 0;
 	#activeQueryJobId = 0;
 	#activeQueryKind: 'query' | 'poll' | 'window' = 'query';
@@ -159,15 +146,12 @@ export class LogWorkspaceController {
 	#nextLocateJobId = 0;
 	#activeLocateJobId = 0;
 	#ensureRunId = 0;
-	#loadEventsSeq = 0;
 	#scrollTopRef = 0;
 	#pinnedToBottomRef = true;
 	#lastScrollBucket = -1;
 	#lastPollAt = 0;
 	#searchTimer: ReturnType<typeof setTimeout> | null = null;
 	#viewerRefreshTimer: ReturnType<typeof setTimeout> | null = null;
-	#timelineRefreshTimer: ReturnType<typeof setTimeout> | null = null;
-	#noticeTimer: ReturnType<typeof setTimeout> | null = null;
 	#pendingJumpLocator: LogRowLocator | null = null;
 	#programmaticScroll = false;
 	#autoFocusFindResults = false;
@@ -175,14 +159,184 @@ export class LogWorkspaceController {
 	constructor(data: LogWorkspacePageData) {
 		this.data = data;
 		this.selectedFiles = [...data.defaultSelected];
+
+		this.timeline = new TimelineManager({
+			reportId: () => this.data.reportId,
+			reportOk: () => this.data.reportOk,
+			selectedFiles: () => this.selectedFiles,
+			maxLines: () => this.maxLines,
+			requireTimestamp: () => this.requireTimestamp,
+			requireNonEmptyMessage: () => this.requireNonEmptyMessage,
+			clearSearch: () => this.clearSearch(),
+			jumpToLocator: (locator) => this.jumpToLocator(locator)
+		});
+
+		this.ingest = new IngestManager({
+			reportId: () => this.data.reportId,
+			sourceKind: () => this.data.sourceKind,
+			downloadMode: this.downloadMode,
+			maxBytes: this.maxBytes,
+			maxLines: this.maxLines,
+			parseVersion: this.parseVersion,
+			timezoneOffsetSeconds: () => this.data.timezoneOffsetSeconds,
+			yearHint: () => this.data.yearHint,
+			isFileSelected: (filename) => this.selectedFiles.includes(filename),
+			onParsingMilestone: (_filename) => {
+				if (this.searchQuery) {
+					this.#scheduleViewerRefresh(250, true);
+				} else if (this.#pinnedToBottomRef) {
+					this.#sendPoll();
+				} else if (!this.renderReady) {
+					this.#scheduleViewerRefresh(0, true);
+				}
+				this.timeline.scheduleRefresh(250);
+			},
+			onIngestComplete: (_filename) => {
+				this.#scheduleViewerRefresh(0, true);
+				this.timeline.scheduleRefresh(100);
+			},
+			onError: (message) => {
+				this.error = message;
+			}
+		});
 	}
+
+	// =========================================================================
+	// Proxy getters — timeline (keeps the public API unchanged)
+	// =========================================================================
+
+	get events() {
+		return this.timeline.events;
+	}
+	get eventById() {
+		return this.timeline.eventById;
+	}
+	get renderedEvents() {
+		return this.timeline.renderedEvents;
+	}
+	get renderedEventById() {
+		return this.timeline.renderedEventById;
+	}
+	get builtTimeline() {
+		return this.timeline.builtTimeline;
+	}
+	get timelineRevision() {
+		return this.timeline.revision;
+	}
+	get timelineClusters() {
+		return this.timeline.clusters;
+	}
+	get timelineVisibleWindow() {
+		return this.timeline.visibleWindow;
+	}
+	get userIntendedWindow() {
+		return this.timeline.userIntendedWindow;
+	}
+	get timelineClusterMode() {
+		return this.timeline.clusterMode;
+	}
+	get timelineLoading() {
+		return this.timeline.loading;
+	}
+	get selectedEventId() {
+		return this.timeline.selectedEventId;
+	}
+	get eventFilter() {
+		return this.timeline.eventFilter;
+	}
+	get flashEventId() {
+		return this.timeline.flashEventId;
+	}
+	get timelineError() {
+		return this.timeline.error;
+	}
+	get timelineNotice() {
+		return this.timeline.notice;
+	}
+	get selectedEvent() {
+		return this.timeline.selectedEvent;
+	}
+	get timelinePayload() {
+		return this.timeline.payload;
+	}
+	get filteredEvents() {
+		return this.timeline.filteredEvents;
+	}
+	get timelineRawEventCount() {
+		return this.timeline.rawEventCount;
+	}
+	get timelineRenderedEventCount() {
+		return this.timeline.renderedEventCount;
+	}
+	get timelineAppCategoryVisibility() {
+		return this.timeline.appCategoryVisibility;
+	}
+	get timelineAppCategoryCounts() {
+		return this.timeline.appCategoryCounts;
+	}
+
+	// =========================================================================
+	// Proxy getters — ingest
+	// =========================================================================
+
+	get sourceRecords() {
+		return this.ingest.sourceRecords;
+	}
+	get progressByFile() {
+		return this.ingest.progressByFile;
+	}
+	get activeWorkers() {
+		return this.ingest.activeWorkers;
+	}
+	get activeJobIds() {
+		return this.ingest.activeJobIds;
+	}
+	get rowsWrittenByFile() {
+		return this.ingest.rowsWrittenByFile;
+	}
+
+	// =========================================================================
+	// Delegate methods — timeline
+	// =========================================================================
+
+	handleTimelineVisibleWindowChange(window: VisibleWindow) {
+		this.timeline.handleVisibleWindowChange(window);
+	}
+
+	handleUserWindowChange(window: VisibleWindow) {
+		this.timeline.handleUserWindowChange(window);
+	}
+
+	selectTimelineEvent(event: TimelineEvent | null) {
+		this.timeline.selectEvent(event);
+	}
+
+	selectTimelineEventById(id: string | null) {
+		this.timeline.selectEventById(id);
+	}
+
+	onTimelineItemClick(item: unknown) {
+		this.timeline.handleItemClick(item);
+	}
+
+	setEventFilter(value: string) {
+		this.timeline.setEventFilter(value);
+	}
+
+	toggleTimelineAppCategory(category: string) {
+		this.timeline.toggleAppCategoryVisibility(category);
+	}
+
+	// =========================================================================
+	// Computed getters
+	// =========================================================================
 
 	get selectedFileMetas(): LogWorkspaceFile[] {
 		return this.data.files.filter((file) => this.selectedFiles.includes(file.filename));
 	}
 
 	get loading() {
-		return this.selectedFiles.some((file) => !!this.progressByFile[file]);
+		return this.selectedFiles.some((file) => !!this.ingest.progressByFile[file]);
 	}
 
 	get searchQuery() {
@@ -200,14 +354,19 @@ export class LogWorkspaceController {
 	get indexedEstimate() {
 		let total = 0;
 		for (const sourceFile of this.selectedFiles) {
-			const record = this.sourceRecords[sourceFile];
-			total += record?.status === 'complete' ? record.rowCount : (this.rowsWrittenByFile[sourceFile] ?? 0);
+			const record = this.ingest.sourceRecords[sourceFile];
+			total += record?.status === 'complete'
+				? record.rowCount
+				: (this.ingest.rowsWrittenByFile[sourceFile] ?? 0);
 		}
 		return total;
 	}
 
 	get allSelectedComplete() {
-		return this.selectedFiles.length > 0 && this.selectedFiles.every((sourceFile) => this.sourceRecords[sourceFile]?.status === 'complete');
+		return (
+			this.selectedFiles.length > 0 &&
+			this.selectedFiles.every((sourceFile) => this.ingest.sourceRecords[sourceFile]?.status === 'complete')
+		);
 	}
 
 	get renderReady() {
@@ -250,167 +409,9 @@ export class LogWorkspaceController {
 		};
 	}
 
-	get selectedEvent(): TimelineEvent | null {
-		if (!this.selectedEventId) return null;
-		return this.renderedEventById[this.selectedEventId] ?? this.eventById[this.selectedEventId] ?? null;
-	}
-
-	get timelinePayload() {
-		if (!this.builtTimeline) return null;
-		return {
-			groups: this.builtTimeline.groups,
-			items: this.builtTimeline.items,
-			options: this.builtTimeline.options,
-			initialWindow: this.builtTimeline.initialWindow
-		};
-	}
-
-	#setBuiltTimeline(next: BuiltCompactTimeline | null, reason: string) {
-		this.builtTimeline = next;
-		this.timelineRevision += 1;
-		if (DEBUG_TIMELINE_CLUSTER) {
-			console.info('[timeline-cluster] payload-assign', {
-				reason,
-				revision: this.timelineRevision,
-				items: next?.items?.length ?? 0,
-				groups: next?.groups?.length ?? 0,
-				clusterLike: next ? next.items.filter((item) => String(item.id).startsWith('cluster:')).length : 0
-			});
-		}
-	}
-
-	/**
-	 * Called on every visible-window change (including vis-timeline internal reflows).
-	 * Updates display state only — does NOT drive clustering decisions.
-	 */
-	handleTimelineVisibleWindowChange(window: VisibleWindow) {
-		this.timelineVisibleWindow = window;
-		if (DEBUG_TIMELINE_CLUSTER) {
-			console.info('[timeline-cluster] window (display)', {
-				spanMin: Math.round(window.spanMs / 60000)
-			});
-		}
-	}
-
-	/**
-	 * Called only when the window changes due to explicit user interaction
-	 * (wheel zoom or drag/pinch). This is the sole driver of clustering decisions.
-	 */
-	handleUserWindowChange(window: VisibleWindow) {
-		this.userIntendedWindow = window;
-		this.timelineVisibleWindow = window;
-
-		const cfg = DEFAULT_TIMELINE_CLUSTERING.apps;
-		const appsCount = this.events.reduce((acc, e) => (e.category === 'Apps' ? acc + 1 : acc), 0);
-		const nextMode =
-			cfg.enabled && window.spanMs >= cfg.minSpanMs && appsCount >= cfg.minItems ? ('apps' as const) : ('none' as const);
-		const renderedHasCluster = this.renderedEvents.some((event) => event.id.startsWith('cluster:'));
-
-		if (DEBUG_TIMELINE_CLUSTER) {
-			console.info('[timeline-cluster] user-window', {
-				spanMin: Math.round(window.spanMs / 60000),
-				rawApps: appsCount,
-				prevMode: this.timelineClusterMode,
-				nextMode
-			});
-		}
-
-		// Force deterministic unclustering when we are below threshold.
-		if (nextMode === 'none') {
-			// Already unclustered with non-cluster payload; avoid reassign loops.
-			if (this.timelineClusterMode === 'none' && !renderedHasCluster) return;
-
-			this.timelineClusterMode = 'none';
-			this.renderedEvents = this.events;
-			this.timelineClusters = {};
-
-			const nextRenderedMap: Record<string, TimelineEvent> = {};
-			for (const ev of this.events) nextRenderedMap[ev.id] = ev;
-			this.renderedEventById = nextRenderedMap;
-			this.#setBuiltTimeline(this.events.length > 0 ? buildCompactTimeline(this.events) : null, 'forced-uncluster');
-			if (DEBUG_TIMELINE_CLUSTER) {
-				console.info('[timeline-cluster] forced-uncluster', {
-					spanMin: Math.round(window.spanMs / 60000),
-					rawApps: this.timelineRawAppsCount,
-					renderedApps: this.timelineRenderedAppsCount
-				});
-			}
-			return;
-		}
-
-		// Recompute on mode transitions. While clustered we only need window-driven recompute
-		// if clustering itself depends on current visible window.
-		const shouldRecomputeWhileClustered = nextMode === 'apps' && cfg.useVisibleWindowOnly;
-		if (nextMode !== this.timelineClusterMode || shouldRecomputeWhileClustered) {
-			this.#recomputeTimelineModel('user-window-change');
-		}
-	}
-
-	#recomputeTimelineModel(reason: string = 'unknown') {
-		const model = clusterTimelineEvents(this.events, this.userIntendedWindow ?? this.timelineVisibleWindow, DEFAULT_TIMELINE_CLUSTERING);
-		this.timelineClusterMode = model.mode === 'clustered' ? 'apps' : 'none';
-		this.renderedEvents = model.events;
-		this.timelineClusters = model.clusters ?? {};
-
-		const nextRenderedMap: Record<string, TimelineEvent> = {};
-		for (const ev of model.events) nextRenderedMap[ev.id] = ev;
-		this.renderedEventById = nextRenderedMap;
-
-		this.#setBuiltTimeline(model.events.length > 0 ? buildCompactTimeline(model.events) : null, reason);
-
-		if (this.selectedEventId && !nextRenderedMap[this.selectedEventId] && !this.eventById[this.selectedEventId]) {
-			this.selectedEventId = null;
-		}
-
-		if (DEBUG_TIMELINE_CLUSTER) {
-			console.info('[timeline-cluster] recompute', {
-				reason,
-				mode: this.timelineClusterMode,
-				spanMin: this.timelineVisibleWindow ? Math.round(this.timelineVisibleWindow.spanMs / 60000) : null,
-				rawApps: this.timelineRawAppsCount,
-				renderedApps: this.timelineRenderedAppsCount
-			});
-		}
-	}
-
-	#deriveFallbackWindow(events: TimelineEvent[]): VisibleWindow | null {
-		if (events.length === 0) return null;
-		let min = Number.POSITIVE_INFINITY;
-		let max = Number.NEGATIVE_INFINITY;
-		for (const ev of events) {
-			const startMs = ev.start.getTime();
-			const endMs = (ev.end ?? ev.start).getTime();
-			if (Number.isFinite(startMs)) min = Math.min(min, startMs);
-			if (Number.isFinite(endMs)) max = Math.max(max, endMs);
-		}
-		if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
-		return { startMs: min, endMs: max, spanMs: Math.max(0, max - min) };
-	}
-
-	get filteredEvents() {
-		const ordered = [...this.events].sort((left, right) => left.start.getTime() - right.start.getTime());
-		const query = this.eventFilter.trim().toLowerCase();
-		if (!query) return ordered;
-		return ordered.filter(
-			(event) =>
-				event.label.toLowerCase().includes(query) ||
-				event.sourceFile.toLowerCase().includes(query) ||
-				event.category.toLowerCase().includes(query) ||
-				(event.detail ?? '').toLowerCase().includes(query)
-		);
-	}
-
-	get timelineRawAppsCount() {
-		let count = 0;
-		for (const ev of this.events) if (ev.category === 'Apps') count += 1;
-		return count;
-	}
-
-	get timelineRenderedAppsCount() {
-		let count = 0;
-		for (const ev of this.renderedEvents) if (ev.category === 'Apps') count += 1;
-		return count;
-	}
+	// =========================================================================
+	// Lifecycle
+	// =========================================================================
 
 	init() {
 		if (!browser || this.queryWorker) return;
@@ -464,32 +465,36 @@ export class LogWorkspaceController {
 			}
 
 			if (this.searchQuery && queryKind !== 'window') {
-				// If we already have an active match, keep it; otherwise treat this as
-				// the first find result and auto-jump (covers the "search fired before
-				// rows were indexed" race where the initial find returned empty).
 				const hasActiveMatch = this.activeMatchOrdinal >= 0;
 				this.#requestFind({ keepActive: hasActiveMatch, autoFocus: !hasActiveMatch });
 			}
 		};
 
 		if (this.data.reportOk) {
-			void this.ensureIndexed(false);
-			this.#scheduleViewerRefresh(0, true);
-			this.#scheduleTimelineRefresh(0);
+			if (this.data.forceReparse) {
+				void this.reloadSelected();
+			} else {
+				void this.ensureIndexed(false);
+				this.#scheduleViewerRefresh(0, true);
+				this.timeline.scheduleRefresh(0);
+			}
 		}
 	}
 
 	destroy() {
-		this.#stopAllWorkers();
+		this.ingest.destroy();
+		this.timeline.destroy();
 		if (this.queryWorker) {
 			this.queryWorker.terminate();
 			this.queryWorker = null;
 		}
 		if (this.#searchTimer) window.clearTimeout(this.#searchTimer);
 		if (this.#viewerRefreshTimer) window.clearTimeout(this.#viewerRefreshTimer);
-		if (this.#timelineRefreshTimer) window.clearTimeout(this.#timelineRefreshTimer);
-		if (this.#noticeTimer) window.clearTimeout(this.#noticeTimer);
 	}
+
+	// =========================================================================
+	// File management
+	// =========================================================================
 
 	toggleFile(filename: string) {
 		if (this.selectedFiles.includes(filename)) {
@@ -498,8 +503,8 @@ export class LogWorkspaceController {
 			this.selectedFiles = [...this.selectedFiles, filename];
 		}
 
-		if (this.selectedEvent && !this.selectedFiles.includes(this.selectedEvent.sourceFile)) {
-			this.selectedEventId = null;
+		if (this.timeline.selectedEvent && !this.selectedFiles.includes(this.timeline.selectedEvent.sourceFile)) {
+			this.timeline.selectedEventId = null;
 		}
 
 		if (this.selectedRow && !this.selectedFiles.includes(this.selectedRow.sourceFile)) {
@@ -509,8 +514,67 @@ export class LogWorkspaceController {
 
 		void this.ensureIndexed(false);
 		this.#scheduleViewerRefresh(0, true);
-		this.#scheduleTimelineRefresh(100);
+		this.timeline.scheduleRefresh(100);
 	}
+
+	async reloadSelected() {
+		this.totalRows = 0;
+		this.totalMatches = 0;
+		this.clipped = false;
+		this.windowStart = 0;
+		this.windowRows = [];
+		this.lastQueryKey = null;
+		this.windowLoading = false;
+		this.pendingWindowStart = null;
+		this.timeline.reset('toggle-file-reset');
+		await this.ensureIndexed(true);
+		this.#scheduleViewerRefresh(0, true);
+		this.timeline.scheduleRefresh(0);
+	}
+
+	async ensureIndexed(force = false) {
+		if (!browser || !this.data.reportOk) return;
+		this.error = null;
+		const runId = ++this.#ensureRunId;
+
+		const files = this.selectedFileMetas;
+		if (files.length === 0) {
+			this.ingest.sourceRecords = {};
+			this.totalRows = 0;
+			this.totalMatches = 0;
+			this.clipped = false;
+			this.windowStart = 0;
+			this.windowRows = [];
+			this.lastQueryKey = null;
+			this.windowLoading = false;
+			this.pendingWindowStart = null;
+			this.timeline.reset('reload-selected-empty');
+			return;
+		}
+
+		const records = await Promise.all(
+			files.map(async (file) => [file.filename, await getSourceRecord(this.data.reportId, file.filename)] as const)
+		);
+		if (runId !== this.#ensureRunId) return;
+
+		const nextRecords: Record<string, import('$lib/lab/log-index/types').LogSourceRecord> = {};
+		for (const [sourceFile, record] of records) {
+			if (record) nextRecords[sourceFile] = record;
+		}
+		this.ingest.sourceRecords = nextRecords;
+
+		for (const file of files) {
+			if (!force && this.ingest.activeWorkers[file.filename]) continue;
+			const record = nextRecords[file.filename] ?? null;
+			if (!force && !this.ingest.needsIngest(file, record)) continue;
+			this.ingest.rowsWrittenByFile = { ...this.ingest.rowsWrittenByFile, [file.filename]: 0 };
+			this.ingest.startIngest(file);
+		}
+	}
+
+	// =========================================================================
+	// Search / Find
+	// =========================================================================
 
 	setSearchInput(value: string) {
 		this.searchInput = value;
@@ -527,8 +591,6 @@ export class LogWorkspaceController {
 				this.#clearFindState();
 				return;
 			}
-
-			// autoFocus: true so the view jumps to the first match once results arrive.
 			this.#requestFind({ autoFocus: true });
 		}, this.searchDebounceMs);
 	}
@@ -562,6 +624,111 @@ export class LogWorkspaceController {
 		this.#jumpToGlobalMatchOrdinal(ordinal);
 	}
 
+	#requestFind(opts?: { keepActive?: boolean; autoFocus?: boolean; targetOrdinal?: number | null }) {
+		if (!browser || !this.queryWorker) return;
+		const jobId = ++this.#nextFindJobId;
+		this.#activeFindJobId = jobId;
+		this.#autoFocusFindResults = opts?.autoFocus ?? !opts?.keepActive;
+		this.findLoading = true;
+		this.queryWorker.postMessage({
+			type: 'find',
+			jobId,
+			query: this.searchQuery,
+			activeRowId: opts?.keepActive ? this.activeMatchRowId : null,
+			anchorRowId: opts?.keepActive ? this.activeMatchRowId : null,
+			targetOrdinal: opts?.targetOrdinal ?? null
+		} satisfies QueryWorkerRequest);
+	}
+
+	#clearFindState() {
+		this.matchIndexes = [];
+		this.matchRowIds = [];
+		this.totalFindMatchCount = 0;
+		this.findLoading = false;
+		this.matchWindowStartOrdinal = 0;
+		this.activeMatchOrdinal = -1;
+		this.activeMatchRowId = null;
+		this.pendingRevealRowIndex = null;
+	}
+
+	#jumpToLocalMatch(localOrdinal: number) {
+		if (localOrdinal < 0 || localOrdinal >= this.matchIndexes.length) return;
+		const rowIndex = this.matchIndexes[localOrdinal]!;
+		this.activeMatchOrdinal = this.matchWindowStartOrdinal + localOrdinal;
+		this.activeMatchRowId = this.matchRowIds[localOrdinal] ?? null;
+		this.pinnedToBottom = false;
+		this.#pinnedToBottomRef = false;
+		this.pendingRevealRowIndex = rowIndex;
+
+		const windowEnd = this.windowStart + this.windowRows.length;
+		if (rowIndex < this.windowStart || rowIndex >= windowEnd) {
+			const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
+			this.#sendWindow(this.#windowStartForViewport(rowIndex, this.totalRows, viewportRows));
+			return;
+		}
+
+		this.#scheduleRevealIfVisible(rowIndex);
+	}
+
+	#jumpToGlobalMatchOrdinal(globalOrdinal: number) {
+		const total = this.totalFindMatchCount;
+		if (total <= 0) return;
+		const clamped = Math.max(0, Math.min(Math.trunc(globalOrdinal), total - 1));
+
+		const localOrdinal = clamped - this.matchWindowStartOrdinal;
+		if (localOrdinal >= 0 && localOrdinal < this.matchIndexes.length) {
+			this.#jumpToLocalMatch(localOrdinal);
+			return;
+		}
+
+		this.pinnedToBottom = false;
+		this.#pinnedToBottomRef = false;
+		this.#requestFind({ autoFocus: true, targetOrdinal: clamped });
+	}
+
+	#handleFindMessage(event: Extract<QueryMessage, { type: 'find' }>) {
+		if (event.jobId !== this.#activeFindJobId) return;
+		const shouldAutoFocus = this.#autoFocusFindResults;
+		this.#autoFocusFindResults = false;
+		this.findLoading = false;
+		this.matchIndexes = event.result.matchIndexes;
+		this.matchRowIds = event.result.matchRowIds;
+		this.totalFindMatchCount = event.result.totalMatchCount;
+		this.matchWindowStartOrdinal = event.result.windowStartOrdinal;
+		this.activeMatchOrdinal = event.result.activeOrdinal;
+		const localOrdinal =
+			event.result.activeOrdinal >= 0 ? event.result.activeOrdinal - event.result.windowStartOrdinal : -1;
+		const nextActiveRowId = localOrdinal >= 0 ? (event.result.matchRowIds[localOrdinal] ?? null) : null;
+		const nextRevealIndex = localOrdinal >= 0 ? (event.result.matchIndexes[localOrdinal] ?? null) : null;
+		this.activeMatchRowId = nextActiveRowId;
+
+		if (nextRevealIndex == null || nextRevealIndex < 0) {
+			this.pendingRevealRowIndex = null;
+			return;
+		}
+
+		if (!shouldAutoFocus) {
+			this.pendingRevealRowIndex = null;
+			return;
+		}
+
+		this.pinnedToBottom = false;
+		this.#pinnedToBottomRef = false;
+		this.pendingRevealRowIndex = nextRevealIndex;
+		const windowEnd = this.windowStart + this.windowRows.length;
+		if (nextRevealIndex >= this.windowStart && nextRevealIndex < windowEnd) {
+			this.#scheduleRevealIfVisible(nextRevealIndex);
+			return;
+		}
+
+		const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
+		this.#sendWindow(this.#windowStartForViewport(nextRevealIndex, this.totalRows, viewportRows));
+	}
+
+	// =========================================================================
+	// Scroll / Viewport
+	// =========================================================================
+
 	handleTableElementChange(element: HTMLDivElement | null) {
 		this.tableEl = element;
 		if (!element) return;
@@ -594,9 +761,6 @@ export class LogWorkspaceController {
 		const pinned = remaining <= this.rowHeight * 2;
 		this.pinnedToBottom = pinned;
 		this.#pinnedToBottomRef = pinned;
-		// Even for programmatic scrolls we still update pinned state above, otherwise
-		// the viewer can remain "stuck" in pinned mode and snap back to the bottom
-		// after an auto-jump (e.g. find/locate).
 		if (this.#programmaticScroll) return;
 		this.#maybeRequestWindow();
 	}
@@ -614,89 +778,6 @@ export class LogWorkspaceController {
 		}
 	}
 
-	setEventFilter(value: string) {
-		this.eventFilter = value;
-	}
-
-	selectTimelineEvent(event: TimelineEvent | null) {
-		this.selectedEventId = event?.id ?? null;
-		this.timelineNotice = null;
-		if (!event) return;
-
-		this.flashEventId = event.id;
-		window.setTimeout(() => {
-			if (this.flashEventId === event.id) this.flashEventId = null;
-		}, 400);
-
-		this.clearSearch();
-		if (!event.startRef) return;
-		void this.jumpToLocator(event.startRef);
-	}
-
-	selectTimelineEventById(id: string | null) {
-		this.selectTimelineEvent(id ? this.eventById[id] ?? null : null);
-	}
-
-	async reloadSelected() {
-		this.totalRows = 0;
-		this.totalMatches = 0;
-		this.clipped = false;
-		this.windowStart = 0;
-		this.windowRows = [];
-		this.lastQueryKey = null;
-		this.windowLoading = false;
-		this.pendingWindowStart = null;
-		this.events = [];
-		this.eventById = {};
-		this.#setBuiltTimeline(null, 'toggle-file-reset');
-		this.timelineNotice = null;
-		await this.ensureIndexed(true);
-		this.#scheduleViewerRefresh(0, true);
-		this.#scheduleTimelineRefresh(0);
-	}
-
-	async ensureIndexed(force = false) {
-		if (!browser || !this.data.reportOk) return;
-		this.error = null;
-		const runId = ++this.#ensureRunId;
-
-		const files = this.selectedFileMetas;
-		if (files.length === 0) {
-			this.sourceRecords = {};
-			this.totalRows = 0;
-			this.totalMatches = 0;
-			this.clipped = false;
-			this.windowStart = 0;
-			this.windowRows = [];
-			this.lastQueryKey = null;
-			this.windowLoading = false;
-			this.pendingWindowStart = null;
-			this.events = [];
-			this.eventById = {};
-			this.#setBuiltTimeline(null, 'reload-selected-empty');
-			return;
-		}
-
-		const records = await Promise.all(
-			files.map(async (file) => [file.filename, await getSourceRecord(this.data.reportId, file.filename)] as const)
-		);
-		if (runId !== this.#ensureRunId) return;
-
-		const nextRecords: Record<string, LogSourceRecord> = {};
-		for (const [sourceFile, record] of records) {
-			if (record) nextRecords[sourceFile] = record;
-		}
-		this.sourceRecords = nextRecords;
-
-		for (const file of files) {
-			if (!force && this.activeWorkers[file.filename]) continue;
-			const record = nextRecords[file.filename] ?? null;
-			if (!force && !this.#needsIngest(file, record)) continue;
-			this.rowsWrittenByFile = { ...this.rowsWrittenByFile, [file.filename]: 0 };
-			void this.#startSourceIngest(file);
-		}
-	}
-
 	async jumpToLocator(locator: LogRowLocator | null) {
 		if (!locator) return;
 
@@ -705,7 +786,7 @@ export class LogWorkspaceController {
 			this.#pendingJumpLocator = locator;
 			await this.ensureIndexed(false);
 			this.#scheduleViewerRefresh(0, true);
-			this.#scheduleTimelineRefresh(100);
+			this.timeline.scheduleRefresh(100);
 			return;
 		}
 
@@ -713,193 +794,9 @@ export class LogWorkspaceController {
 		this.#requestLocate(locator);
 	}
 
-	onTimelineItemClick(item: unknown) {
-		const id = (item as { id?: string } | null)?.id ?? null;
-		this.selectTimelineEventById(id);
-	}
-
-	#stopWorker(sourceFile: string) {
-		const worker = this.activeWorkers[sourceFile];
-		if (worker) worker.terminate();
-
-		if (sourceFile in this.activeWorkers) {
-			const nextWorkers = { ...this.activeWorkers };
-			delete nextWorkers[sourceFile];
-			this.activeWorkers = nextWorkers;
-		}
-
-		if (sourceFile in this.progressByFile) {
-			const nextProgress = { ...this.progressByFile };
-			delete nextProgress[sourceFile];
-			this.progressByFile = nextProgress;
-		}
-
-		if (sourceFile in this.activeJobIds) {
-			const nextJobIds = { ...this.activeJobIds };
-			delete nextJobIds[sourceFile];
-			this.activeJobIds = nextJobIds;
-		}
-	}
-
-	#stopAllWorkers() {
-		for (const worker of Object.values(this.activeWorkers)) worker.terminate();
-		this.activeWorkers = {};
-		this.progressByFile = {};
-		this.activeJobIds = {};
-	}
-
-	#needsIngest(file: LogWorkspaceFile, record: LogSourceRecord | null) {
-		if (!record) return true;
-		if (record.status !== 'complete') return true;
-		if (record.filePath !== file.filePath) return true;
-		if (record.fileSize !== file.size) return true;
-		if (record.downloadMode !== this.downloadMode) return true;
-		if (record.maxBytes !== this.maxBytes) return true;
-		if ((record.maxLines ?? null) !== this.maxLines) return true;
-		if (record.parseVersion !== this.parseVersion) return true;
-		return false;
-	}
-
-	#encodeFilePath(filePath: string) {
-		return filePath.split('/').map(encodeURIComponent).join('/');
-	}
-
-	#buildSourceUrl(file: LogWorkspaceFile) {
-		if (this.data.sourceKind === 'api') {
-			return `/api/reports/${encodeURIComponent(this.data.reportId)}/files/${this.#encodeFilePath(file.filePath)}?mode=${this.downloadMode}&maxBytes=${this.maxBytes}`;
-		}
-
-		return `/lab/fixtures/${encodeURIComponent(this.data.reportId)}/files/${encodeURIComponent(file.filePath)}?mode=${this.downloadMode}&maxBytes=${this.maxBytes}`;
-	}
-
-	async #startSourceIngest(file: LogWorkspaceFile) {
-		this.#stopWorker(file.filename);
-
-		const worker = new Worker(new URL('$lib/lab/log-index/worker.ts', import.meta.url), {
-			type: 'module'
-		});
-		const jobId = ++this.#nextJobId;
-
-		this.activeWorkers = { ...this.activeWorkers, [file.filename]: worker };
-		this.activeJobIds = { ...this.activeJobIds, [file.filename]: jobId };
-		this.progressByFile = { ...this.progressByFile, [file.filename]: 'Indexing…' };
-
-		worker.addEventListener('message', (event: MessageEvent<WorkerProgressMessage>) => {
-			if (this.activeJobIds[file.filename] !== jobId) return;
-
-			if (event.data.type === 'progress') {
-				this.progressByFile = { ...this.progressByFile, [file.filename]: event.data.message };
-				if (event.data.phase === 'parsing') {
-					this.rowsWrittenByFile = { ...this.rowsWrittenByFile, [file.filename]: event.data.rowsWritten };
-					if (this.selectedFiles.includes(file.filename) && event.data.rowsWritten >= 1000) {
-						if (this.searchQuery) {
-							this.#scheduleViewerRefresh(250, true);
-						} else if (this.#pinnedToBottomRef) {
-							this.#sendPoll();
-						} else if (!this.renderReady) {
-							this.#scheduleViewerRefresh(0, true);
-						}
-						this.#scheduleTimelineRefresh(250);
-					}
-				}
-				return;
-			}
-
-			this.#stopWorker(file.filename);
-
-			if (event.data.type === 'complete') {
-				this.sourceRecords = { ...this.sourceRecords, [file.filename]: event.data.source };
-				this.rowsWrittenByFile = { ...this.rowsWrittenByFile, [file.filename]: 0 };
-				if (this.selectedFiles.includes(file.filename)) {
-					this.#scheduleViewerRefresh(0, true);
-					this.#scheduleTimelineRefresh(100);
-				}
-				return;
-			}
-
-			this.error = event.data.message;
-		});
-
-		worker.addEventListener('error', (event) => {
-			if (this.activeJobIds[file.filename] !== jobId) return;
-			this.#stopWorker(file.filename);
-			this.error = event.message || 'Worker failed';
-		});
-
-		worker.postMessage({
-			type: 'ingest',
-			jobId,
-			reportId: this.data.reportId,
-			sourceFile: file.filename,
-			filePath: file.filePath,
-			fileSize: file.size,
-			sourceUrl: this.#buildSourceUrl(file),
-			downloadMode: this.downloadMode,
-			maxBytes: this.maxBytes,
-			maxLines: this.maxLines,
-			timezoneOffsetSeconds: this.data.timezoneOffsetSeconds,
-			yearHint: this.data.yearHint,
-			nowYear: new Date().getUTCFullYear()
-		});
-	}
-
-	#windowSizeForViewport() {
-		return this.maxRetainedRows;
-	}
-
-	#clampWindowStart(start: number, total: number) {
-		const safeStart = Math.max(0, Math.trunc(start));
-		const maxStart = Math.max(0, total - this.maxRetainedRows);
-		const aligned = Math.floor(safeStart / this.chunkSize) * this.chunkSize;
-		return Math.min(aligned, maxStart);
-	}
-
-	#windowStartForViewport(viewportStart: number, total: number, viewportRows: number) {
-		if (total <= this.maxRetainedRows) return 0;
-		const centered = viewportStart - Math.floor((this.maxRetainedRows - viewportRows) / 2);
-		return this.#clampWindowStart(centered, total);
-	}
-
-	#queryKeyForState(sourceFiles: string[]) {
-		return `${this.data.reportId}|${sourceFiles.join(',')}|${this.downloadMode}|${this.maxBytes}|${this.maxLines}|${this.parseVersion}|ts|msg`;
-	}
-
-	#currentViewportRowId() {
-		const viewportIndex = Math.max(0, Math.floor(this.#scrollTopRef / this.rowHeight));
-		if (viewportIndex < this.windowStart) return this.windowRows[0]?.id ?? null;
-		const localIndex = viewportIndex - this.windowStart;
-		return this.windowRows[localIndex]?.id ?? this.windowRows[0]?.id ?? null;
-	}
-
-	#requestFind(opts?: { keepActive?: boolean; autoFocus?: boolean; targetOrdinal?: number | null }) {
-		if (!browser || !this.queryWorker) return;
-		const jobId = ++this.#nextFindJobId;
-		this.#activeFindJobId = jobId;
-		this.#autoFocusFindResults = opts?.autoFocus ?? !opts?.keepActive;
-		this.findLoading = true;
-		this.queryWorker.postMessage({
-			type: 'find',
-			jobId,
-			query: this.searchQuery,
-			activeRowId: opts?.keepActive ? this.activeMatchRowId : null,
-			// For fresh searches (keepActive = false) pass null so the worker returns
-			// ordinal 0 — the absolute first match — instead of the nearest match to
-			// the current viewport position.
-			anchorRowId: opts?.keepActive ? this.activeMatchRowId : null,
-			targetOrdinal: opts?.targetOrdinal ?? null
-		} satisfies QueryWorkerRequest);
-	}
-
-	#clearFindState() {
-		this.matchIndexes = [];
-		this.matchRowIds = [];
-		this.totalFindMatchCount = 0;
-		this.findLoading = false;
-		this.matchWindowStartOrdinal = 0;
-		this.activeMatchOrdinal = -1;
-		this.activeMatchRowId = null;
-		this.pendingRevealRowIndex = null;
-	}
+	// =========================================================================
+	// Locate
+	// =========================================================================
 
 	#requestLocate(locator: LogRowLocator) {
 		if (!browser || !this.queryWorker) return;
@@ -916,6 +813,42 @@ export class LogWorkspaceController {
 			}
 		} satisfies QueryWorkerRequest);
 	}
+
+	#handleLocateMessage(event: Extract<QueryMessage, { type: 'locate' }>) {
+		if (event.jobId !== this.#activeLocateJobId) return;
+
+		if (event.result.rowIndex < 0 || !event.result.row) {
+			const locator = event.result.locator;
+			const sourceFile = locator?.sourceFile ?? this.#pendingJumpLocator?.sourceFile ?? null;
+			if (sourceFile && (this.ingest.progressByFile[sourceFile] || this.ingest.activeWorkers[sourceFile])) {
+				this.#pendingJumpLocator = locator ?? this.#pendingJumpLocator;
+				return;
+			}
+			this.#pendingJumpLocator = null;
+			this.timeline.showNotice('Source log row not available in the current indexed slice.');
+			return;
+		}
+
+		this.selectedRow = event.result.row;
+		this.detailOpen = true;
+		this.pinnedToBottom = false;
+		this.#pinnedToBottomRef = false;
+		this.pendingRevealRowIndex = event.result.rowIndex;
+		this.#pendingJumpLocator = null;
+
+		const windowEnd = this.windowStart + this.windowRows.length;
+		if (event.result.rowIndex < this.windowStart || event.result.rowIndex >= windowEnd) {
+			const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
+			this.#sendWindow(this.#windowStartForViewport(event.result.rowIndex, this.totalRows, viewportRows));
+			return;
+		}
+
+		this.#scheduleRevealIfVisible(event.result.rowIndex);
+	}
+
+	// =========================================================================
+	// Viewport helpers
+	// =========================================================================
 
 	#revealRowIndex(rowIndex: number) {
 		if (!this.tableEl) return;
@@ -938,8 +871,6 @@ export class LogWorkspaceController {
 			if (this.pendingRevealRowIndex === rowIndex) {
 				this.#revealRowIndex(rowIndex);
 				this.pendingRevealRowIndex = null;
-				// If the detail pane is open, sync it to the newly revealed row so
-				// the sidebar reflects the match the user just jumped to.
 				if (this.detailOpen) {
 					const localIndex = rowIndex - this.windowStart;
 					const row = this.windowRows[localIndex];
@@ -974,41 +905,29 @@ export class LogWorkspaceController {
 		});
 	}
 
-	#jumpToLocalMatch(localOrdinal: number) {
-		if (localOrdinal < 0 || localOrdinal >= this.matchIndexes.length) return;
-		const rowIndex = this.matchIndexes[localOrdinal]!;
-		this.activeMatchOrdinal = this.matchWindowStartOrdinal + localOrdinal;
-		this.activeMatchRowId = this.matchRowIds[localOrdinal] ?? null;
-		// Navigating to a match is an explicit jump away from the live tail.
-		this.pinnedToBottom = false;
-		this.#pinnedToBottomRef = false;
-		this.pendingRevealRowIndex = rowIndex;
+	// =========================================================================
+	// Query worker communication
+	// =========================================================================
 
-		const windowEnd = this.windowStart + this.windowRows.length;
-		if (rowIndex < this.windowStart || rowIndex >= windowEnd) {
-			const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
-			this.#sendWindow(this.#windowStartForViewport(rowIndex, this.totalRows, viewportRows));
-			return;
-		}
-
-		this.#scheduleRevealIfVisible(rowIndex);
+	#windowSizeForViewport() {
+		return this.maxRetainedRows;
 	}
 
-	#jumpToGlobalMatchOrdinal(globalOrdinal: number) {
-		const total = this.totalFindMatchCount;
-		if (total <= 0) return;
-		const clamped = Math.max(0, Math.min(Math.trunc(globalOrdinal), total - 1));
+	#clampWindowStart(start: number, total: number) {
+		const safeStart = Math.max(0, Math.trunc(start));
+		const maxStart = Math.max(0, total - this.maxRetainedRows);
+		const aligned = Math.floor(safeStart / this.chunkSize) * this.chunkSize;
+		return Math.min(aligned, maxStart);
+	}
 
-		const localOrdinal = clamped - this.matchWindowStartOrdinal;
-		if (localOrdinal >= 0 && localOrdinal < this.matchIndexes.length) {
-			this.#jumpToLocalMatch(localOrdinal);
-			return;
-		}
+	#windowStartForViewport(viewportStart: number, total: number, viewportRows: number) {
+		if (total <= this.maxRetainedRows) return 0;
+		const centered = viewportStart - Math.floor((this.maxRetainedRows - viewportRows) / 2);
+		return this.#clampWindowStart(centered, total);
+	}
 
-		// Request a new find window centred around the desired ordinal.
-		this.pinnedToBottom = false;
-		this.#pinnedToBottomRef = false;
-		this.#requestFind({ autoFocus: true, targetOrdinal: clamped });
+	#queryKeyForState(sourceFiles: string[]) {
+		return `${this.data.reportId}|${sourceFiles.join(',')}|${this.downloadMode}|${this.maxBytes}|${this.maxLines}|${this.parseVersion}|ts|msg`;
 	}
 
 	#sendQuery(opts?: { align?: 'top' | 'bottom'; force?: boolean; windowStart?: number }) {
@@ -1113,79 +1032,9 @@ export class LogWorkspaceController {
 		}
 	}
 
-	#handleFindMessage(event: Extract<QueryMessage, { type: 'find' }>) {
-		if (event.jobId !== this.#activeFindJobId) return;
-		const shouldAutoFocus = this.#autoFocusFindResults;
-		this.#autoFocusFindResults = false;
-		this.findLoading = false;
-		this.matchIndexes = event.result.matchIndexes;
-		this.matchRowIds = event.result.matchRowIds;
-		this.totalFindMatchCount = event.result.totalMatchCount;
-		this.matchWindowStartOrdinal = event.result.windowStartOrdinal;
-		this.activeMatchOrdinal = event.result.activeOrdinal;
-		const localOrdinal =
-			event.result.activeOrdinal >= 0 ? event.result.activeOrdinal - event.result.windowStartOrdinal : -1;
-		const nextActiveRowId = localOrdinal >= 0 ? (event.result.matchRowIds[localOrdinal] ?? null) : null;
-		const nextRevealIndex = localOrdinal >= 0 ? (event.result.matchIndexes[localOrdinal] ?? null) : null;
-		this.activeMatchRowId = nextActiveRowId;
-
-		if (nextRevealIndex == null || nextRevealIndex < 0) {
-			this.pendingRevealRowIndex = null;
-			return;
-		}
-
-		if (!shouldAutoFocus) {
-			this.pendingRevealRowIndex = null;
-			return;
-		}
-
-		// Auto-focusing a find result is a jump away from the live tail; unpin
-		// immediately so background refreshes don't snap the viewport back down.
-		this.pinnedToBottom = false;
-		this.#pinnedToBottomRef = false;
-		this.pendingRevealRowIndex = nextRevealIndex;
-		const windowEnd = this.windowStart + this.windowRows.length;
-		if (nextRevealIndex >= this.windowStart && nextRevealIndex < windowEnd) {
-			this.#scheduleRevealIfVisible(nextRevealIndex);
-			return;
-		}
-
-		const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
-		this.#sendWindow(this.#windowStartForViewport(nextRevealIndex, this.totalRows, viewportRows));
-	}
-
-	#handleLocateMessage(event: Extract<QueryMessage, { type: 'locate' }>) {
-		if (event.jobId !== this.#activeLocateJobId) return;
-
-		if (event.result.rowIndex < 0 || !event.result.row) {
-			const locator = event.result.locator;
-			const sourceFile = locator?.sourceFile ?? this.#pendingJumpLocator?.sourceFile ?? null;
-			if (sourceFile && (this.progressByFile[sourceFile] || this.activeWorkers[sourceFile])) {
-				this.#pendingJumpLocator = locator ?? this.#pendingJumpLocator;
-				return;
-			}
-			this.#pendingJumpLocator = null;
-			this.#showTimelineNotice('Source log row not available in the current indexed slice.');
-			return;
-		}
-
-		this.selectedRow = event.result.row;
-		this.detailOpen = true;
-		// Locating a row is also a jump away from the live tail.
-		this.pinnedToBottom = false;
-		this.#pinnedToBottomRef = false;
-		this.pendingRevealRowIndex = event.result.rowIndex;
-		this.#pendingJumpLocator = null;
-
-		const windowEnd = this.windowStart + this.windowRows.length;
-		if (event.result.rowIndex < this.windowStart || event.result.rowIndex >= windowEnd) {
-			const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
-			this.#sendWindow(this.#windowStartForViewport(event.result.rowIndex, this.totalRows, viewportRows));
-			return;
-		}
-
-		this.#scheduleRevealIfVisible(event.result.rowIndex);
-	}
+	// =========================================================================
+	// Refresh scheduling
+	// =========================================================================
 
 	#scheduleViewerRefresh(delayMs: number, force: boolean) {
 		if (!browser) return;
@@ -1205,84 +1054,5 @@ export class LogWorkspaceController {
 			);
 			this.#sendQuery({ force, windowStart: desiredStart });
 		}, delayMs);
-	}
-
-	#scheduleTimelineRefresh(delayMs: number) {
-		if (!browser) return;
-		if (this.#timelineRefreshTimer) window.clearTimeout(this.#timelineRefreshTimer);
-		this.#timelineRefreshTimer = window.setTimeout(() => {
-			void this.#refreshTimeline();
-		}, delayMs);
-	}
-
-	async #refreshTimeline() {
-		if (!browser || !this.data.reportOk) return;
-		const sourceFiles = [...this.selectedFiles];
-		if (sourceFiles.length === 0) {
-			this.events = [];
-			this.eventById = {};
-			this.renderedEvents = [];
-			this.renderedEventById = {};
-			this.#setBuiltTimeline(null, 'refresh-timeline-empty-files');
-			this.timelineClusters = {};
-			this.timelineLoading = false;
-			return;
-		}
-
-		const seq = ++this.#loadEventsSeq;
-		this.timelineLoading = true;
-		this.timelineError = null;
-
-		try {
-			const result = await queryRowsForSources({
-				reportId: this.data.reportId,
-				sourceFiles,
-				search: '',
-				kinds: null,
-				limit: Math.max(1, sourceFiles.length) * this.maxLines,
-				requireTimestamp: this.requireTimestamp,
-				requireNonEmptyMessage: this.requireNonEmptyMessage
-			});
-			if (seq !== this.#loadEventsSeq) return;
-
-			const nextEvents = extractTimelineEventsFromRows(result.rows);
-			const nextMap: Record<string, TimelineEvent> = {};
-			for (const event of nextEvents) nextMap[event.id] = event;
-
-			this.events = nextEvents;
-			this.eventById = nextMap;
-			// If the timeline hasn't reported its current visible window yet, use a fallback
-			// derived from the event extents so clustering can activate immediately.
-			if (!this.timelineVisibleWindow) {
-				this.timelineVisibleWindow = this.#deriveFallbackWindow(nextEvents);
-			}
-			// Rendered timeline may differ (clustering); recompute from current window.
-			this.#recomputeTimelineModel();
-
-			if (this.selectedEventId && !nextMap[this.selectedEventId] && !this.renderedEventById[this.selectedEventId]) {
-				this.selectedEventId = null;
-			}
-		} catch (error) {
-			if (seq !== this.#loadEventsSeq) return;
-			this.timelineError = error instanceof Error ? error.message : String(error);
-			this.events = [];
-			this.eventById = {};
-			this.renderedEvents = [];
-			this.renderedEventById = {};
-			this.#setBuiltTimeline(null, 'refresh-timeline-error');
-			this.timelineClusters = {};
-		} finally {
-			if (seq === this.#loadEventsSeq) {
-				this.timelineLoading = false;
-			}
-		}
-	}
-
-	#showTimelineNotice(message: string) {
-		this.timelineNotice = message;
-		if (this.#noticeTimer) window.clearTimeout(this.#noticeTimer);
-		this.#noticeTimer = window.setTimeout(() => {
-			if (this.timelineNotice === message) this.timelineNotice = null;
-		}, 3000);
 	}
 }

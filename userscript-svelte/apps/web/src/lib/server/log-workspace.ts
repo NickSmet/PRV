@@ -129,13 +129,19 @@ async function loadApiFiles(reportId: string): Promise<{
 	};
 }
 
-export async function loadLogWorkspacePageData(reportId: string): Promise<LogWorkspacePageData> {
+export async function loadLogWorkspacePageData(
+	reportId: string,
+	options?: { forceReparse?: boolean }
+): Promise<LogWorkspacePageData> {
+	const forceReparse = options?.forceReparse ?? false;
+
 	try {
 		const api = await loadApiFiles(reportId);
 		return {
 			reportId,
 			sourceKind: 'api',
 			reportOk: true,
+			forceReparse,
 			timezoneOffsetSeconds: api.timezoneOffsetSeconds,
 			yearHint: api.yearHint,
 			files: api.files,
@@ -148,6 +154,7 @@ export async function loadLogWorkspacePageData(reportId: string): Promise<LogWor
 			reportId,
 			sourceKind: 'fixture',
 			reportOk: fixture.available,
+			forceReparse,
 			timezoneOffsetSeconds: fixture.timezoneOffsetSeconds,
 			yearHint: fixture.yearHint,
 			files: fixture.files,

@@ -14,11 +14,19 @@ export type VisItem = Record<string, unknown> & {
   end?: Date | string | number;
 };
 
+export type VisCustomTime = {
+  id: string | number;
+  time: Date | string | number;
+  title?: string;
+  marker?: string;
+};
+
 export type TimelinePayload = {
   groups: VisGroup[];
   items: VisItem[];
   options?: TimelineOptions;
   initialWindow?: { start: string | number | Date; end: string | number | Date };
+  customTimes?: VisCustomTime[];
 };
 
 /** Window info emitted by the Timeline component. */
@@ -30,4 +38,3 @@ export type TimelineWindowEvent = {
   spanMs: number;
   source: 'init' | 'rangechange' | 'rangechanged';
 };
-

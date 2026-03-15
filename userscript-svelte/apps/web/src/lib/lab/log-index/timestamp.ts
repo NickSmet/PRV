@@ -18,12 +18,36 @@ export function parseTsRaw(
     !Number.isFinite(hh) ||
     !Number.isFinite(mm) ||
     !Number.isFinite(ss) ||
-    !Number.isFinite(ms)
+    !Number.isFinite(ms) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hh < 0 ||
+    hh > 23 ||
+    mm < 0 ||
+    mm > 59 ||
+    ss < 0 ||
+    ss > 59 ||
+    ms < 0 ||
+    ms > 999
   ) {
     return null;
   }
 
   const wallMs = Date.UTC(baseYear, month - 1, day, hh, mm, ss, ms);
   if (!Number.isFinite(wallMs)) return null;
+  const wallDate = new Date(wallMs);
+  if (
+    wallDate.getUTCFullYear() !== baseYear ||
+    wallDate.getUTCMonth() !== month - 1 ||
+    wallDate.getUTCDate() !== day ||
+    wallDate.getUTCHours() !== hh ||
+    wallDate.getUTCMinutes() !== mm ||
+    wallDate.getUTCSeconds() !== ss ||
+    wallDate.getUTCMilliseconds() !== ms
+  ) {
+    return null;
+  }
   return wallMs;
 }

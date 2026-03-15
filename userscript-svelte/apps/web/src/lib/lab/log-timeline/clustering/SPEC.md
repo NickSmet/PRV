@@ -2,16 +2,14 @@
 
 ## Overview
 
-This module defines **dynamic clustering/aggregation rules** for timeline rendering when the user is zoomed out.
+This module defines **dynamic clustering/aggregation rules** for timeline rendering. When the visible time window contains too many events per category, events are aggregated into burst-based clusters. When zoomed in (or when event density is low), the fully expanded per-event view is shown.
 
-**Goal:** when the visible time window is large (zoomed out), show **fewer, higher-level items** (summary lanes/items). When zoomed in, show the **fully expanded** per-event items.
-
-**Key principle:** clustering is a **view-layer transformation**:
-- it must not change the underlying event timestamps or provenance
-- it must be reversible (zoom in → regain original events)
-- it should be configurable per event category (Apps vs GUI vs Config, etc.)
-
-This spec is intended to support clustering across multiple categories, not only Apps.
+**Key principles:**
+- Clustering is a **view-layer transformation** — it does not change underlying event timestamps or provenance
+- It is **reversible** — zoom in to regain original events
+- It is **category-agnostic** — every category is evaluated independently for density
+- It is **severity-aware** — cluster labels show severity breakdown; cluster items inherit the highest severity
+- Clustering decisions are driven by the **user-intended window** (wheel/drag), not vis-timeline's internal reflow window, to prevent feedback loops
 
 ---
 
@@ -19,31 +17,28 @@ This spec is intended to support clustering across multiple categories, not only
 
 ### Input
 
-- `TimelineEvent[]` (library-agnostic UI events)
-  - Spec: `apps/web/src/lib/lab/timeline/types.ts`
-- `VisibleWindow`
+- `TimelineEvent[]` — library-agnostic UI events (see `apps/web/src/lib/lab/timeline/types.ts`)
+- `VisibleWindow | null` — current user-intended zoom window; null means no window known yet
 
 ```ts
 type VisibleWindow = {
   startMs: number;
   endMs: number;
+  spanMs: number;
 };
 ```
 
 ### Output
 
-- `ClusteredTimelineModel`
-
 ```ts
 type ClusteredTimelineModel = {
   mode: 'none' | 'clustered';
-  /** Events actually rendered (either original or aggregated). */
   events: TimelineEvent[];
-  /**
-   * Optional mapping to support drilldown:
-   * clusterEventId -> child event ids.
-   */
-  clusters?: Record<string, string[]>;
+  clusters?: Record<string, string[]>; // clusterId → child event ids
+  stats: {
+    totalByCategory: Record<string, number>;
+    clusteredByCategory: Record<string, number>;
+  };
 };
 ```
 
@@ -51,89 +46,146 @@ type ClusteredTimelineModel = {
 
 ## Clustering triggers
 
-Clustering is driven by **zoom level** (visible window span).
+### Global guard
 
-```ts
-const spanMs = endMs - startMs;
+Clustering requires all of the following to be true:
+1. `config.enabled` is true
+2. A visible window is known (`window !== null`)
+3. `spanMs >= noAggregationFloorMs` (default: 5 minutes)
+
+If any condition fails, all events are returned unclustered.
+
+### Per-category evaluation
+
+Each category is evaluated independently with **two triggers**:
+
+```
+densityTrigger = visibleCount > maxVisibleEvents
+spanTrigger    = (spanMs >= alwaysClusterAboveSpanMs) && (categoryEvents.length >= minItems)
 ```
 
-### Baseline policy (initial)
+- **Density trigger** — counts events overlapping the visible window. If there are too many to read comfortably, cluster.
+- **Span trigger** — when the window is very wide (default: ≥ 6 hours), cluster any category with enough total events. Uses **total** event count (not visible count) so panning doesn't cause de-aggregation when events slide to the edge of view.
 
-- If `spanMs >= CLUSTER_APPS_THRESHOLD_MS`, enable Apps clustering.
-- Otherwise, show the fully expanded list.
+Important: the `minItems` gate still applies before burst formation. This means a visually close pair in a sparse category can remain unclustered if that category does not meet the configured minimum total event count.
 
-The threshold is intentionally coarse and should be tuned empirically.
+### Hard floor
+
+When `spanMs < noAggregationFloorMs` (default: 5 minutes), **no aggregation occurs** regardless of density or category size.
+
+### Default thresholds
+
+| Parameter | Default | Description |
+|---|---|---|
+| `noAggregationFloorMs` | 5 min | Minimum span below which clustering never triggers |
+| `alwaysClusterAboveSpanMs` | 6 hours | Span above which span trigger evaluates |
+| `defaultMaxVisibleEvents` | 15 | Density threshold per category |
+| `defaultMinItems` | 6 | Minimum total events for a category to be eligible |
+
+### Configuration
+
+```ts
+type TimelineClusteringConfig = {
+  enabled: boolean;
+  noAggregationFloorMs: number;
+  alwaysClusterAboveSpanMs: number;
+  defaultMaxVisibleEvents: number;
+  defaultMinItems: number;
+  burstGap: BurstGapConfig;
+  categories?: Record<string, Partial<CategoryClusterConfig>>;
+};
+```
+
+Per-category overrides allow tuning `maxVisibleEvents`, `minItems`, `burstGap`, and an optional sub-dimension `classify` function.
 
 ---
 
-## Clustering dimensions
+## Burst formation
 
-Clustering groups events by a **dimension key** derived from the event.
+Within a clustered category, events are grouped into **temporal bursts**:
+1. Sort events by start time
+2. Compute each event's **clustering footprint end**
+3. Merge consecutive events when the gap between them is ≤ `gapMs`
+3. If the resulting burst count exceeds `maxClustersPerKey`, iteratively widen the gap (×1.6 per iteration, up to `maxIterations`)
 
-Examples:
-- Apps: `system` vs `thirdParty`
-- GUI: `prompt` vs `notification`
-- Config: `sharing` vs `network` vs `storage` (future)
+The clustering footprint is not always the raw event end:
 
-```ts
-type ClusterDimensionKey = string;
-type ClusterDimensionFn = (event: TimelineEvent) => ClusterDimensionKey;
-```
+- point-like events (`<= 5s`, or no `end`) get a small synthetic footprint
+- narrow summary/range items may also get a small synthetic footprint
+- cluster summary items use a bounded synthetic footprint
+- wide true-duration items use their actual end
+
+This keeps burst formation aligned with what is visually competing on screen without using the full readability expansion width.
+
+### Burst gap defaults
+
+| Parameter | Default |
+|---|---|
+| `fractionOfSpan` | 0 (use minMs directly) |
+| `minMs` | 10 minutes |
+| `maxMs` | 12 hours |
+| `maxClustersPerKey` | 12 |
+| `maxIterations` | 6 |
+
+### Clustering footprint defaults
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| point-like / narrow footprint | ~`60px` at assumed `800px` viewport | Footprint used for burst formation, not final render width |
+| point threshold | `<= 5s` | Events treated as point-like for display/clustering semantics |
+
+### Sub-dimensions
+
+An optional `classify` function can split a category into sub-buckets. The current compact timeline does not use that for app activity, because app events are extracted into separate categories up front (`Apps: System`, `Apps: Microsoft`, `Apps: Third-party`). Each category still clusters independently.
+
+---
+
+## Severity-aware aggregation
+
+Cluster items carry severity information:
+- **Highest severity wins**: the cluster item's `severity` field is set to the worst severity in its children
+- **Composite labels**: when a burst contains mixed severities, the label shows a breakdown — e.g. `"12 apps (3 errors, 2 warn, 7 info)"`
+- **Visual styling**: `buildCompactPayload` applies severity-based CSS classes, so cluster items with errors render with error styling
+- **Child label summary**: the cluster item's `detail` field contains the first 24 child event labels (newline-separated), shown in the hover tooltip
 
 ---
 
 ## Rendering model
 
 When clustered:
+1. Original events in that category are replaced by **burst summary items**
+2. Summary item labels encode: count, category name, severity breakdown
+3. Summary item time range spans the burst's actual `[startMs, endMs]`
+4. Summary items remain clickable (click emits the cluster item for drill-down)
+5. Cluster items carry a CSS class `prv-ct-item--cluster` for special sizing rules
 
-1. Replace many child items with a small number of **summary items**.
-2. Summary item labels must encode:
-   - count
-   - cluster dimension name (e.g. “System apps”)
-3. Summary items MUST remain clickable:
-   - clicking a summary item can either:
-     - zoom in to a narrower window (recommended), or
-     - open a list panel (future)
+Cluster children are whatever items entered clustering at that layer. In practice this means a cluster can contain raw point events, real range events, or already summarized extracted events such as individual config-diff rows. The current implementation does not recursively flatten child provenance back to leaf log rows inside cluster detail text.
 
-### Summary item time range
+### Cluster item IDs
 
-The summary item time range is purely a visual affordance.
+Format: `cluster:{categoryKey}:{dimensionKey}:{burstIndex}:{startMs}:{endMs}`
 
-Baseline strategy:
-- Use the **current visible window** as the summary item range:
-  - `start = window.start`
-  - `end = window.end`
-
-This avoids implying specific durations while still providing a stable “band” in the lane.
+The `clusters` map in the output maps each cluster ID to its child event IDs for drill-down support.
 
 ---
 
 ## Integration points
 
-### Timeline library capabilities (vis-timeline)
+### vis-timeline
 
-`vis-timeline` has a built-in `cluster` option:
+vis-timeline has a built-in `cluster` option, but it doesn't produce domain-specific semantic summaries. **Policy:** use app-level clustering (this module) for semantic aggregation.
 
-- `TimelineOptions.cluster`
-- `clusterCriteria(firstItem, secondItem) => boolean`
-- `maxItems`
+### Key architectural note
 
-This can reduce visual density, but it does not produce the domain-specific “System apps vs Third-party apps” lane summaries we want.
-
-**Policy:** prefer app-level clustering (this spec) for semantic summaries; use built-in `cluster` only for purely visual density reduction.
+Clustering decisions must be driven by **user-intended window** only (not vis-timeline's internal window state) to avoid feedback loops. The controller maintains a separate `userIntendedWindow` that is only updated on explicit user wheel/drag events. See `timeline-clustering-debug.md` for the full explanation.
 
 ### Where clustering applies
 
-Primary surfaces:
-- `/lab/timeline/:reportId/compact` (shared timeline + viewer workspace)
-- `/lab/timeline/:reportId` and other lab timelines that reuse `TimelineEvent[]`
+- Log timeline workspace (`LogTimelineWorkspace.svelte`)
+- Managed by `TimelineManager` (in `createLogWorkspace` directory); the controller filters hidden app lanes, calls `clusterTimelineEvents()` on the visible event set, and then passes the result to `buildCompactTimeline()`
 
 ---
 
 ## Status
 
-**🔶 Outline** — defines the intended behavior and interfaces. Implementation will add:
-- range-change hooks (visible window observation)
-- an event → cluster key classifier (Apps first)
-- dataset switching between expanded and clustered views
-
+**Working** — universal density-based clustering with dual triggers (density + span) and severity awareness is implemented. See `clusterTimelineEvents.ts`.
