@@ -183,7 +183,7 @@
 								<span
 									style={`font-size:10px; font-family:${VIEWER_FONTS.mono}; color:${VIEWER_COLORS.t3};`}
 								>
-									{workspace.events.length} events
+									{workspace.events.length} events{workspace.timelineClusterMode === 'apps' ? ' (apps clustered)' : ''}{workspace.timelineVisibleWindow ? ` · span ${Math.round(workspace.timelineVisibleWindow.spanMs / 60000)}m` : ''} · apps raw {workspace.timelineRawAppsCount}/rendered {workspace.timelineRenderedAppsCount}
 								</span>
 							</button>
 
@@ -200,10 +200,13 @@
 										<div style="flex:1; min-height:0; overflow:hidden;">
 											<LogTimeline
 												payload={workspace.timelinePayload}
+												payloadRevision={workspace.timelineRevision}
 												loading={workspace.timelineLoading}
 												error={workspace.timelineError}
 												hasSelection={workspace.selectedFiles.length > 0}
 												onItemClick={(item) => workspace?.onTimelineItemClick(item)}
+												onVisibleWindowChange={(window) => workspace?.handleTimelineVisibleWindowChange(window)}
+												onUserWindowChange={(window) => workspace?.handleUserWindowChange(window)}
 											/>
 										</div>
 										{#if workspace.timelineNotice}
@@ -346,6 +349,16 @@
 		font-size: 11px;
 		font-weight: 500;
 		line-height: 1.3;
+		min-width: 10px;
+	}
+
+	/* Cluster items should remain readable even when zoomed out. */
+	:global(.vis-item.prv-ct-item.prv-ct-item--cluster) {
+		min-width: max(72px, calc(7ch + 24px));
+	}
+
+	:global(.vis-item.vis-point.prv-ct-item) {
+		min-width: 12px;
 	}
 
 	:global(.vis-item.prv-ct-item .vis-item-content) {

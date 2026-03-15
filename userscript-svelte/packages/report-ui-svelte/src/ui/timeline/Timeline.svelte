@@ -1,30 +1,78 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { DataSet, Timeline, type TimelineOptions } from 'vis-timeline/standalone';
+  import { DataSet, Timeline } from 'vis-timeline/standalone';
+  // @ts-expect-error Vite resolves ?inline imports at build time.
   import timelineStyles from 'vis-timeline/styles/vis-timeline-graph2d.min.css?inline';
 
-  type VisGroup = Record<string, unknown> & { id: string | number; content?: string };
-  type VisItem = Record<string, unknown> & { id: string | number; content?: string; start: Date | string | number; end?: Date | string | number };
+  import type { TimelinePayload, TimelineWindowEvent, VisGroup, VisItem } from './types';
 
-  export type TimelinePayload = {
-    groups: VisGroup[];
-    items: VisItem[];
-    options?: TimelineOptions;
-    initialWindow?: { start: string | number | Date; end: string | number | Date };
-  };
-
-  let { payload, onItemClick = () => {} }: {
+  let {
+    payload,
+    payloadRevision = 0,
+    onItemClick = () => {},
+    onVisibleWindowChange,
+    onUserWindowChange,
+    wheelMode = 'native'
+  }: {
     payload: TimelinePayload;
+    payloadRevision?: number;
     onItemClick?: (item: unknown) => void;
+    /** Fires on every visible-window change (including internal vis-timeline reflows). */
+    onVisibleWindowChange?: (window: TimelineWindowEvent) => void;
+    /**
+     * Fires only when the window changes due to explicit user interaction
+     * (wheel zoom or drag/pinch). Safe to use for clustering decisions
+     * without risk of feedback loops from data-update reflows.
+     */
+    onUserWindowChange?: (window: TimelineWindowEvent) => void;
+    /**
+     * - native: keep vis-timeline's default wheel behavior (e.g. vertical lane scroll, ctrl+wheel zoom)
+     * - zoom: wheel zooms time axis; shift+wheel scrolls lanes (if enabled in options)
+     */
+    wheelMode?: 'native' | 'zoom';
   } = $props();
 
   let container: HTMLDivElement | null = null;
   let timeline: Timeline | null = null;
-  let groups: DataSet | null = null;
-  let items: DataSet | null = null;
+  let groups: DataSet<VisGroup> | null = null;
+  let items: DataSet<VisItem> | null = null;
   let initialized = false;
   let resizeObserver: ResizeObserver | null = null;
   let pendingRedraw = false;
+  let wheelCleanup: (() => void) | null = null;
+  let optionsRef: Record<string, unknown> = {};
+  const DEBUG_TIMELINE_WINDOW = true;
+  const DEBUG_TIMELINE_PAYLOAD = true;
+  let lastClusterLike = 0;
+  /** Last window explicitly set by the user (wheel/drag). Used to restore after data updates. */
+  let userIntendedWindow: { start: Date; end: Date } | null = null;
+
+  function emitWindow(source: 'init' | 'rangechange' | 'rangechanged', start: Date, end: Date, isUserDriven: boolean) {
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    if (DEBUG_TIMELINE_WINDOW) {
+      console.info('[timeline-window] emit', {
+        source,
+        isUserDriven,
+        spanMin: Math.round(Math.max(0, endMs - startMs) / 60000),
+        startIso: new Date(startMs).toISOString(),
+        endIso: new Date(endMs).toISOString()
+      });
+    }
+    const windowEvent: TimelineWindowEvent = {
+      start,
+      end,
+      startMs,
+      endMs,
+      spanMs: Math.max(0, endMs - startMs),
+      source
+    };
+    onVisibleWindowChange?.(windowEvent);
+    if (isUserDriven) {
+      userIntendedWindow = { start, end };
+      onUserWindowChange?.(windowEvent);
+    }
+  }
 
   function scheduleRedraw() {
     if (!timeline) return;
@@ -56,12 +104,117 @@
     }
   }
 
+  function bindTimelineEvents(instance: Timeline) {
+    instance.on('click', (props) => {
+      if (!props.item) return;
+      const record = items?.get(props.item);
+      onItemClick(record);
+    });
+
+    instance.on('rangechange', (props: any) => {
+      if (!props?.start || !props?.end) return;
+      emitWindow('rangechange', props.start, props.end, !!props.byUser);
+    });
+
+    instance.on('rangechanged', (props: any) => {
+      if (!props?.start || !props?.end) return;
+      emitWindow('rangechanged', props.start, props.end, !!props.byUser);
+    });
+  }
+
+  function recreateTimeline(nextPayload: TimelinePayload, preserveWindow: { start: Date; end: Date } | null) {
+    if (!container) return;
+    timeline?.destroy();
+    const nextGroups = new DataSet(nextPayload.groups);
+    const nextItems = new DataSet(nextPayload.items);
+    groups = nextGroups;
+    items = nextItems;
+
+    // Bake the intended window into the constructor options so vis-timeline
+    // uses it from the very start. A post-construction setWindow() call is
+    // unreliable because vis-timeline's async internal fit() can override it.
+    const opts: Record<string, unknown> = { ...(nextPayload.options ?? {}) };
+    if (preserveWindow) {
+      opts.start = preserveWindow.start;
+      opts.end = preserveWindow.end;
+    }
+
+    timeline = new Timeline(container, nextItems, nextGroups, opts);
+    bindTimelineEvents(timeline);
+
+    // After construction vis-timeline's internal DOM is inserted but the
+    // browser hasn't performed layout yet. rAFs fire before the layout is
+    // stable; setTimeout(0) fires after the current task + pending layout,
+    // matching the timing of ResizeObserver callbacks (which is what reliably
+    // triggers a correct redraw in practice).
+    const tl = timeline;
+    setTimeout(() => {
+      if (timeline !== tl) return;
+      tl.redraw();
+      // Second pass in case the first measured stale dimensions (e.g. during
+      // a flex/percent-height layout recalculation).
+      setTimeout(() => {
+        if (timeline !== tl) return;
+        tl.redraw();
+      }, 50);
+    }, 0);
+  }
+
   function updateData(nextPayload: TimelinePayload) {
-    groups?.clear();
-    items?.clear();
-    groups?.add(nextPayload.groups);
-    items?.add(nextPayload.items);
-    timeline?.setOptions(nextPayload.options ?? {});
+    if (!timeline) return;
+    // Prefer the user-intended window over whatever vis-timeline currently reports
+    // (which may already be polluted by a previous data-update reflow).
+    const windowToPreserve = userIntendedWindow ?? timeline.getWindow();
+    const nextClusterLike = nextPayload.items.filter((item) => String(item.id).startsWith('cluster:')).length;
+    lastClusterLike = nextClusterLike;
+
+    // Never destroy/recreate the timeline — doing so inside a Svelte $effect
+    // leaves vis-timeline in a state where no redraw timing reliably restores
+    // rendering. Instead, clear items/groups first to flush stale state, then
+    // set new data. Merging start/end into setOptions keeps the window stable.
+    const timelineAny = timeline as unknown as {
+      setData?: (data: { items: DataSet<VisItem>; groups: DataSet<VisGroup> }) => void;
+      setGroups?: (groups: DataSet<VisGroup>) => void;
+      setItems?: (items: DataSet<VisItem>) => void;
+    };
+
+    // Clear first to avoid vis-timeline keeping stale rendered items when
+    // the group/item structure changes significantly (e.g. cluster ↔ expand).
+    if (typeof timelineAny.setData === 'function') {
+      timelineAny.setData({ items: new DataSet([]), groups: new DataSet([]) });
+    }
+
+    const nextGroups = new DataSet(nextPayload.groups);
+    const nextItems = new DataSet(nextPayload.items);
+    groups = nextGroups;
+    items = nextItems;
+
+    if (typeof timelineAny.setData === 'function') {
+      timelineAny.setData({ items: nextItems, groups: nextGroups });
+    } else {
+      timelineAny.setGroups?.(nextGroups);
+      timelineAny.setItems?.(nextItems);
+    }
+
+    // Merge the intended window into setOptions so vis-timeline applies both
+    // atomically. A separate setWindow() call can be overridden by async reflows.
+    const opts: Record<string, unknown> = { ...(nextPayload.options ?? {}) };
+    opts.start = windowToPreserve.start;
+    opts.end = windowToPreserve.end;
+    timeline.setOptions(opts);
+    scheduleRedraw();
+
+    if (DEBUG_TIMELINE_PAYLOAD) {
+      const ids = nextPayload.items.slice(0, 3).map((item) => String(item.id));
+      const clusterLike = nextClusterLike;
+      console.info('[timeline-payload] updateData', {
+        items: nextPayload.items.length,
+        groups: nextPayload.groups.length,
+        clusterLike,
+        firstIds: ids,
+        windowPreserved: !!userIntendedWindow
+      });
+    }
   }
 
   onMount(() => {
@@ -72,6 +225,18 @@
     groups = new DataSet(payload.groups);
     items = new DataSet(payload.items);
     timeline = new Timeline(container, items, groups, payload.options ?? {});
+    optionsRef = (payload.options ?? {}) as unknown as Record<string, unknown>;
+    lastClusterLike = payload.items.filter((item) => String(item.id).startsWith('cluster:')).length;
+    if (DEBUG_TIMELINE_PAYLOAD) {
+      const ids = payload.items.slice(0, 3).map((item) => String(item.id));
+      const clusterLike = payload.items.filter((item) => String(item.id).startsWith('cluster:')).length;
+      console.info('[timeline-payload] mount', {
+        items: payload.items.length,
+        groups: payload.groups.length,
+        clusterLike,
+        firstIds: ids
+      });
+    }
 
     if (payload.initialWindow) {
       const { start, end } = payload.initialWindow;
@@ -80,11 +245,74 @@
       timeline.fit({ animation: false });
     }
 
-    timeline.on('click', (props) => {
-      if (!props.item) return;
-      const record = items?.get(props.item);
-      onItemClick(record);
-    });
+    {
+      const w = timeline.getWindow();
+      // Init emission is treated as user-driven so the controller gets an initial
+      // userIntendedWindow to base clustering decisions on.
+      userIntendedWindow = { start: w.start, end: w.end };
+      emitWindow('init', w.start, w.end, true);
+    }
+
+    bindTimelineEvents(timeline);
+
+    if (wheelMode === 'zoom') {
+      const handler = (event: WheelEvent) => {
+        if (!timeline || !container) return;
+        // Escape hatch: allow lane scrolling with Shift.
+        if (event.shiftKey) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Use userIntendedWindow as the source of truth for zoom calculations.
+        // After a timeline recreation (e.g. cluster→expand), timeline.getWindow()
+        // may return the auto-fitted range before setWindow takes effect, which
+        // would cause the zoom to compute from the wrong base and re-trigger clustering.
+        const windowRange = userIntendedWindow ?? timeline.getWindow();
+        const startMs = windowRange.start.getTime();
+        const endMs = windowRange.end.getTime();
+        const rangeMs = Math.max(1, endMs - startMs);
+
+        const props = timeline.getEventProperties(event);
+        const anchorMs =
+          props?.time instanceof Date
+            ? props.time.getTime()
+            : typeof props?.time === 'number'
+              ? props.time
+              : (startMs + endMs) / 2;
+
+        const zoomMin = typeof optionsRef.zoomMin === 'number' ? (optionsRef.zoomMin as number) : null;
+        const zoomMax = typeof optionsRef.zoomMax === 'number' ? (optionsRef.zoomMax as number) : null;
+
+        const deltaMultiplier =
+          event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 120 : 1; // line/page → px-ish
+        const delta = event.deltaY * deltaMultiplier;
+
+        // Smooth exponential scaling feels better across mice/trackpads.
+        const scale = Math.exp(delta * 0.002); // >1 zoom out, <1 zoom in
+        let nextRange = rangeMs * scale;
+        if (zoomMin != null) nextRange = Math.max(zoomMin, nextRange);
+        if (zoomMax != null) nextRange = Math.min(zoomMax, nextRange);
+
+        const t = rangeMs > 0 ? (anchorMs - startMs) / rangeMs : 0.5;
+        const clampedT = Math.max(0, Math.min(1, t));
+        const nextStart = anchorMs - clampedT * nextRange;
+        const nextEnd = nextStart + nextRange;
+
+        timeline.setWindow(nextStart, nextEnd, { animation: false });
+        // vis-timeline does not reliably emit rangechange/rangechanged for programmatic setWindow().
+        // Emit the new window explicitly so consumers (e.g. clustering) can react deterministically.
+        const nextStartDate = new Date(nextStart);
+        const nextEndDate = new Date(nextEnd);
+        emitWindow('rangechange', nextStartDate, nextEndDate, true);
+        window.requestAnimationFrame(() => {
+          emitWindow('rangechanged', nextStartDate, nextEndDate, true);
+        });
+      };
+
+      container.addEventListener('wheel', handler, { passive: false, capture: true });
+      wheelCleanup = () => container.removeEventListener('wheel', handler, true);
+    }
 
     // Pane resize (via drag handles) doesn't trigger a window resize event, and
     // vis-timeline doesn't automatically re-measure height. Observe the container
@@ -98,6 +326,8 @@
     scheduleRedraw();
 
     return () => {
+      wheelCleanup?.();
+      wheelCleanup = null;
       resizeObserver?.disconnect();
       resizeObserver = null;
       timeline?.destroy();
@@ -109,12 +339,17 @@
 
   $effect(() => {
     if (!timeline) return;
+    const revision = payloadRevision;
     // Skip the first run — onMount already initialized the data.
     // This prevents resetting vis-timeline's internal state (e.g. group collapse)
     // on every parent re-render.
     if (!initialized) {
       initialized = true;
       return;
+    }
+    optionsRef = (payload.options ?? {}) as unknown as Record<string, unknown>;
+    if (DEBUG_TIMELINE_PAYLOAD) {
+      console.info('[timeline-payload] effect', { revision });
     }
     updateData(payload);
   });

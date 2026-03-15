@@ -1,19 +1,26 @@
 <script lang="ts">
-	import { Timeline, type TimelinePayload } from '@prv/report-ui-svelte';
+	import { Timeline, type TimelinePayload, type TimelineWindowEvent } from '@prv/report-ui-svelte';
 	import { VIEWER_COLORS, VIEWER_FONTS } from '$lib/lab/log-viewer/theme';
 
 	let {
 		payload,
+		payloadRevision = 0,
 		loading,
 		error,
 		hasSelection,
-		onItemClick
+		onItemClick,
+		onVisibleWindowChange,
+		onUserWindowChange
 	}: {
 		payload: TimelinePayload | null;
+		payloadRevision?: number;
 		loading: boolean;
 		error: string | null;
 		hasSelection: boolean;
 		onItemClick: (item: unknown) => void;
+		onVisibleWindowChange?: (window: TimelineWindowEvent) => void;
+		/** Fires only on user-driven window changes (wheel/drag). */
+		onUserWindowChange?: (window: TimelineWindowEvent) => void;
 	} = $props();
 </script>
 
@@ -38,7 +45,7 @@
 		</div>
 	{:else}
 		<div style="flex:1; min-height:0; overflow:hidden;">
-			<Timeline {payload} {onItemClick} />
+			<Timeline {payload} {payloadRevision} {onItemClick} {onVisibleWindowChange} {onUserWindowChange} wheelMode="zoom" />
 		</div>
 	{/if}
 </div>

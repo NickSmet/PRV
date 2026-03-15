@@ -147,6 +147,56 @@ These are the next expected changes to align the timeline with our use-case:
 - **Density controls**: compact vs readable lane heights; label visibility policies.
 - **Selection sync**: optional highlight/scroll-to-event when the viewer jumps due to other interactions.
 
+### Next iteration (we will implement first)
+
+#### 1) Minimum visual width for events
+
+**Goal:** very short range/point events must remain clickable and discoverable even when zoomed out.
+
+**Rule (visual):**
+- All timeline items in this surface MUST render with a minimum pixel width.
+- This is a **UI affordance**, not a data transformation: the underlying timestamps remain correct.
+
+**Baseline values:**
+- Range items: min width = **10px**
+- Point items: min width = **12px**
+
+Implementation note: enforce via CSS on the item class used by this surface (`.prv-ct-item`) so we can tweak without touching data.
+
+#### 1a) Point events render as tiny ranges (no vertical bars)
+
+**Goal:** an event without an end timestamp should not render as a tall “instant” bar/marker.
+
+**Rule (rendering):**
+- If an event has no `end` (or `end === start`), we render it as a **tiny range** by using:
+  - `renderEnd = start + 1000ms`
+
+**Notes:**
+- This is a **visual affordance**. It does not claim the event lasted 1s; it avoids misleading “instant” rendering and keeps the UI consistent.
+- Implemented in the payload builders that create `vis-timeline` items.
+
+#### 2) Wheel zoom policy (primary interaction)
+
+**Goal:** scrolling over the timeline should zoom the time axis, not scroll lanes.
+
+**Rules:**
+- Mouse wheel / trackpad scroll over the timeline MUST zoom in/out.
+- Holding **Shift** while wheeling MAY scroll lanes vertically (escape hatch for dense lane lists).
+
+Implementation note: implement wheel-to-zoom in the shared timeline wrapper (`packages/report-ui-svelte/src/ui/timeline/Timeline.svelte`) behind an explicit opt-in (`wheelMode: 'zoom'`) so other surfaces are unaffected.
+
+#### 3) Zoom bounds (max zoom-out + min zoom-in)
+
+**Goal:** prevent “zoom out forever” and define a stable overview window.
+
+**Rules:**
+- Maximum zoom-out range MUST be bounded by the initial overview span (derived from event min/max with padding).
+- Minimum zoom-in range MUST be bounded to a practical precision window.
+
+**Baseline values:**
+- `zoomMax`: `initialWindow.end - initialWindow.start` (ms)
+- `zoomMin`: **5 seconds** (5000 ms)
+
 ---
 
 ## Dependencies

@@ -81,6 +81,7 @@ function severityDot(severity: string): string {
 // ── Build ──────────────────────────────────────────────────────────────────
 
 export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimeline {
+	const POINT_AS_RANGE_MS = 1000;
 	const groups: VisGroup[] = [];
 	const items: VisItem[] = [];
 
@@ -130,14 +131,18 @@ export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimel
 				const sev = severityDot(ev.severity);
 				const label = ev.label;
 				const content = `${sev}<span class="prv-ct-label">${label}</span>`;
+				const startMs = ev.start.getTime();
+				const rawEnd = ev.end ?? null;
+				const endMs = rawEnd ? rawEnd.getTime() : startMs;
+				const end = rawEnd && endMs > startMs ? rawEnd : new Date(startMs + POINT_AS_RANGE_MS);
 
 				items.push({
 					id: ev.id,
 					group: catGroupId,
 					start: ev.start,
-					end: ev.end,
+					end,
 					content,
-					className: `prv-ct-item prv-ct-item--${ev.severity} prv-ct-item--${catK}`,
+					className: `prv-ct-item ${ev.id.startsWith('cluster:') ? 'prv-ct-item--cluster ' : ''}prv-ct-item--${ev.severity} prv-ct-item--${catK}`,
 					title: `${label}\n${ev.sourceFile} · ${ev.category}`
 				});
 			}
@@ -173,6 +178,12 @@ export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimel
 			? { start: new Date(min - padMs), end: new Date(max + padMs) }
 			: undefined;
 
+	// Important: `zoomMax` must not shrink when we swap datasets (e.g. clustering).
+	// If it shrinks to the clustered window span, users can get "stuck" and be unable to zoom out.
+	const DEFAULT_ZOOM_MAX_MS = 400 * 24 * 60 * 60 * 1000; // ~13 months
+	const dataSpanMs = initialWindow ? initialWindow.end.getTime() - initialWindow.start.getTime() : 0;
+	const zoomMax = Math.max(DEFAULT_ZOOM_MAX_MS, Number.isFinite(dataSpanMs) ? dataSpanMs : 0);
+
 	const options: TimelineOptions = {
 		stack: true,
 		zoomKey: 'ctrlKey',
@@ -182,6 +193,8 @@ export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimel
 		margin: { item: { horizontal: 2, vertical: 3 } },
 		showCurrentTime: false,
 		verticalScroll: true,
+		zoomMin: 5000,
+		zoomMax,
 		// Let the parent container control the height (resizable panes / full-height layouts).
 		height: '100%'
 	};

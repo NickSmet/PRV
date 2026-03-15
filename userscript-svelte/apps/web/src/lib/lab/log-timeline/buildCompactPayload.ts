@@ -71,6 +71,7 @@ function severityDot(severity: string): string {
 }
 
 export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimeline {
+	const POINT_AS_RANGE_MS = 1000;
 	const groups: VisGroup[] = [];
 	const items: VisItem[] = [];
 	const bySubsystem = new Map<string, TimelineEvent[]>();
@@ -117,13 +118,20 @@ export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimel
 			});
 
 			for (const event of categoryEvents) {
+				const startMs = event.start.getTime();
+				const rawEnd = event.end ?? null;
+				const endMs = rawEnd ? rawEnd.getTime() : startMs;
+				const end =
+					rawEnd && endMs > startMs ? rawEnd : new Date(startMs + POINT_AS_RANGE_MS);
 				items.push({
 					id: event.id,
 					group: categoryId,
 					start: event.start,
-					end: event.end,
+					// For events without an end (or with a zero-length end), render as a tiny range
+					// to avoid the tall "instant" bar/marker and keep the UI consistent.
+					end,
 					content: `${severityDot(event.severity)}<span class="prv-ct-label">${event.label}</span>`,
-					className: `prv-ct-item prv-ct-item--${event.severity} prv-ct-item--${categoryKey(event.category)}`,
+					className: `prv-ct-item ${event.id.startsWith('cluster:') ? 'prv-ct-item--cluster ' : ''}prv-ct-item--${event.severity} prv-ct-item--${categoryKey(event.category)}`,
 					title: `${event.label}\n${event.sourceFile} · ${event.category}`
 				});
 			}
@@ -155,6 +163,12 @@ export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimel
 			? { start: new Date(min - padMs), end: new Date(max + padMs) }
 			: undefined;
 
+	// Important: `zoomMax` must not shrink when we swap datasets (e.g. clustering).
+	// If it shrinks to the clustered window span, users can get "stuck" and be unable to zoom out.
+	const DEFAULT_ZOOM_MAX_MS = 400 * 24 * 60 * 60 * 1000; // ~13 months
+	const dataSpanMs = initialWindow ? initialWindow.end.getTime() - initialWindow.start.getTime() : 0;
+	const zoomMax = Math.max(DEFAULT_ZOOM_MAX_MS, Number.isFinite(dataSpanMs) ? dataSpanMs : 0);
+
 	return {
 		groups,
 		items,
@@ -167,6 +181,8 @@ export function buildCompactTimeline(events: TimelineEvent[]): BuiltCompactTimel
 			margin: { item: { horizontal: 2, vertical: 3 } },
 			showCurrentTime: false,
 			verticalScroll: true,
+			zoomMin: 5000,
+			zoomMax,
 			// Let the parent container control the height (resizable panes).
 			height: '100%'
 		},

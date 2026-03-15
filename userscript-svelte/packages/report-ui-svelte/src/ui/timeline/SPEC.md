@@ -51,6 +51,8 @@ export type TimelinePayload = {
 // Svelte component props
 payload: TimelinePayload
 onItemClick?: (item: unknown) => void
+wheelMode?: 'native' | 'zoom'
+onVisibleWindowChange?: (window) => void
 ```
 
 ### Styling hooks
@@ -79,6 +81,12 @@ The timeline root element is:
 5. Attach `click` handler:
    - when an item is clicked, look up its record via `items.get(props.item)` and call `onItemClick(record)`
 6. Observe container resize and call `timeline.redraw()` on changes (throttled via `requestAnimationFrame`).
+7. If `wheelMode === 'zoom'`:
+   - wheel zooms the time axis
+   - Shift + wheel is allowed through as an escape hatch for lane scrolling
+8. If `onVisibleWindowChange` is provided:
+   - it is called on init with the initial visible window
+   - it is called on `rangechange`/`rangechanged` with the updated window
 
 ### Updates (payload changes)
 
@@ -150,6 +158,7 @@ Common options used by consumers:
 
 - `vis-timeline/standalone`
 - Consumer payload builders (e.g. `apps/web/src/lib/lab/log-timeline/buildCompactPayload.ts`)
+- Vendored API snapshot (version-pinned): `docs/vendor/vis-timeline/`
 
 ---
 

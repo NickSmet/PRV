@@ -325,7 +325,7 @@
 						{loading ? 'Loading...' : 'No events parsed from selected logs.'}
 					</div>
 				{:else}
-					<Timeline payload={timelinePayload} {onItemClick} />
+					<Timeline payload={timelinePayload} {onItemClick} wheelMode="zoom" />
 				{/if}
 			</div>
 
@@ -370,6 +370,11 @@
 		font-size: 11px;
 		font-weight: 500;
 		line-height: 1.3;
+		min-width: 10px;
+	}
+
+	:global(.vis-item.vis-point.prv-ct-item) {
+		min-width: 12px;
 	}
 
 	:global(.vis-item.prv-ct-item .vis-item-content) {

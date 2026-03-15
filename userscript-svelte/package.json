@@ -17,7 +17,8 @@
     "web:dev": "npm -w apps/web run dev",
     "web:build": "npm -w apps/web run build",
     "mcp:dev": "npm -w servers/mcp run dev",
-    "test": "tsx scripts/test.ts"
+    "test": "tsx scripts/test.ts",
+    "vendor:vis-timeline": "tsx scripts/vendor-vis-timeline.ts"
   },
   "devDependencies": {
     "chokidar": "^4.0.3",

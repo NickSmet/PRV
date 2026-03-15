@@ -35,6 +35,7 @@ function cssSafeFileKey(filename: string): string {
 }
 
 export function buildVisTimeline(events: TimelineEvent[]): BuiltTimeline {
+  const POINT_AS_RANGE_MS = 1000;
   const groups: VisGroup[] = [];
   const items: VisItem[] = [];
 
@@ -70,11 +71,15 @@ export function buildVisTimeline(events: TimelineEvent[]): BuiltTimeline {
       });
 
       for (const ev of (byCategory.get(cat) ?? [])) {
+        const startMs = ev.start.getTime();
+        const rawEnd = ev.end ?? null;
+        const endMs = rawEnd ? rawEnd.getTime() : startMs;
+        const end = rawEnd && endMs > startMs ? rawEnd : new Date(startMs + POINT_AS_RANGE_MS);
         items.push({
           id: ev.id,
           group: catId,
           start: ev.start,
-          end: ev.end,
+          end,
           content: ev.label,
           className: `prv-tl-item prv-tl-item--${ev.severity} prv-tl-item--${categoryKey(ev.category)}`,
         });

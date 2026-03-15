@@ -4,9 +4,16 @@ import { getSourceRecord, queryRowsForSources } from '$lib/lab/log-index/db';
 import type { LogRow, LogSourceRecord } from '$lib/lab/log-index/types';
 import { buildCompactTimeline, type BuiltCompactTimeline } from '$lib/lab/log-timeline/buildCompactPayload';
 import { extractTimelineEventsFromRows } from '$lib/lab/log-timeline/extractEvents';
+import {
+  clusterTimelineEvents,
+  DEFAULT_TIMELINE_CLUSTERING,
+  type VisibleWindow
+} from '$lib/lab/log-timeline/clustering/clusterTimelineEvents';
 import type { LogWorkspaceFile, LogWorkspacePageData } from '$lib/lab/log-workspace/types';
 import type { QueryMessage, ViewerPlaceholderState, ViewerStats, ViewerVirtualState, WorkerProgressMessage } from '$lib/lab/log-viewer/types';
 import type { LogRowLocator, TimelineEvent } from '$lib/lab/timeline/types';
+
+const DEBUG_TIMELINE_CLUSTER = true;
 
 type QueryWorkerRequest =
 	| {
@@ -119,7 +126,24 @@ export class LogWorkspaceController {
 
 	events = $state<TimelineEvent[]>([]);
 	eventById = $state<Record<string, TimelineEvent>>({});
+	/**
+	 * Render model can differ from `events` (e.g. clustered view when zoomed out).
+	 * `events` remains the full extracted list so we can still show totals.
+	 */
+	renderedEvents = $state<TimelineEvent[]>([]);
+	renderedEventById = $state<Record<string, TimelineEvent>>({});
 	builtTimeline = $state<BuiltCompactTimeline | null>(null);
+	/** Monotonic revision to force downstream timeline payload refreshes. */
+	timelineRevision = $state(0);
+	timelineClusters = $state<Record<string, string[]>>({});
+	timelineVisibleWindow = $state<VisibleWindow | null>(null);
+	/**
+	 * The last window explicitly set by user interaction (wheel/drag).
+	 * Clustering decisions are based on this, NOT on timelineVisibleWindow,
+	 * to avoid feedback loops from vis-timeline's internal reflows.
+	 */
+	userIntendedWindow = $state<VisibleWindow | null>(null);
+	timelineClusterMode = $state<'none' | 'apps'>('none');
 	timelineLoading = $state(false);
 	selectedEventId = $state<string | null>(null);
 	eventFilter = $state('');
@@ -227,7 +251,8 @@ export class LogWorkspaceController {
 	}
 
 	get selectedEvent(): TimelineEvent | null {
-		return this.selectedEventId ? this.eventById[this.selectedEventId] ?? null : null;
+		if (!this.selectedEventId) return null;
+		return this.renderedEventById[this.selectedEventId] ?? this.eventById[this.selectedEventId] ?? null;
 	}
 
 	get timelinePayload() {
@@ -238,6 +263,128 @@ export class LogWorkspaceController {
 			options: this.builtTimeline.options,
 			initialWindow: this.builtTimeline.initialWindow
 		};
+	}
+
+	#setBuiltTimeline(next: BuiltCompactTimeline | null, reason: string) {
+		this.builtTimeline = next;
+		this.timelineRevision += 1;
+		if (DEBUG_TIMELINE_CLUSTER) {
+			console.info('[timeline-cluster] payload-assign', {
+				reason,
+				revision: this.timelineRevision,
+				items: next?.items?.length ?? 0,
+				groups: next?.groups?.length ?? 0,
+				clusterLike: next ? next.items.filter((item) => String(item.id).startsWith('cluster:')).length : 0
+			});
+		}
+	}
+
+	/**
+	 * Called on every visible-window change (including vis-timeline internal reflows).
+	 * Updates display state only — does NOT drive clustering decisions.
+	 */
+	handleTimelineVisibleWindowChange(window: VisibleWindow) {
+		this.timelineVisibleWindow = window;
+		if (DEBUG_TIMELINE_CLUSTER) {
+			console.info('[timeline-cluster] window (display)', {
+				spanMin: Math.round(window.spanMs / 60000)
+			});
+		}
+	}
+
+	/**
+	 * Called only when the window changes due to explicit user interaction
+	 * (wheel zoom or drag/pinch). This is the sole driver of clustering decisions.
+	 */
+	handleUserWindowChange(window: VisibleWindow) {
+		this.userIntendedWindow = window;
+		this.timelineVisibleWindow = window;
+
+		const cfg = DEFAULT_TIMELINE_CLUSTERING.apps;
+		const appsCount = this.events.reduce((acc, e) => (e.category === 'Apps' ? acc + 1 : acc), 0);
+		const nextMode =
+			cfg.enabled && window.spanMs >= cfg.minSpanMs && appsCount >= cfg.minItems ? ('apps' as const) : ('none' as const);
+		const renderedHasCluster = this.renderedEvents.some((event) => event.id.startsWith('cluster:'));
+
+		if (DEBUG_TIMELINE_CLUSTER) {
+			console.info('[timeline-cluster] user-window', {
+				spanMin: Math.round(window.spanMs / 60000),
+				rawApps: appsCount,
+				prevMode: this.timelineClusterMode,
+				nextMode
+			});
+		}
+
+		// Force deterministic unclustering when we are below threshold.
+		if (nextMode === 'none') {
+			// Already unclustered with non-cluster payload; avoid reassign loops.
+			if (this.timelineClusterMode === 'none' && !renderedHasCluster) return;
+
+			this.timelineClusterMode = 'none';
+			this.renderedEvents = this.events;
+			this.timelineClusters = {};
+
+			const nextRenderedMap: Record<string, TimelineEvent> = {};
+			for (const ev of this.events) nextRenderedMap[ev.id] = ev;
+			this.renderedEventById = nextRenderedMap;
+			this.#setBuiltTimeline(this.events.length > 0 ? buildCompactTimeline(this.events) : null, 'forced-uncluster');
+			if (DEBUG_TIMELINE_CLUSTER) {
+				console.info('[timeline-cluster] forced-uncluster', {
+					spanMin: Math.round(window.spanMs / 60000),
+					rawApps: this.timelineRawAppsCount,
+					renderedApps: this.timelineRenderedAppsCount
+				});
+			}
+			return;
+		}
+
+		// Recompute on mode transitions. While clustered we only need window-driven recompute
+		// if clustering itself depends on current visible window.
+		const shouldRecomputeWhileClustered = nextMode === 'apps' && cfg.useVisibleWindowOnly;
+		if (nextMode !== this.timelineClusterMode || shouldRecomputeWhileClustered) {
+			this.#recomputeTimelineModel('user-window-change');
+		}
+	}
+
+	#recomputeTimelineModel(reason: string = 'unknown') {
+		const model = clusterTimelineEvents(this.events, this.userIntendedWindow ?? this.timelineVisibleWindow, DEFAULT_TIMELINE_CLUSTERING);
+		this.timelineClusterMode = model.mode === 'clustered' ? 'apps' : 'none';
+		this.renderedEvents = model.events;
+		this.timelineClusters = model.clusters ?? {};
+
+		const nextRenderedMap: Record<string, TimelineEvent> = {};
+		for (const ev of model.events) nextRenderedMap[ev.id] = ev;
+		this.renderedEventById = nextRenderedMap;
+
+		this.#setBuiltTimeline(model.events.length > 0 ? buildCompactTimeline(model.events) : null, reason);
+
+		if (this.selectedEventId && !nextRenderedMap[this.selectedEventId] && !this.eventById[this.selectedEventId]) {
+			this.selectedEventId = null;
+		}
+
+		if (DEBUG_TIMELINE_CLUSTER) {
+			console.info('[timeline-cluster] recompute', {
+				reason,
+				mode: this.timelineClusterMode,
+				spanMin: this.timelineVisibleWindow ? Math.round(this.timelineVisibleWindow.spanMs / 60000) : null,
+				rawApps: this.timelineRawAppsCount,
+				renderedApps: this.timelineRenderedAppsCount
+			});
+		}
+	}
+
+	#deriveFallbackWindow(events: TimelineEvent[]): VisibleWindow | null {
+		if (events.length === 0) return null;
+		let min = Number.POSITIVE_INFINITY;
+		let max = Number.NEGATIVE_INFINITY;
+		for (const ev of events) {
+			const startMs = ev.start.getTime();
+			const endMs = (ev.end ?? ev.start).getTime();
+			if (Number.isFinite(startMs)) min = Math.min(min, startMs);
+			if (Number.isFinite(endMs)) max = Math.max(max, endMs);
+		}
+		if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+		return { startMs: min, endMs: max, spanMs: Math.max(0, max - min) };
 	}
 
 	get filteredEvents() {
@@ -251,6 +398,18 @@ export class LogWorkspaceController {
 				event.category.toLowerCase().includes(query) ||
 				(event.detail ?? '').toLowerCase().includes(query)
 		);
+	}
+
+	get timelineRawAppsCount() {
+		let count = 0;
+		for (const ev of this.events) if (ev.category === 'Apps') count += 1;
+		return count;
+	}
+
+	get timelineRenderedAppsCount() {
+		let count = 0;
+		for (const ev of this.renderedEvents) if (ev.category === 'Apps') count += 1;
+		return count;
 	}
 
 	init() {
@@ -489,7 +648,7 @@ export class LogWorkspaceController {
 		this.pendingWindowStart = null;
 		this.events = [];
 		this.eventById = {};
-		this.builtTimeline = null;
+		this.#setBuiltTimeline(null, 'toggle-file-reset');
 		this.timelineNotice = null;
 		await this.ensureIndexed(true);
 		this.#scheduleViewerRefresh(0, true);
@@ -514,7 +673,7 @@ export class LogWorkspaceController {
 			this.pendingWindowStart = null;
 			this.events = [];
 			this.eventById = {};
-			this.builtTimeline = null;
+			this.#setBuiltTimeline(null, 'reload-selected-empty');
 			return;
 		}
 
@@ -1062,7 +1221,10 @@ export class LogWorkspaceController {
 		if (sourceFiles.length === 0) {
 			this.events = [];
 			this.eventById = {};
-			this.builtTimeline = null;
+			this.renderedEvents = [];
+			this.renderedEventById = {};
+			this.#setBuiltTimeline(null, 'refresh-timeline-empty-files');
+			this.timelineClusters = {};
 			this.timelineLoading = false;
 			return;
 		}
@@ -1089,9 +1251,15 @@ export class LogWorkspaceController {
 
 			this.events = nextEvents;
 			this.eventById = nextMap;
-			this.builtTimeline = nextEvents.length > 0 ? buildCompactTimeline(nextEvents) : null;
+			// If the timeline hasn't reported its current visible window yet, use a fallback
+			// derived from the event extents so clustering can activate immediately.
+			if (!this.timelineVisibleWindow) {
+				this.timelineVisibleWindow = this.#deriveFallbackWindow(nextEvents);
+			}
+			// Rendered timeline may differ (clustering); recompute from current window.
+			this.#recomputeTimelineModel();
 
-			if (this.selectedEventId && !nextMap[this.selectedEventId]) {
+			if (this.selectedEventId && !nextMap[this.selectedEventId] && !this.renderedEventById[this.selectedEventId]) {
 				this.selectedEventId = null;
 			}
 		} catch (error) {
@@ -1099,7 +1267,10 @@ export class LogWorkspaceController {
 			this.timelineError = error instanceof Error ? error.message : String(error);
 			this.events = [];
 			this.eventById = {};
-			this.builtTimeline = null;
+			this.renderedEvents = [];
+			this.renderedEventById = {};
+			this.#setBuiltTimeline(null, 'refresh-timeline-error');
+			this.timelineClusters = {};
 		} finally {
 			if (seq === this.#loadEventsSeq) {
 				this.timelineLoading = false;
