@@ -116,6 +116,7 @@ export function parseParallelsSystemLog(
       const label = count === 1 ? '1 config change' : `${count} config changes`;
       events.push({
         id: `parallels-system.log:config:${diffBurst.start.getTime()}:${count}`,
+        ruleId: 'lab.parallels_system.config_diff_burst',
         sourceFile: opts.sourceFile,
         category: 'Config Diffs',
         severity: 'info',
@@ -187,6 +188,7 @@ export function parseParallelsSystemLog(
         openByKey.delete(key);
         events.push({
           id: `parallels-system.log:gui:${open.startedAt.getTime()}:${typeCode}`,
+          ruleId: 'lab.parallels_system.gui_message',
           sourceFile: opts.sourceFile,
           category: 'GUI Messages',
           severity: 'info',
@@ -235,6 +237,7 @@ export function parseParallelsSystemLog(
   for (const open of openByKey.values()) {
     events.push({
       id: `parallels-system.log:gui:${open.startedAt.getTime()}:${open.typeCode}:open`,
+      ruleId: 'lab.parallels_system.gui_message',
       sourceFile: opts.sourceFile,
       category: 'GUI Messages',
       severity: 'warn',
@@ -303,6 +306,7 @@ export function parseVmLog(
   for (const [key, agg] of byKey.entries()) {
     out.push({
       id: `vm.log:apps:${agg.start.getTime()}:${key}`,
+      ruleId: 'lab.vm.app_range',
       sourceFile: opts.sourceFile,
       category: 'Apps',
       severity: 'info',

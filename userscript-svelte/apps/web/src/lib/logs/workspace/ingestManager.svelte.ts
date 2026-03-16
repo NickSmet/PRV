@@ -9,6 +9,7 @@ export type IngestManagerConfig = {
 	maxBytes: number;
 	maxLines: number;
 	parseVersion: string;
+	reportReceivedAt: () => string | null;
 	timezoneOffsetSeconds: () => number | null;
 	yearHint: () => number | null;
 	isFileSelected: (filename: string) => boolean;
@@ -149,6 +150,7 @@ export class IngestManager {
 			downloadMode: this.#config.downloadMode,
 			maxBytes: this.#config.maxBytes,
 			maxLines: this.#config.maxLines,
+			reportReceivedAt: this.#config.reportReceivedAt(),
 			timezoneOffsetSeconds: this.#config.timezoneOffsetSeconds(),
 			yearHint: this.#config.yearHint(),
 			nowYear: new Date().getUTCFullYear()

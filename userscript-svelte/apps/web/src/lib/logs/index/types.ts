@@ -3,6 +3,7 @@ export type LogKind = 'entry' | 'continuation' | 'repeat' | 'meta' | 'unknown';
 export type LogLevel = 'F' | 'W' | 'I' | 'D';
 
 export type YearInferredFrom =
+  | 'report-received'
   | 'parallels-build'
   | 'parallels-daily'
   | 'tools-inner'

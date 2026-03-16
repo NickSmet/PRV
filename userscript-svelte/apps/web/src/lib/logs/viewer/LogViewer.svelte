@@ -22,7 +22,7 @@
 
   let { data }: { data: LogViewerPageData } = $props();
 
-  const parseVersion = 'log-index-v1';
+  const parseVersion = 'log-index-v2';
   const maxBytes = 2 * 1024 * 1024;
   const maxLines = 20_000;
   const downloadMode = 'tail' as const;
@@ -60,6 +60,9 @@
   let debouncedSearch = $state('');
   let matchIndexes = $state<number[]>([]);
   let matchRowIds = $state<string[]>([]);
+  let totalFindMatchCount = $state(0);
+  let findLoading = $state(false);
+  let matchWindowStartOrdinal = $state(0);
   let activeMatchOrdinal = $state(-1);
   let activeMatchRowId = $state<string | null>(null);
   let nextFindJobId = 0;
@@ -79,6 +82,7 @@
   let lastPollAt = 0;
   let windowLoading = $state(false);
   let pendingWindowStart = $state<number | null>(null);
+  let programmaticScroll = false;
 
   const selectedFileMetas = $derived.by(() =>
     data.files.filter((file) => selectedFiles.includes(file.filename))
@@ -86,7 +90,7 @@
 
   const loading = $derived.by(() => selectedFiles.some((file) => !!progressByFile[file]));
   const searchQuery = $derived(debouncedSearch.trim());
-  const matchCount = $derived(matchIndexes.length);
+  const matchCount = $derived(totalFindMatchCount);
   const matchRowIdSet = $derived.by(() => new Set(matchRowIds));
 
   const indexedEstimate = $derived.by(() => {
@@ -158,6 +162,9 @@
     rowsWrittenByFile = {};
     searchInput = '';
     debouncedSearch = '';
+    totalFindMatchCount = 0;
+    findLoading = false;
+    matchWindowStartOrdinal = 0;
     selectedRow = null;
     detailOpen = false;
     scrollTop = 0;
@@ -204,8 +211,7 @@
       const q = debouncedSearch.trim();
       if (!q && pinnedToBottom) {
         window.requestAnimationFrame(() => {
-          if (!tableEl) return;
-          tableEl.scrollTop = tableEl.scrollHeight;
+          syncViewportToLoadedRows();
         });
       } else if (q) {
         requestFind({ keepActive: true });
@@ -327,17 +333,19 @@
     return windowRows[localIndex]?.id ?? windowRows[0]?.id ?? null;
   }
 
-  function requestFind(opts?: { keepActive?: boolean }) {
+  function requestFind(opts?: { keepActive?: boolean; targetOrdinal?: number | null }) {
     if (!browser || !queryWorker) return;
 
     const jobId = ++nextFindJobId;
     activeFindJobId = jobId;
+    findLoading = true;
     queryWorker.postMessage({
       type: 'find',
       jobId,
       query: searchQuery,
       activeRowId: opts?.keepActive ? activeMatchRowId : null,
-      anchorRowId: opts?.keepActive ? activeMatchRowId : currentViewportRowId()
+      anchorRowId: opts?.keepActive ? activeMatchRowId : currentViewportRowId(),
+      targetOrdinal: opts?.targetOrdinal ?? null
     });
   }
 
@@ -346,28 +354,77 @@
     const centerOffset = Math.max(0, Math.floor((viewportHeight - rowHeight) / 2));
     const maxScrollTop = Math.max(0, tableEl.scrollHeight - tableEl.clientHeight);
     const nextScrollTop = Math.max(0, Math.min(rowIndex * rowHeight - centerOffset, maxScrollTop));
+    programmaticScroll = true;
     tableEl.scrollTop = nextScrollTop;
     scrollTop = nextScrollTop;
     scrollTopRef = nextScrollTop;
     lastScrollBucket = Math.floor(nextScrollTop / rowHeight);
+    window.requestAnimationFrame(() => {
+      programmaticScroll = false;
+    });
   }
 
   function scheduleRevealIfVisible(rowIndex: number) {
     if (rowIndex < windowStart || rowIndex >= windowStart + windowRows.length) return;
     window.requestAnimationFrame(() => {
-      if (pendingRevealRowIndex === rowIndex) {
-        revealRowIndex(rowIndex);
-        pendingRevealRowIndex = null;
-      }
+      window.requestAnimationFrame(() => {
+        if (pendingRevealRowIndex === rowIndex) {
+          revealRowIndex(rowIndex);
+          pendingRevealRowIndex = null;
+        }
+      });
     });
   }
 
-  function jumpToMatch(ordinal: number) {
-    if (ordinal < 0 || ordinal >= matchIndexes.length) return;
-    const rowIndex = matchIndexes[ordinal]!;
-    const rowId = matchRowIds[ordinal] ?? null;
-    activeMatchOrdinal = ordinal;
+  function syncViewportToLoadedRows() {
+    if (!tableEl || windowRows.length === 0) return;
+    const viewportRows = Math.max(1, Math.ceil(tableEl.clientHeight / rowHeight));
+
+    if (pendingRevealRowIndex != null) {
+      const minScrollTop = windowStart * rowHeight;
+      const maxScrollTop = Math.max(minScrollTop, (windowStart + windowRows.length - viewportRows) * rowHeight);
+      if (tableEl.scrollTop < minScrollTop || tableEl.scrollTop > maxScrollTop) {
+        programmaticScroll = true;
+        tableEl.scrollTop = Math.min(Math.max(pendingRevealRowIndex * rowHeight, minScrollTop), maxScrollTop);
+        scrollTop = tableEl.scrollTop;
+        scrollTopRef = tableEl.scrollTop;
+        lastScrollBucket = Math.floor(tableEl.scrollTop / rowHeight);
+        window.requestAnimationFrame(() => {
+          programmaticScroll = false;
+          if (pendingRevealRowIndex != null) {
+            scheduleRevealIfVisible(pendingRevealRowIndex);
+          }
+        });
+        return;
+      }
+      scheduleRevealIfVisible(pendingRevealRowIndex);
+      return;
+    }
+
+    programmaticScroll = true;
+    if (pinnedToBottomRef) {
+      const lastVisibleRow = Math.max(0, windowStart + windowRows.length - viewportRows);
+      tableEl.scrollTop = lastVisibleRow * rowHeight;
+    } else if (tableEl.scrollTop === 0 && windowStart > 0) {
+      tableEl.scrollTop = windowStart * rowHeight;
+    }
+
+    scrollTop = tableEl.scrollTop;
+    scrollTopRef = tableEl.scrollTop;
+    lastScrollBucket = Math.floor(tableEl.scrollTop / rowHeight);
+    window.requestAnimationFrame(() => {
+      programmaticScroll = false;
+    });
+  }
+
+  function jumpToLocalMatch(localOrdinal: number) {
+    if (localOrdinal < 0 || localOrdinal >= matchIndexes.length) return;
+    const rowIndex = matchIndexes[localOrdinal]!;
+    const rowId = matchRowIds[localOrdinal] ?? null;
+    activeMatchOrdinal = matchWindowStartOrdinal + localOrdinal;
     activeMatchRowId = rowId;
+    pinnedToBottom = false;
+    pinnedToBottomRef = false;
     pendingRevealRowIndex = rowIndex;
 
     const windowEnd = windowStart + windowRows.length;
@@ -380,13 +437,28 @@
     scheduleRevealIfVisible(rowIndex);
   }
 
-  function moveMatch(delta: -1 | 1) {
-    if (matchIndexes.length === 0) return;
-    if (activeMatchOrdinal < 0) {
-      jumpToMatch(delta > 0 ? 0 : matchIndexes.length - 1);
+  function jumpToMatch(ordinal: number) {
+    if (totalFindMatchCount <= 0) return;
+    const clamped = Math.max(0, Math.min(Math.trunc(ordinal), totalFindMatchCount - 1));
+    const localOrdinal = clamped - matchWindowStartOrdinal;
+    if (localOrdinal >= 0 && localOrdinal < matchIndexes.length) {
+      jumpToLocalMatch(localOrdinal);
       return;
     }
-    const nextOrdinal = (activeMatchOrdinal + delta + matchIndexes.length) % matchIndexes.length;
+
+    pinnedToBottom = false;
+    pinnedToBottomRef = false;
+    requestFind({ targetOrdinal: clamped });
+  }
+
+  function moveMatch(delta: -1 | 1) {
+    const total = totalFindMatchCount;
+    if (total === 0) return;
+    if (activeMatchOrdinal < 0) {
+      jumpToMatch(delta > 0 ? 0 : total - 1);
+      return;
+    }
+    const nextOrdinal = (activeMatchOrdinal + delta + total) % total;
     jumpToMatch(nextOrdinal);
   }
 
@@ -508,11 +580,14 @@
 
   function handleFindMessage(event: Extract<QueryMessage, { type: 'find' }>) {
     if (event.jobId !== activeFindJobId) return;
+    findLoading = false;
     matchIndexes = event.result.matchIndexes;
     matchRowIds = event.result.matchRowIds;
+    totalFindMatchCount = event.result.totalMatchCount;
+    matchWindowStartOrdinal = event.result.windowStartOrdinal;
+    activeMatchOrdinal = event.result.activeOrdinal;
     const localOrdinal =
       event.result.activeOrdinal >= 0 ? event.result.activeOrdinal - event.result.windowStartOrdinal : -1;
-    activeMatchOrdinal = localOrdinal;
     const nextActiveRowId = localOrdinal >= 0 ? (event.result.matchRowIds[localOrdinal] ?? null) : null;
     const nextRevealIndex = localOrdinal >= 0 ? (event.result.matchIndexes[localOrdinal] ?? null) : null;
     activeMatchRowId = nextActiveRowId;
@@ -662,6 +737,7 @@
     const pinned = remaining <= rowHeight * 2;
     pinnedToBottom = pinned;
     pinnedToBottomRef = pinned;
+    if (programmaticScroll) return;
     maybeRequestWindow();
   }
 
@@ -684,14 +760,26 @@
 
   function clearSearch() {
     searchInput = '';
+    totalFindMatchCount = 0;
+    findLoading = false;
+    matchWindowStartOrdinal = 0;
   }
 
   function handleTableElementChange(element: HTMLDivElement | null) {
     tableEl = element;
+    if (!element) return;
+    window.requestAnimationFrame(() => {
+      if (tableEl !== element) return;
+      syncViewportToLoadedRows();
+    });
   }
 
   function handleViewportHeightChange(value: number) {
     viewportHeight = value;
+    if (!tableEl || value <= 0 || windowRows.length === 0) return;
+    window.requestAnimationFrame(() => {
+      syncViewportToLoadedRows();
+    });
   }
 
   $effect(() => {
@@ -746,6 +834,9 @@
     if (!searchQuery) {
       matchIndexes = [];
       matchRowIds = [];
+      totalFindMatchCount = 0;
+      findLoading = false;
+      matchWindowStartOrdinal = 0;
       activeMatchOrdinal = -1;
       activeMatchRowId = null;
       pendingRevealRowIndex = null;
@@ -780,6 +871,7 @@
       {searchQuery}
       {matchCount}
       {activeMatchOrdinal}
+      {findLoading}
       onToggleFile={toggleFile}
       onSearchInput={handleSearchInput}
       onClearSearch={clearSearch}

@@ -83,6 +83,7 @@ export async function loadLogWorkspacePageData(
 		sourceKind: source.sourceKind,
 		reportOk: true,
 		forceReparse,
+		reportReceivedAt: source.index.received ?? null,
 		timezoneOffsetSeconds,
 		yearHint: inferYearHint(files),
 		files,

@@ -1,9 +1,9 @@
 import type { LogRow, LogSourceRecord } from './types';
 import { createLogParser } from './parse';
-import { chooseBaseYear } from './year';
+import { chooseBaseYear, inferTimestampYears } from './year';
 import { putRowBatch, putSourceRecord, resetSourceForIngest } from './db';
 
-const PARSE_VERSION = 'log-index-v1';
+const PARSE_VERSION = 'log-index-v2';
 const BATCH_SIZE = 1000;
 
 type IngestRequest = {
@@ -18,6 +18,7 @@ type IngestRequest = {
   maxBytes: number;
   maxLines: number | null;
   timezoneOffsetSeconds: number | null;
+  reportReceivedAt: string | null;
   yearHint: number | null | undefined;
   nowYear: number;
 };
@@ -107,13 +108,18 @@ async function runIngest(request: IngestRequest) {
   const trimmedFirstLine = response.headers.get('x-prv-trimmed-first-line') === 'true';
   const text = await response.text();
 
+  const sliced = sliceTextByLines(text, request.downloadMode, request.maxLines);
+  const lines = sliced.text.split(/\r?\n/);
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+
   const { baseYear, yearInferredFrom, warnings } = chooseBaseYear({
-    text,
+    text: lines.join('\n'),
+    reportReceivedAt: request.reportReceivedAt,
+    timezoneOffsetSeconds: request.timezoneOffsetSeconds,
     yearHint: request.yearHint,
     nowYear: request.nowYear
   });
 
-  const sliced = sliceTextByLines(text, request.downloadMode, request.maxLines);
   if (sliced.sliced) {
     warnings.push(
       `Line cap applied: parsed ${request.downloadMode === 'tail' ? 'last' : 'first'} ${clampMaxLines(request.maxLines)!.toLocaleString()} lines.`
@@ -143,7 +149,8 @@ async function runIngest(request: IngestRequest) {
     reportId: request.reportId,
     sourceFile: request.sourceFile,
     baseYear,
-    yearInferredFrom
+    yearInferredFrom,
+    lineYears: inferTimestampYears(lines, baseYear)
   });
 
   let batch: LogRow[] = [];
@@ -167,15 +174,7 @@ async function runIngest(request: IngestRequest) {
   // - avoid giant in-memory arrays
   // - keep IDB transactions short so query reads can proceed
   // - emit progress early (enables UI to render after first 1k rows)
-  let start = 0;
-  for (let i = 0; i <= sliced.text.length; i += 1) {
-    const isEnd = i === sliced.text.length;
-    if (!isEnd && sliced.text.charCodeAt(i) !== 10) continue;
-
-    const end = i > start && sliced.text.charCodeAt(i - 1) === 13 ? i - 1 : i;
-    const line = sliced.text.slice(start, end);
-    start = i + 1;
-
+  for (const line of lines) {
     batch.push(parser.pushLine(line));
     if (batch.length >= BATCH_SIZE) {
       // eslint-disable-next-line no-await-in-loop

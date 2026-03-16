@@ -76,7 +76,7 @@ export class LogWorkspaceController {
 	readonly data: LogWorkspacePageData;
 
 	// --- Config constants ---
-	readonly parseVersion = 'log-index-v1';
+	readonly parseVersion = 'log-index-v2';
 	readonly maxBytes = 2 * 1024 * 1024;
 	readonly maxLines = 20_000;
 	readonly downloadMode = 'tail' as const;
@@ -151,10 +151,11 @@ export class LogWorkspaceController {
 	#lastScrollBucket = -1;
 	#lastPollAt = 0;
 	#searchTimer: ReturnType<typeof setTimeout> | null = null;
-	#viewerRefreshTimer: ReturnType<typeof setTimeout> | null = null;
-	#pendingJumpLocator: LogRowLocator | null = null;
-	#programmaticScroll = false;
-	#autoFocusFindResults = false;
+		#viewerRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+		#pendingJumpLocator: LogRowLocator | null = null;
+		#programmaticScroll = false;
+		#autoFocusFindResults = false;
+		#findCorrectionAttempts = 0;
 
 	constructor(data: LogWorkspacePageData) {
 		this.data = data;
@@ -178,6 +179,7 @@ export class LogWorkspaceController {
 			maxBytes: this.maxBytes,
 			maxLines: this.maxLines,
 			parseVersion: this.parseVersion,
+			reportReceivedAt: () => this.data.reportReceivedAt,
 			timezoneOffsetSeconds: () => this.data.timezoneOffsetSeconds,
 			yearHint: () => this.data.yearHint,
 			isFileSelected: (filename) => this.selectedFiles.includes(filename),
@@ -640,16 +642,17 @@ export class LogWorkspaceController {
 		} satisfies QueryWorkerRequest);
 	}
 
-	#clearFindState() {
-		this.matchIndexes = [];
-		this.matchRowIds = [];
-		this.totalFindMatchCount = 0;
-		this.findLoading = false;
-		this.matchWindowStartOrdinal = 0;
-		this.activeMatchOrdinal = -1;
-		this.activeMatchRowId = null;
-		this.pendingRevealRowIndex = null;
-	}
+		#clearFindState() {
+			this.matchIndexes = [];
+			this.matchRowIds = [];
+			this.totalFindMatchCount = 0;
+			this.findLoading = false;
+			this.matchWindowStartOrdinal = 0;
+			this.activeMatchOrdinal = -1;
+			this.activeMatchRowId = null;
+			this.pendingRevealRowIndex = null;
+			this.#findCorrectionAttempts = 0;
+		}
 
 	#jumpToLocalMatch(localOrdinal: number) {
 		if (localOrdinal < 0 || localOrdinal >= this.matchIndexes.length) return;
@@ -686,11 +689,11 @@ export class LogWorkspaceController {
 		this.#requestFind({ autoFocus: true, targetOrdinal: clamped });
 	}
 
-	#handleFindMessage(event: Extract<QueryMessage, { type: 'find' }>) {
-		if (event.jobId !== this.#activeFindJobId) return;
-		const shouldAutoFocus = this.#autoFocusFindResults;
-		this.#autoFocusFindResults = false;
-		this.findLoading = false;
+		#handleFindMessage(event: Extract<QueryMessage, { type: 'find' }>) {
+			if (event.jobId !== this.#activeFindJobId) return;
+			const shouldAutoFocus = this.#autoFocusFindResults;
+			this.#autoFocusFindResults = false;
+			this.findLoading = false;
 		this.matchIndexes = event.result.matchIndexes;
 		this.matchRowIds = event.result.matchRowIds;
 		this.totalFindMatchCount = event.result.totalMatchCount;
@@ -699,8 +702,9 @@ export class LogWorkspaceController {
 		const localOrdinal =
 			event.result.activeOrdinal >= 0 ? event.result.activeOrdinal - event.result.windowStartOrdinal : -1;
 		const nextActiveRowId = localOrdinal >= 0 ? (event.result.matchRowIds[localOrdinal] ?? null) : null;
-		const nextRevealIndex = localOrdinal >= 0 ? (event.result.matchIndexes[localOrdinal] ?? null) : null;
-		this.activeMatchRowId = nextActiveRowId;
+			const nextRevealIndex = localOrdinal >= 0 ? (event.result.matchIndexes[localOrdinal] ?? null) : null;
+			this.activeMatchRowId = nextActiveRowId;
+			this.#findCorrectionAttempts = 0;
 
 		if (nextRevealIndex == null || nextRevealIndex < 0) {
 			this.pendingRevealRowIndex = null;
@@ -865,29 +869,72 @@ export class LogWorkspaceController {
 		});
 	}
 
-	#scheduleRevealIfVisible(rowIndex: number) {
-		if (rowIndex < this.windowStart || rowIndex >= this.windowStart + this.windowRows.length) return;
-		window.requestAnimationFrame(() => {
-			if (this.pendingRevealRowIndex === rowIndex) {
-				this.#revealRowIndex(rowIndex);
-				this.pendingRevealRowIndex = null;
-				if (this.detailOpen) {
-					const localIndex = rowIndex - this.windowStart;
-					const row = this.windowRows[localIndex];
-					if (row) this.selectedRow = row;
-				}
-			}
-		});
-	}
-
-	#syncViewportToLoadedRows() {
-		if (!this.tableEl || this.windowRows.length === 0) return;
-		const viewportRows = Math.max(1, Math.ceil(this.tableEl.clientHeight / this.rowHeight));
-
-		if (this.pendingRevealRowIndex != null) {
-			this.#scheduleRevealIfVisible(this.pendingRevealRowIndex);
-			return;
+		#scheduleRevealIfVisible(rowIndex: number) {
+			if (rowIndex < this.windowStart || rowIndex >= this.windowStart + this.windowRows.length) return;
+			window.requestAnimationFrame(() => {
+				window.requestAnimationFrame(() => {
+					if (this.pendingRevealRowIndex === rowIndex) {
+						this.#revealRowIndex(rowIndex);
+						this.pendingRevealRowIndex = null;
+						if (this.detailOpen) {
+							const localIndex = rowIndex - this.windowStart;
+							const row = this.windowRows[localIndex];
+							if (row) this.selectedRow = row;
+						}
+					}
+				});
+			});
 		}
+
+		#syncViewportToLoadedRows() {
+			if (!this.tableEl || this.windowRows.length === 0) return;
+			const viewportRows = Math.max(1, Math.ceil(this.tableEl.clientHeight / this.rowHeight));
+
+			if (this.pendingRevealRowIndex != null) {
+				const pendingLocalIndex = this.pendingRevealRowIndex - this.windowStart;
+				if (
+					this.activeMatchRowId &&
+					pendingLocalIndex >= 0 &&
+					pendingLocalIndex < this.windowRows.length
+				) {
+					const pendingRow = this.windowRows[pendingLocalIndex] ?? null;
+					if (pendingRow?.id !== this.activeMatchRowId) {
+						if (this.#findCorrectionAttempts < 2 && this.activeMatchOrdinal >= 0) {
+							this.#findCorrectionAttempts += 1;
+							this.#requestFind({
+								autoFocus: true,
+								targetOrdinal: this.activeMatchOrdinal
+							});
+						}
+						return;
+					}
+				}
+
+				const minScrollTop = this.windowStart * this.rowHeight;
+				const maxScrollTop = Math.max(
+					minScrollTop,
+					(this.windowStart + this.windowRows.length - viewportRows) * this.rowHeight
+				);
+				if (this.tableEl.scrollTop < minScrollTop || this.tableEl.scrollTop > maxScrollTop) {
+					this.#programmaticScroll = true;
+					this.tableEl.scrollTop = Math.min(
+						Math.max(this.pendingRevealRowIndex * this.rowHeight, minScrollTop),
+						maxScrollTop
+					);
+					this.scrollTop = this.tableEl.scrollTop;
+					this.#scrollTopRef = this.tableEl.scrollTop;
+					this.#lastScrollBucket = Math.floor(this.tableEl.scrollTop / this.rowHeight);
+					window.requestAnimationFrame(() => {
+						this.#programmaticScroll = false;
+						if (this.pendingRevealRowIndex != null) {
+							this.#scheduleRevealIfVisible(this.pendingRevealRowIndex);
+						}
+					});
+					return;
+				}
+				this.#scheduleRevealIfVisible(this.pendingRevealRowIndex);
+				return;
+			}
 
 		this.#programmaticScroll = true;
 		if (this.#pinnedToBottomRef) {

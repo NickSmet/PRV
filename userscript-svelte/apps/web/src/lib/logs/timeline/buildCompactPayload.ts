@@ -2,6 +2,11 @@ import type { TimelineEvent } from '$lib/lab/timeline/types';
 
 import { isAppTimelineCategory } from './appCategories';
 import {
+	categoryOrder,
+	categorySlug,
+	categoryStyleKey
+} from './registry/categories';
+import {
 	computeMaxClusterDurationMs,
 	computeReadableDurationMs,
 	isPointLikeEvent
@@ -63,48 +68,12 @@ const FILE_TO_SUBSYSTEM: Record<string, string> = {
 const SUBSYSTEM_ORDER: Record<string, number> = { vm: 0, system: 1 };
 const SUBSYSTEM_LABEL: Record<string, string> = { vm: 'VM', system: 'System' };
 
-const CATEGORY_ORDER: Record<string, number> = {
-	'Apps: System': 0,
-	'Apps: Microsoft': 1,
-	'Apps: Third-party': 2,
-	'Tools Install': 3,
-	'Tools Issues': 4,
-	'GUI Messages': 10,
-	'Config Diffs': 11
-};
-
 function subsystemForFile(file: string): string {
 	return FILE_TO_SUBSYSTEM[file] ?? 'system';
 }
 
 function subsystemOrder(subsystem: string): number {
 	return SUBSYSTEM_ORDER[subsystem] ?? 99;
-}
-
-function categorySlug(category: string): string {
-	switch (category) {
-		case 'Apps: System':
-			return 'apps-system';
-		case 'Apps: Microsoft':
-			return 'apps-microsoft';
-		case 'Apps: Third-party':
-			return 'apps-third-party';
-		default:
-			return category.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-	}
-}
-
-function categoryStyleKey(category: string): string {
-	const normalized = category.trim().toLowerCase();
-	if (normalized.includes('app')) return 'apps';
-	if (normalized.includes('tool')) return 'tools';
-	if (normalized.includes('gui')) return 'gui';
-	if (normalized.includes('config')) return 'config';
-	return normalized.replace(/\s+/g, '-');
-}
-
-function categoryOrder(category: string): number {
-	return CATEGORY_ORDER[category] ?? 99;
 }
 
 function subsystemForCategory(category: string): string | null {

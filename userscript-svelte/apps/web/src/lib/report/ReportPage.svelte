@@ -129,7 +129,7 @@
       <span>Logs</span>
     </button>
 
-    <button
+    <!-- <button
       class="floating-action"
       class:floating-action--active={chatOpen}
       onclick={() => chatOpen = !chatOpen}
@@ -138,7 +138,7 @@
     >
       <MessageSquare class="h-4 w-4" />
       <span>{chatOpen ? 'Hide chat' : 'Chat'}</span>
-    </button>
+    </button> -->
   </div>
 
   {#if logsOpen}

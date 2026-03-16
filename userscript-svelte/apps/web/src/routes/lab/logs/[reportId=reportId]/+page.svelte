@@ -14,6 +14,7 @@
     reportId: string;
     sourceKind: 'api' | 'fixture';
     reportOk: boolean;
+    reportReceivedAt: string | null;
     timezoneOffsetSeconds: number | null;
     yearHint: number | null;
     files: Array<{ filename: string; filePath: string; size: number }>;
@@ -51,7 +52,7 @@
   let { data }: { data: PageData } = $props();
 
   const renderCap = 5000;
-  const parseVersion = 'log-index-v1';
+  const parseVersion = 'log-index-v2';
 
   let fileFilter = $state('');
   let selectedFiles = $state<string[]>([]);
@@ -470,6 +471,7 @@
       downloadMode: currentDownloadMode(),
       maxBytes,
       maxLines,
+      reportReceivedAt: data.reportReceivedAt,
       timezoneOffsetSeconds: data.timezoneOffsetSeconds,
       yearHint: data.yearHint,
       nowYear: new Date().getUTCFullYear()

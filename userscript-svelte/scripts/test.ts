@@ -5,19 +5,22 @@ import {
 	APP_MICROSOFT_CATEGORY,
 	APP_SYSTEM_CATEGORY,
 	APP_THIRD_PARTY_CATEGORY
-} from '../apps/web/src/lib/lab/log-timeline/appCategories';
+} from '../apps/web/src/lib/logs/timeline/appCategories';
 import {
 	buildCompactTimeline,
-} from '../apps/web/src/lib/lab/log-timeline/buildCompactPayload';
-import { classifyWindowsTimelineApp } from '../apps/web/src/lib/lab/log-timeline/classifyWindowsTimelineApp';
-import { POINT_EVENT_THRESHOLD_MS } from '../apps/web/src/lib/lab/log-timeline/displaySemantics';
+} from '../apps/web/src/lib/logs/timeline/buildCompactPayload';
+import { classifyWindowsTimelineApp } from '../apps/web/src/lib/logs/timeline/classifyWindowsTimelineApp';
+import { POINT_EVENT_THRESHOLD_MS } from '../apps/web/src/lib/logs/timeline/displaySemantics';
 import {
 	clusterTimelineEvents,
 	type VisibleWindow
-} from '../apps/web/src/lib/lab/log-timeline/clustering/clusterTimelineEvents';
-import { extractTimelineEventsFromRows } from '../apps/web/src/lib/lab/log-timeline/extractEvents';
-import { parseLogText } from '../apps/web/src/lib/lab/log-index/parse';
+} from '../apps/web/src/lib/logs/timeline/clustering/clusterTimelineEvents';
+import { extractTimelineEventsFromRows } from '../apps/web/src/lib/logs/timeline/extractEvents';
+import { parseLogText } from '../apps/web/src/lib/logs/index/parse';
+import { chooseBaseYear } from '../apps/web/src/lib/logs/index/year';
 import type { TimelineEvent } from '../apps/web/src/lib/lab/timeline/types';
+import { TOOLS_CATEGORY } from '../apps/web/src/lib/logs/timeline/registry/categories';
+import { LEGACY_TIMELINE_PARITY_REGISTRY } from '../apps/web/src/lib/logs/timeline/registry/migrationRegistry';
 
 function testDiscoverPerVmFiles() {
   const uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
@@ -178,8 +181,8 @@ function testExtractTimelineEventsBucketsApps() {
       id: 'row-1',
       sourceFile: 'vm.log',
       lineNo: 10,
-      message: 'D3D11.32: C:\\Windows\\explorer.exe\\d2d1.dll',
-      raw: 'D3D11.32: C:\\Windows\\explorer.exe\\d2d1.dll',
+      message: 'D3D11.32: C:\\Windows\\system32\\notepad.exe\\d2d1.dll',
+      raw: 'D3D11.32: C:\\Windows\\system32\\notepad.exe\\d2d1.dll',
       tsWallMs: Date.UTC(2026, 0, 10, 12, 0, 0)
     },
     {
@@ -280,10 +283,10 @@ function testExtractTimelineEventsToolsLog() {
   ] as any[];
 
   const events = extractTimelineEventsFromRows(rows);
-  assert.ok(events.some((event) => event.category === 'Tools Install' && event.label === 'Updating from 19.4.0.12345'));
-  assert.ok(events.some((event) => event.category === 'Tools Install' && event.label === 'Installation failed.' && event.severity === 'danger'));
-  assert.ok(events.some((event) => event.category === 'Tools Issues' && event.label === 'Registry database is corrupt'));
-  assert.ok(events.some((event) => event.category === 'Tools Issues' && event.label.includes('KB125243')));
+  assert.ok(events.some((event) => event.category === TOOLS_CATEGORY && event.label === 'Updating from 19.4.0.12345'));
+  assert.ok(events.some((event) => event.category === TOOLS_CATEGORY && event.label === 'Installation failed.' && event.severity === 'danger'));
+  assert.ok(events.some((event) => event.category === TOOLS_CATEGORY && event.label === 'Registry database is corrupt'));
+  assert.ok(events.some((event) => event.category === TOOLS_CATEGORY && event.label.includes('KB125243')));
 }
 
 function testExtractTimelineEventsToolsLogSuppressesKbIssueAfterSuccess() {
@@ -307,8 +310,8 @@ function testExtractTimelineEventsToolsLogSuppressesKbIssueAfterSuccess() {
   ] as any[];
 
   const events = extractTimelineEventsFromRows(rows);
-  assert.ok(events.some((event) => event.category === 'Tools Install' && event.label === 'Installation successful!'));
-  assert.ok(!events.some((event) => event.category === 'Tools Issues' && event.label.includes('KB125243')));
+  assert.ok(events.some((event) => event.category === TOOLS_CATEGORY && event.label === 'Installation successful!'));
+  assert.ok(!events.some((event) => event.category === TOOLS_CATEGORY && event.label.includes('KB125243')));
 }
 
 function testExtractTimelineEventsToolsLogFromParsedTags() {
@@ -326,8 +329,8 @@ function testExtractTimelineEventsToolsLogFromParsedTags() {
   });
 
   const events = extractTimelineEventsFromRows(parsed.rows);
-  assert.ok(events.some((event) => event.category === 'Tools Install' && event.label === 'Installation type: UPDATE'));
-  assert.ok(events.some((event) => event.category === 'Tools Install' && event.label === 'Installation successful!'));
+  assert.ok(events.some((event) => event.category === TOOLS_CATEGORY && event.label === 'Installation type: UPDATE'));
+  assert.ok(events.some((event) => event.category === TOOLS_CATEGORY && event.label === 'Installation successful!'));
 }
 
 function testExtractTimelineEventsKeepsConfigDiffsSeparate() {
@@ -353,10 +356,10 @@ function testExtractTimelineEventsKeepsConfigDiffsSeparate() {
   const events = extractTimelineEventsFromRows(rows);
   const configEvents = events.filter((event) => event.category === 'Config Diffs');
 
-  assert.equal(configEvents.length, 2);
+  assert.equal(configEvents.length, 1);
   assert.deepEqual(
     configEvents.map((event) => event.label),
-    ['Hardware.USB[0].Connected', 'Hardware.Hdd[0].SizeOnDisk']
+    ['Hardware.USB[0].Connected']
   );
   assert.ok(configEvents.every((event) => event.end == null));
 }
@@ -443,10 +446,209 @@ function testParseLogTextFallsBackForMalformedRepeatTimestamp() {
   assert.equal(parsed.rows[1]?.tsRaw, '02-99 12:61:00.000');
 }
 
+function testChooseBaseYearAnchorsToReportCollectionDate() {
+  const text = [
+    '12-31 23:58:00.000 I /prl_vm/ Shutdown started',
+    '01-01 00:01:00.000 I /prl_vm/ Shutdown completed'
+  ].join('\n');
+
+  const chosen = chooseBaseYear({
+    text,
+    reportReceivedAt: '2026-01-01T00:05:00.000Z',
+    timezoneOffsetSeconds: 0,
+    yearHint: null,
+    nowYear: 2026
+  });
+
+  assert.equal(chosen.baseYear, 2026);
+  assert.equal(chosen.yearInferredFrom, 'report-received');
+}
+
+function testChooseBaseYearRollsNewestLineToPreviousYearWhenNeeded() {
+  const text = '12-31 23:58:00.000 I /prl_vm/ Last visible event';
+
+  const chosen = chooseBaseYear({
+    text,
+    reportReceivedAt: '2026-01-01T00:05:00.000Z',
+    timezoneOffsetSeconds: 0,
+    yearHint: null,
+    nowYear: 2026
+  });
+
+  assert.equal(chosen.baseYear, 2025);
+  assert.equal(chosen.yearInferredFrom, 'report-received');
+}
+
+function testParseLogTextRollsYearBackwardAcrossMonthWrap() {
+  const text = [
+    '12-31 23:59:58.000 I /prl_vm/ Last event from previous year',
+    '12-31 23:59:59.000 I /prl_vm/ Still previous year',
+    '01-01 00:00:00.000 I /prl_vm/ New year starts',
+    '01-01 00:00:01.000 I /prl_vm/ Next event'
+  ].join('\n');
+
+  const parsed = parseLogText({
+    text,
+    reportId: 'parse-rollover',
+    sourceFile: 'vm.log',
+    baseYear: 2026,
+    yearInferredFrom: 'report-received'
+  });
+
+  assert.equal(parsed.rows[0]?.tsWallMs, Date.UTC(2025, 11, 31, 23, 59, 58, 0));
+  assert.equal(parsed.rows[1]?.tsWallMs, Date.UTC(2025, 11, 31, 23, 59, 59, 0));
+  assert.equal(parsed.rows[2]?.tsWallMs, Date.UTC(2026, 0, 1, 0, 0, 0, 0));
+  assert.equal(parsed.rows[3]?.tsWallMs, Date.UTC(2026, 0, 1, 0, 0, 1, 0));
+}
+
+function testExtractTimelineEventsVmLifecycleAndErrors() {
+  const rows = [
+    {
+      id: 'vm-start',
+      sourceFile: 'vm.log',
+      lineNo: 1,
+      message: 'VM state(VmStateProblemReport): started',
+      raw: '01-10 12:00:00.000 I /vm/ VM state(VmStateProblemReport): started',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 0, 0)
+    },
+    {
+      id: 'vm-reset',
+      sourceFile: 'vm.log',
+      lineNo: 2,
+      message: "VM state(VmStateRunning): enqueued 'VmLocalCmdHardwareReset'(20007) command",
+      raw: "01-10 12:01:00.000 I /vm/ VM state(VmStateRunning): enqueued 'VmLocalCmdHardwareReset'(20007) command",
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 1, 0)
+    },
+    {
+      id: 'vm-crash-prev',
+      sourceFile: 'vm.log',
+      lineNo: 3,
+      message: 'Unexpected failure',
+      raw: '01-10 12:02:00.000 I /vm/ Unexpected failure',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 2, 0)
+    },
+    {
+      id: 'vm-crash-sep',
+      sourceFile: 'vm.log',
+      lineNo: 4,
+      message: '=============================================================',
+      raw: '01-10 12:02:01.000 I /vm/ =============================================================',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 2, 1)
+    },
+    {
+      id: 'vm-device',
+      sourceFile: 'vm.log',
+      lineNo: 5,
+      message: '[Tpm2] TVNS - invalid signature',
+      raw: '01-10 12:03:00.000 I /vm/ [Tpm2] TVNS - invalid signature',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 3, 0)
+    }
+  ] as any[];
+
+  const events = extractTimelineEventsFromRows(rows);
+  assert.ok(events.some((event) => event.ruleId === 'vm.report_collection_started' && event.label === 'Collecting report'));
+  assert.ok(events.some((event) => event.ruleId === 'vm.hardware_reset' && event.label === 'reset(WIN)'));
+  assert.ok(events.some((event) => event.ruleId === 'vm.crash_separator' && event.label === 'crash(host?)'));
+  assert.ok(events.some((event) => event.ruleId === 'vm.tpm_invalid_signature' && event.category === 'Devices'));
+}
+
+function testExtractTimelineEventsVmCrashSuppressesBenignSeparator() {
+  const rows = [
+    {
+      id: 'vm-exit',
+      sourceFile: 'vm.log',
+      lineNo: 1,
+      message: 'VM process exiting with code 0',
+      raw: '01-10 12:00:00.000 I /vm/ VM process exiting with code 0',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 0, 0)
+    },
+    {
+      id: 'vm-sep',
+      sourceFile: 'vm.log',
+      lineNo: 2,
+      message: '=============================================================',
+      raw: '01-10 12:00:01.000 I /vm/ =============================================================',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 0, 1)
+    }
+  ] as any[];
+
+  const events = extractTimelineEventsFromRows(rows);
+  assert.ok(!events.some((event) => event.ruleId === 'vm.crash_separator'));
+}
+
+function testExtractTimelineEventsVmOpenGlAppsAndIgnoreList() {
+  const rows = [
+    {
+      id: 'vm-open-gl',
+      sourceFile: 'vm.log',
+      lineNo: 1,
+      message: 'OpenGL.210.330.123 some text C:\\Program Files\\Acme\\Painter.exe',
+      raw: '01-10 12:00:00.000 I /vm/ OpenGL.210.330.123 some text C:\\Program Files\\Acme\\Painter.exe',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 0, 0)
+    },
+    {
+      id: 'vm-ignore',
+      sourceFile: 'vm.log',
+      lineNo: 2,
+      message: 'D3D11.32: C:\\Windows\\explorer.exe',
+      raw: '01-10 12:00:01.000 I /vm/ D3D11.32: C:\\Windows\\explorer.exe',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 0, 1)
+    }
+  ] as any[];
+
+  const events = extractTimelineEventsFromRows(rows);
+  assert.ok(events.some((event) => event.ruleId === 'vm.app_sighting' && event.label.includes('Painter.exe') && event.severity === 'warn'));
+  assert.ok(!events.some((event) => event.label.includes('explorer.exe')));
+}
+
+function testExtractTimelineEventsParallelsSystemLegacyErrorsAndSkipNoise() {
+  const rows = [
+    {
+      id: 'ps-skip',
+      sourceFile: 'parallels-system.log',
+      lineNo: 1,
+      message: "VmCfgCommitDiff: Key: 'Hardware.Hdd[0].SizeOnDisk', New value: '107541', Old value: '107526'",
+      raw: "VmCfgCommitDiff: Key: 'Hardware.Hdd[0].SizeOnDisk', New value: '107541', Old value: '107526'",
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 0, 0)
+    },
+    {
+      id: 'ps-keep',
+      sourceFile: 'parallels-system.log',
+      lineNo: 2,
+      message: "VmCfgCommitDiff: Key: 'Hardware.USB[0].Connected', New value: '1', Old value: '0'",
+      raw: "VmCfgCommitDiff: Key: 'Hardware.USB[0].Connected', New value: '1', Old value: '0'",
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 1, 0)
+    },
+    {
+      id: 'ps-net',
+      sourceFile: 'parallels-system.log',
+      lineNo: 3,
+      message: 'PRL_NET_PRLNET_OPEN_FAILED',
+      raw: 'PRL_NET_PRLNET_OPEN_FAILED',
+      tsWallMs: Date.UTC(2026, 0, 10, 12, 2, 0)
+    }
+  ] as any[];
+
+  const events = extractTimelineEventsFromRows(rows);
+  assert.ok(!events.some((event) => event.ruleId === 'prl.config_diff' && event.label.includes('SizeOnDisk')));
+  assert.ok(events.some((event) => event.ruleId === 'prl.config_diff' && event.label === 'Hardware.USB[0].Connected'));
+  assert.ok(events.some((event) => event.ruleId === 'prl.net_open_failed' && event.category === 'Network'));
+}
+
+function testLegacyTimelineParityRegistryHasNoUnclassifiedEntries() {
+  assert.ok(LEGACY_TIMELINE_PARITY_REGISTRY.length > 0);
+  assert.ok(
+    LEGACY_TIMELINE_PARITY_REGISTRY.every((entry) =>
+      ['kept', 'superseded', 'deferred'].includes(entry.currentStatus)
+    )
+  );
+}
+
 function makeTimelineEvent(id: string, category: string, offsetMinutes: number): TimelineEvent {
   const start = new Date(Date.UTC(2026, 0, 10, 12, offsetMinutes, 0));
   return {
     id,
+    ruleId: `test.${id}`,
     sourceFile: 'vm.log',
     category,
     severity: 'info',
@@ -492,9 +694,9 @@ function testBuildCompactTimelineKeepsHiddenAppRows() {
 }
 
 function testBuildCompactTimelineInflatesSingletonsAtWideZoom() {
-  const event = makeTimelineEvent('tools-singleton', 'Tools Install', 0);
+  const event = makeTimelineEvent('tools-singleton', TOOLS_CATEGORY, 0);
   event.end = undefined;
-  const later = makeTimelineEvent('tools-later', 'Tools Install', 3 * 24 * 60);
+  const later = makeTimelineEvent('tools-later', TOOLS_CATEGORY, 3 * 24 * 60);
 
   const payload = buildCompactTimeline([event], {
     visibleSpanMs: 15 * 24 * 60 * 60 * 1000,
@@ -508,8 +710,8 @@ function testBuildCompactTimelineInflatesSingletonsAtWideZoom() {
 }
 
 function testBuildCompactTimelineInitialWindowPadsPastLastTimestamp() {
-  const first = makeTimelineEvent('tools-a', 'Tools Install', 0);
-  const last = makeTimelineEvent('tools-b', 'Tools Install', 120);
+  const first = makeTimelineEvent('tools-a', TOOLS_CATEGORY, 0);
+  const last = makeTimelineEvent('tools-b', TOOLS_CATEGORY, 120);
   last.end = new Date(last.start.getTime() + 5 * 60 * 1000);
 
   const payload = buildCompactTimeline([first, last]);
@@ -634,12 +836,12 @@ function testClusterTimelineEventsByAppCategory() {
 
 function testClusterTimelineEventsKeepsSingletonBurstsUnclustered() {
   const events: TimelineEvent[] = [
-    makeTimelineEvent('tools-a', 'Tools Install', 0),
-    makeTimelineEvent('tools-b', 'Tools Install', 24 * 60),
-    makeTimelineEvent('tools-c', 'Tools Install', 48 * 60),
-    makeTimelineEvent('tools-d', 'Tools Install', 72 * 60),
-    makeTimelineEvent('tools-e', 'Tools Install', 96 * 60),
-    makeTimelineEvent('tools-f', 'Tools Install', 120 * 60)
+    makeTimelineEvent('tools-a', TOOLS_CATEGORY, 0),
+    makeTimelineEvent('tools-b', TOOLS_CATEGORY, 24 * 60),
+    makeTimelineEvent('tools-c', TOOLS_CATEGORY, 48 * 60),
+    makeTimelineEvent('tools-d', TOOLS_CATEGORY, 72 * 60),
+    makeTimelineEvent('tools-e', TOOLS_CATEGORY, 96 * 60),
+    makeTimelineEvent('tools-f', TOOLS_CATEGORY, 120 * 60)
   ];
 
   const window: VisibleWindow = {
@@ -652,7 +854,7 @@ function testClusterTimelineEventsKeepsSingletonBurstsUnclustered() {
   assert.equal(model.mode, 'none');
   assert.equal(model.events.length, events.length);
   assert.ok(model.events.every((event) => !event.id.startsWith('cluster:')));
-  assert.equal(model.stats.clusteredByCategory['Tools Install'] ?? 0, 0);
+  assert.equal(model.stats.clusteredByCategory[TOOLS_CATEGORY] ?? 0, 0);
 }
 
 function testClusterTimelineEventsClustersPointLikeSummaryItemsByDisplayFootprint() {
@@ -692,10 +894,18 @@ async function main() {
   testExtractTimelineEventsToolsLog();
   testExtractTimelineEventsToolsLogSuppressesKbIssueAfterSuccess();
   testExtractTimelineEventsToolsLogFromParsedTags();
+  testExtractTimelineEventsVmLifecycleAndErrors();
+  testExtractTimelineEventsVmCrashSuppressesBenignSeparator();
+  testExtractTimelineEventsVmOpenGlAppsAndIgnoreList();
+  testExtractTimelineEventsParallelsSystemLegacyErrorsAndSkipNoise();
   testExtractTimelineEventsKeepsConfigDiffsSeparate();
+  testLegacyTimelineParityRegistryHasNoUnclassifiedEntries();
   testParseLogTextFallsBackForInvalidTimestampEntry();
   testParseLogTextFallsBackForMissingTimestampEntry();
   testParseLogTextFallsBackForMalformedRepeatTimestamp();
+  testChooseBaseYearAnchorsToReportCollectionDate();
+  testChooseBaseYearRollsNewestLineToPreviousYearWhenNeeded();
+  testParseLogTextRollsYearBackwardAcrossMonthWrap();
   testBuildCompactTimelineKeepsHiddenAppRows();
   testBuildCompactTimelineInflatesSingletonsAtWideZoom();
   testBuildCompactTimelineInitialWindowPadsPastLastTimestamp();

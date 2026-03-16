@@ -44,6 +44,13 @@ The workspace controller is split across three files:
 | `timelineManager.svelte.ts` | All timeline state, clustering, payload, selection |
 | `ingestManager.svelte.ts` | Worker lifecycle, source records, progress tracking |
 
+Event extraction is registry-driven:
+
+- `extractEvents.ts` is a thin orchestrator
+- `registry/runtime.ts` owns row/stateful rule execution
+- `registry/sources/*.ts` holds per-log rule modules
+- `registry/categories.ts` owns lane ordering/style metadata
+
 ---
 
 ## Interfaces
@@ -55,6 +62,7 @@ The UI-level event model is library-agnostic and lives in `apps/web/src/lib/lab/
 ```ts
 export type TimelineEvent = {
   id: string;
+  ruleId: string;
   sourceFile: string;
   category: string;
   severity: 'info' | 'warn' | 'danger';
@@ -95,7 +103,7 @@ Display semantics are defined in `DISPLAY-MODES.md`.
 Payload builder groups as:
 
 - **Subsystem parent lane** (level 1): `VM` vs `System` (derived from `sourceFile`)
-  - **Category lanes** (level 2): e.g. `Apps: System`, `Apps: Microsoft`, `Apps: Third-party`, `Tools Install`, `Tools Issues`, `GUI Messages`, `Config Diffs`
+  - **Category lanes** (level 2): e.g. `Apps: System`, `Apps: Microsoft`, `Apps: Third-party`, `Tools`, `VM Lifecycle`, `Devices`, `Network`, `Errors`, `Host Issues`, `GUI Messages`, `Config Diffs`
 
 Items:
 - `point` items for semantic point events (`<= 5s`, or no `end`)
@@ -127,20 +135,30 @@ The toolbar exposes checkboxes for these three app lanes along with raw counts f
 
 App extraction semantics:
 
-- each matching `D3D*.**: <path>.exe` row is treated as an **app sighting**, not a process lifetime
+- each matching `D3D*.**: <path>.exe` or `OpenGL.*` row is treated as an **app sighting**, not a process lifetime
 - app sightings are emitted as point events
 - no synthetic start/end pairing is performed for repeated sightings of the same app
 - consecutive sightings of the same executable path within `2s` are deduped
 - dedupe ignores D3D version so `D3D11.32` and `D3D12.20` rows for the same path still collapse when they are effectively the same launch observation
+- a legacy ignore-list suppresses common Windows/system processes that create noise
 
-### Tools log extraction
+### Registry-backed extraction
 
-`tools.log` contributes timeline events under the `VM` subsystem:
+The shared extractor currently covers:
 
-- `Tools Install` for setup milestones such as install mode, update source version, success, and fatal install exit codes
-- `Tools Issues` for known tail-signatures such as registry corruption and the `prl_dd.inf` / `KB125243` driver-install pattern
+- `vm.log`
+  - app sightings
+  - lifecycle transitions
+  - tools state
+  - selected device/network/error/host issue signatures
+- `parallels-system.log`
+  - GUI message lifecycles
+  - per-row config diffs with a legacy noise skip-list
+  - selected system/network error signatures
+- `tools.log`
+  - install milestones and tail issues under the unified `Tools` category
 
-The extraction is heuristic and intentionally mirrors the older tools-log summary logic, but now emits clickable timeline events instead of a plain text summary.
+The extractor is heuristic and intentionally mirrors the older timeline logic, but emits normalized clickable events with `ruleId` provenance.
 
 ### Display modes + readability
 
@@ -197,6 +215,7 @@ The logs workspace supports a one-shot `?reparse=1` query parameter:
 3. Workspace maps `record.id` → `TimelineEvent.id` and sets `selectedEventId`.
 4. If the event has `startRef`, the log viewer is asked to jump to that locator.
 5. The details pane shows `TimelineEvent.detail` and provenance.
+6. `TimelineEvent.ruleId` identifies which registry rule produced the event.
 
 ### Tooltips
 

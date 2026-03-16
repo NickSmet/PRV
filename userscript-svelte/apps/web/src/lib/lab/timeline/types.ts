@@ -9,6 +9,7 @@ export type LogRowLocator = {
 
 export type TimelineEvent = {
   id: string;
+  ruleId: string;
   sourceFile: string;
   category: string;
   severity: TimelineSeverity;

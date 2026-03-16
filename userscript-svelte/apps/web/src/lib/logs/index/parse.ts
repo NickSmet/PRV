@@ -1,6 +1,7 @@
 import type { LogKind, LogRow, LogLevel, ParseResult, ParseStats, YearInferredFrom } from './types';
 import { extractDiffFields, extractGuiMessageDataFields, extractLeadingBracketTags } from './extract';
 import { parseTsRaw } from './timestamp';
+import { inferTimestampYears } from './year';
 
 function parsePid(v: string | undefined): number | null {
   if (!v) return null;
@@ -44,6 +45,7 @@ type ParserOptions = {
   sourceFile: string;
   baseYear: number;
   yearInferredFrom: YearInferredFrom;
+  lineYears?: Array<number | null>;
 };
 
 type ParserFinalize = {
@@ -126,7 +128,8 @@ export function createLogParser(opts: ParserOptions): LogParser {
     const guiFields = extractGuiMessageDataFields(message);
     if (guiFields) Object.assign(fields, guiFields);
 
-    const parsedTsWallMs = args.tsRaw ? parseTsRaw(args.tsRaw, opts.baseYear) : null;
+    const lineYear = opts.lineYears?.[lineNo - 1] ?? opts.baseYear;
+    const parsedTsWallMs = args.tsRaw ? parseTsRaw(args.tsRaw, lineYear) : null;
     const tsWallMs = parsedTsWallMs ?? resolveFallbackTsWallMs();
     if (parsedTsWallMs != null) entryWithTs += 1;
 
@@ -182,8 +185,9 @@ export function createLogParser(opts: ParserOptions): LogParser {
     if (repeatMatch?.groups) {
       const tsRaw = repeatMatch.groups.ts;
       const repeatCount = Number(repeatMatch.groups.n);
+      const lineYear = opts.lineYears?.[lineNo - 1] ?? opts.baseYear;
       const row = buildBaseRow('repeat', raw, {
-        tsWallMs: parseTsRaw(tsRaw, opts.baseYear) ?? resolveFallbackTsWallMs(),
+        tsWallMs: parseTsRaw(tsRaw, lineYear) ?? resolveFallbackTsWallMs(),
         tsRaw,
         message: raw.replace(/^\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}\s+/, ''),
         parentId: lastEntryId,
@@ -266,18 +270,21 @@ export function parseLogText(opts: {
   sourceFile: string;
   baseYear: number;
   yearInferredFrom: YearInferredFrom;
+  lineYears?: Array<number | null>;
   warnings?: string[];
 }): ParseResult {
-  const parser = createLogParser({
-    reportId: opts.reportId,
-    sourceFile: opts.sourceFile,
-    baseYear: opts.baseYear,
-    yearInferredFrom: opts.yearInferredFrom
-  });
   const rows: LogRow[] = [];
 
   const lines = opts.text.split(/\r?\n/);
   if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+
+  const parser = createLogParser({
+    reportId: opts.reportId,
+    sourceFile: opts.sourceFile,
+    baseYear: opts.baseYear,
+    yearInferredFrom: opts.yearInferredFrom,
+    lineYears: opts.lineYears ?? inferTimestampYears(lines, opts.baseYear)
+  });
 
   for (const raw of lines) rows.push(parser.pushLine(raw));
 

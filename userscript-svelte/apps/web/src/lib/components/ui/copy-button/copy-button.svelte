@@ -5,7 +5,6 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import XIcon from '@lucide/svelte/icons/x';
-	import { scale } from 'svelte/transition';
 	import type { CopyButtonProps } from './types';
 
 	let {
@@ -44,24 +43,24 @@
 	}}
 >
 	{#if clipboard.status === 'success'}
-		<div in:scale={{ duration: animationDuration, start: 0.85 }}>
+		<span class="inline-flex">
 			<CheckIcon tabindex={-1} />
 			<span class="sr-only">Copied</span>
-		</div>
+		</span>
 	{:else if clipboard.status === 'failure'}
-		<div in:scale={{ duration: animationDuration, start: 0.85 }}>
+		<span class="inline-flex">
 			<XIcon tabindex={-1} />
 			<span class="sr-only">Failed to copy</span>
-		</div>
+		</span>
 	{:else}
-		<div in:scale={{ duration: animationDuration, start: 0.85 }}>
+		<span class="inline-flex">
 			{#if icon}
 				{@render icon()}
 			{:else}
 				<CopyIcon tabindex={-1} />
 			{/if}
 			<span class="sr-only">Copy</span>
-		</div>
+		</span>
 	{/if}
 	{@render children?.()}
 </Button>

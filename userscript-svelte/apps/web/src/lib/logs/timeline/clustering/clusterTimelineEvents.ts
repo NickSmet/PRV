@@ -308,6 +308,7 @@ export function clusterTimelineEvents(
 
         outputEvents.push({
           id: clusterId,
+          ruleId: 'cluster',
           sourceFile: burst.items[0]?.sourceFile ?? '',
           category,
           severity,
