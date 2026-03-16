@@ -256,6 +256,11 @@ function sendWindow(jobId: number, windowStart: number, windowSize: number) {
  */
 const MAX_FIND_HIGHLIGHTS = 10_000;
 
+function rowMatchesFindQuery(row: LogRow, queryLower: string): boolean {
+  if (!queryLower) return false;
+  return row.message.toLowerCase().includes(queryLower);
+}
+
 function buildFindResult(
   query: string,
   activeRowId?: string | null,
@@ -280,7 +285,7 @@ function buildFindResult(
 
   for (let i = 0; i < cache.rows.length; i += 1) {
     const row = cache.rows[i]!;
-    if (!row.raw.toLowerCase().includes(queryLower)) continue;
+    if (!rowMatchesFindQuery(row, queryLower)) continue;
     allMatchIndexes.push(i);
     allMatchRowIds.push(row.id);
   }

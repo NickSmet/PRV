@@ -145,6 +145,7 @@ export class LogWorkspaceController {
 	#activeFindJobId = 0;
 	#nextLocateJobId = 0;
 	#activeLocateJobId = 0;
+	#activeLocateKind: 'jump' | 'search' = 'jump';
 	#ensureRunId = 0;
 	#scrollTopRef = 0;
 	#pinnedToBottomRef = true;
@@ -657,20 +658,12 @@ export class LogWorkspaceController {
 	#jumpToLocalMatch(localOrdinal: number) {
 		if (localOrdinal < 0 || localOrdinal >= this.matchIndexes.length) return;
 		const rowIndex = this.matchIndexes[localOrdinal]!;
+		const rowId = this.matchRowIds[localOrdinal] ?? null;
 		this.activeMatchOrdinal = this.matchWindowStartOrdinal + localOrdinal;
-		this.activeMatchRowId = this.matchRowIds[localOrdinal] ?? null;
+		this.activeMatchRowId = rowId;
 		this.pinnedToBottom = false;
 		this.#pinnedToBottomRef = false;
-		this.pendingRevealRowIndex = rowIndex;
-
-		const windowEnd = this.windowStart + this.windowRows.length;
-		if (rowIndex < this.windowStart || rowIndex >= windowEnd) {
-			const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
-			this.#sendWindow(this.#windowStartForViewport(rowIndex, this.totalRows, viewportRows));
-			return;
-		}
-
-		this.#scheduleRevealIfVisible(rowIndex);
+		this.#revealSearchMatch(rowId, rowIndex);
 	}
 
 	#jumpToGlobalMatchOrdinal(globalOrdinal: number) {
@@ -689,11 +682,11 @@ export class LogWorkspaceController {
 		this.#requestFind({ autoFocus: true, targetOrdinal: clamped });
 	}
 
-		#handleFindMessage(event: Extract<QueryMessage, { type: 'find' }>) {
-			if (event.jobId !== this.#activeFindJobId) return;
-			const shouldAutoFocus = this.#autoFocusFindResults;
-			this.#autoFocusFindResults = false;
-			this.findLoading = false;
+	#handleFindMessage(event: Extract<QueryMessage, { type: 'find' }>) {
+		if (event.jobId !== this.#activeFindJobId) return;
+		const shouldAutoFocus = this.#autoFocusFindResults;
+		this.#autoFocusFindResults = false;
+		this.findLoading = false;
 		this.matchIndexes = event.result.matchIndexes;
 		this.matchRowIds = event.result.matchRowIds;
 		this.totalFindMatchCount = event.result.totalMatchCount;
@@ -702,9 +695,9 @@ export class LogWorkspaceController {
 		const localOrdinal =
 			event.result.activeOrdinal >= 0 ? event.result.activeOrdinal - event.result.windowStartOrdinal : -1;
 		const nextActiveRowId = localOrdinal >= 0 ? (event.result.matchRowIds[localOrdinal] ?? null) : null;
-			const nextRevealIndex = localOrdinal >= 0 ? (event.result.matchIndexes[localOrdinal] ?? null) : null;
-			this.activeMatchRowId = nextActiveRowId;
-			this.#findCorrectionAttempts = 0;
+		const nextRevealIndex = localOrdinal >= 0 ? (event.result.matchIndexes[localOrdinal] ?? null) : null;
+		this.activeMatchRowId = nextActiveRowId;
+		this.#findCorrectionAttempts = 0;
 
 		if (nextRevealIndex == null || nextRevealIndex < 0) {
 			this.pendingRevealRowIndex = null;
@@ -718,15 +711,7 @@ export class LogWorkspaceController {
 
 		this.pinnedToBottom = false;
 		this.#pinnedToBottomRef = false;
-		this.pendingRevealRowIndex = nextRevealIndex;
-		const windowEnd = this.windowStart + this.windowRows.length;
-		if (nextRevealIndex >= this.windowStart && nextRevealIndex < windowEnd) {
-			this.#scheduleRevealIfVisible(nextRevealIndex);
-			return;
-		}
-
-		const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
-		this.#sendWindow(this.#windowStartForViewport(nextRevealIndex, this.totalRows, viewportRows));
+		this.#revealSearchMatch(nextActiveRowId, nextRevealIndex);
 	}
 
 	// =========================================================================
@@ -806,6 +791,7 @@ export class LogWorkspaceController {
 		if (!browser || !this.queryWorker) return;
 		const jobId = ++this.#nextLocateJobId;
 		this.#activeLocateJobId = jobId;
+		this.#activeLocateKind = 'jump';
 		this.queryWorker.postMessage({
 			type: 'locate',
 			jobId,
@@ -818,8 +804,50 @@ export class LogWorkspaceController {
 		} satisfies QueryWorkerRequest);
 	}
 
+	#requestSearchLocate(rowId: string) {
+		if (!browser || !this.queryWorker) return;
+		const jobId = ++this.#nextLocateJobId;
+		this.#activeLocateJobId = jobId;
+		this.#activeLocateKind = 'search';
+		this.queryWorker.postMessage({
+			type: 'locate',
+			jobId,
+			locator: {
+				sourceFile: this.selectedFiles[0] ?? '',
+				rowId
+			}
+		} satisfies QueryWorkerRequest);
+	}
+
 	#handleLocateMessage(event: Extract<QueryMessage, { type: 'locate' }>) {
 		if (event.jobId !== this.#activeLocateJobId) return;
+		const locateKind = this.#activeLocateKind;
+		this.#activeLocateKind = 'jump';
+
+		if (locateKind === 'search') {
+			if (event.result.rowIndex < 0 || !event.result.row) {
+				if (this.activeMatchOrdinal > 0) {
+					this.#jumpToGlobalMatchOrdinal(this.activeMatchOrdinal - 1);
+					return;
+				}
+				this.pendingRevealRowIndex = null;
+				return;
+			}
+
+			this.pinnedToBottom = false;
+			this.#pinnedToBottomRef = false;
+			this.pendingRevealRowIndex = event.result.rowIndex;
+
+			const windowEnd = this.windowStart + this.windowRows.length;
+			if (event.result.rowIndex < this.windowStart || event.result.rowIndex >= windowEnd) {
+				const viewportRows = Math.max(1, Math.ceil(this.viewportHeight / this.rowHeight));
+				this.#sendWindow(this.#windowStartForViewport(event.result.rowIndex, this.totalRows, viewportRows));
+				return;
+			}
+
+			this.#scheduleRevealIfVisible(event.result.rowIndex);
+			return;
+		}
 
 		if (event.result.rowIndex < 0 || !event.result.row) {
 			const locator = event.result.locator;
@@ -848,6 +876,26 @@ export class LogWorkspaceController {
 		}
 
 		this.#scheduleRevealIfVisible(event.result.rowIndex);
+	}
+
+	#revealSearchMatch(rowId: string | null, rowIndex: number | null) {
+		if (!rowId) {
+			this.pendingRevealRowIndex = null;
+			return;
+		}
+
+		if (rowIndex != null && rowIndex >= 0) {
+			const localIndex = rowIndex - this.windowStart;
+			const currentRow = localIndex >= 0 && localIndex < this.windowRows.length ? this.windowRows[localIndex] ?? null : null;
+			if (currentRow?.id === rowId) {
+				this.pendingRevealRowIndex = rowIndex;
+				this.#scheduleRevealIfVisible(rowIndex);
+				return;
+			}
+		}
+
+		this.pendingRevealRowIndex = null;
+		this.#requestSearchLocate(rowId);
 	}
 
 	// =========================================================================
